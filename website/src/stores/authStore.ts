@@ -11,7 +11,7 @@ export interface User {
   email: string;
   phone: string;
   role: UserRole;
-  employeeId: string;
+  employeeId?: string;
   regionId: string;
   managerId?: string;
   active: boolean;

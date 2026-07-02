@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Outlet, Navigate } from 'react-router-dom';
-import { LayoutDashboard, CheckCircle, Flame, LogOut } from 'lucide-react';
+import { LayoutDashboard, LogOut, BarChart3 } from 'lucide-react';
 import './App.css';
 import { useAuthStore } from './stores/authStore';
+import { Toaster } from '@/components/ui/toaster';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Analytics from './pages/Analytics';
 
 function Sidebar() {
   const navigate = useNavigate();
@@ -17,14 +19,14 @@ function Sidebar() {
   };
 
   const navItems = [
-    { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/verification', icon: CheckCircle, label: 'Verification' },
+    { path: '/', icon: LayoutDashboard, label: 'Team Overview' },
+    { path: '/analytics', icon: BarChart3, label: 'Analytics' },
   ];
 
   return (
     <div className="fixed left-4 top-4 bottom-4 w-20 bg-card border border-border rounded-[32px] shadow-sm flex flex-col items-center py-6 z-50">
       <div className="mb-8">
-        <Flame size={28} className="text-primary" />
+        <img src="/LOGOsmall.png" alt="Kalvium" className="w-10 h-10 object-contain" />
       </div>
 
       <div className="flex flex-col gap-4 flex-1 items-center">
@@ -78,18 +80,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-const Verification = () => (
-  <div className="animate-in fade-in duration-500">
-    <div className="mb-8">
-      <h1 className="text-3xl font-bold tracking-tight">Visit Verification</h1>
-    </div>
-    <div className="bg-card border border-border rounded-xl p-8 shadow-sm">
-      <h3 className="text-xl font-semibold mb-4">Pending Verifications (0)</h3>
-      <p className="text-muted-foreground">All visits have been verified.</p>
-    </div>
-  </div>
-);
-
 function App() {
   const { initialize, isLoading } = useAuthStore();
 
@@ -108,10 +98,11 @@ function App() {
 
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Dashboard />} />
-          <Route path="verification" element={<Verification />} />
+          <Route path="analytics" element={<Analytics />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
+      <Toaster />
     </BrowserRouter>
   );
 }

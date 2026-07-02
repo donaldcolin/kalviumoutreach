@@ -3,13 +3,14 @@ import { useAuthStore, type User } from '../stores/authStore';
 import { Users, Search, UserPlus, MapPin, Map as MapIcon, Clock, Briefcase, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { collection, query, where, onSnapshot, orderBy, doc, setDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
-import { MapContainer, TileLayer, Polyline, Marker, Popup, Tooltip } from 'react-leaflet';
+import { MapContainer, TileLayer, Polyline, Marker, Popup, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { format } from "date-fns";
 import { Calendar } from "../components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
 import { TimelineActivityDialog } from "../components/TimelineActivityDialog";
+import { useToast } from '../hooks/use-toast';
 
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -24,8 +25,18 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
+// Map Auto-Updater Component
+function MapUpdater({ center, zoom }: { center: [number, number], zoom: number }) {
+  const map = useMap();
+  useEffect(() => {
+    map.flyTo(center, zoom, { animate: true, duration: 1.5 });
+  }, [center, zoom, map]);
+  return null;
+}
+
 export default function Dashboard() {
   const { user, users, addAssociate } = useAuthStore();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAssociate, setSelectedAssociate] = useState<User | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -33,16 +44,21 @@ export default function Dashboard() {
   // Analytics State
   const [globalVisitsToday, setGlobalVisitsToday] = useState(0);
   const [selectedDateVisits, setSelectedDateVisits] = useState<any[]>([]);
+  const [selectedDateAutoStops, setSelectedDateAutoStops] = useState<any[]>([]);
 
   // Map State
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
   const [route, setRoute] = useState<[number, number][]>([]);
   const [, setRawPings] = useState<any[]>([]);
   const [selectedDateLocReqs, setSelectedDateLocReqs] = useState<any[]>([]);
+  
+  // Dynamic Map Zoom/Center State
+  const [mapCenter, setMapCenter] = useState<[number, number]>([12.9716, 77.5946]);
+  const [mapZoom, setMapZoom] = useState(13);
 
   // Add Associate State
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newAssociate, setNewAssociate] = useState({ name: '', email: '', phone: '', password: '' });
+  const [newAssociate, setNewAssociate] = useState({ name: '', email: '', phone: '', password: '', regionId: '' });
   const [selectedActivity, setSelectedActivity] = useState<any>(null);
 
   // Tracking Toggle State
@@ -74,6 +90,38 @@ export default function Dashboard() {
     });
     return () => unsubscribe();
   }, [user, users, todayStart, todayEnd]);
+
+  // Global Toast Notifications for new checks
+  useEffect(() => {
+    let initialLoad = true;
+    const q = query(collection(db, 'visits'), where('timestamp', '>=', todayStart));
+    
+    const unsub = onSnapshot(q, (snapshot) => {
+      if (initialLoad) {
+        initialLoad = false;
+        return;
+      }
+      
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          const data = change.doc.data();
+          const assoc = users[data.executiveId];
+          const name = assoc ? assoc.name : 'An associate';
+          
+          let action = `checked in at ${data.schoolName || 'Unknown School'}`;
+          if (data.type === 'break') action = 'took a break';
+          else if (data.type === 'unclassified') action = 'recorded an unclassified stop';
+          
+          toast({
+            title: "Live Update",
+            description: `${name} just ${action}.`,
+          });
+        }
+      });
+    });
+    
+    return () => unsub();
+  }, [users, toast, todayStart]);
 
   // 2. Selected Associate Data (Analytics + Map)
   useEffect(() => {
@@ -131,6 +179,18 @@ export default function Dashboard() {
       setSelectedDateVisits(visits);
     });
 
+    // Map: Timeline (Selected Date Auto Stops from Tracker)
+    const unsubAutoStops = onSnapshot(
+      collection(db, 'dailyTracks', trackDocId, 'visits'),
+      (snapshot) => {
+        const stops = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+        setSelectedDateAutoStops(stops);
+      },
+      (error) => {
+        console.error("Error fetching auto stops:", error);
+      }
+    );
+
     // Map: Timeline (Selected Date Location Requests)
     const qReqsToday = query(
       collection(db, 'locationRequests'),
@@ -161,6 +221,7 @@ export default function Dashboard() {
       unsubTrack();
       if (typeof unsubLocations === 'function') unsubLocations();
       unsubVToday();
+      unsubAutoStops();
       unsubReqsToday();
       unsubLocationReq();
     };
@@ -170,17 +231,29 @@ export default function Dashboard() {
   const timeline = useMemo(() => {
     const merged: any[] = [];
     
-    selectedDateVisits.forEach(v => {
-      const date = new Date(v.timestamp);
+    const allVisitsAndStops = [...selectedDateVisits, ...selectedDateAutoStops];
+
+    allVisitsAndStops.forEach(v => {
+      const ts = v.timestamp?.toMillis ? v.timestamp.toMillis() : (v.timestamp || 0);
+      const date = new Date(ts);
       const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      let eventText = `Checked in at ${v.schoolName || 'Unknown School'}`;
+      if (v.type === 'location_ping') eventText = 'Location Updated';
+      else if (v.type === 'break') eventText = 'Took a break';
+      else if (v.type === 'unclassified') eventText = 'Unclassified Stop';
+      else if (v.type === 'school') eventText = `Visited ${v.schoolName || 'Unknown School'}`;
+      else if (v.type === 'teashop' || v.type === 'park') eventText = `Stopped at ${v.type}`;
+
       merged.push({
         time: timeStr,
-        event: v.type === 'location_ping' ? 'Location Updated' : `Checked in at ${v.schoolName || 'Unknown School'}`,
+        event: eventText,
         type: v.type === 'location_ping' ? 'ping' : 'visit',
-        lat: v.checkInLat,
-        lng: v.checkInLng,
-        timestamp: v.timestamp,
-        data: v
+        lat: v.checkInLat || v.location?.lat || v.lat,
+        lng: v.checkInLng || v.location?.lng || v.lng,
+        timestamp: ts,
+        status: v.status || (v.type === 'location_ping' ? undefined : 'completed'),
+        data: v,
       });
     });
 
@@ -201,7 +274,7 @@ export default function Dashboard() {
 
     merged.sort((a, b) => a.timestamp - b.timestamp);
     return merged;
-  }, [selectedDateVisits, selectedDateLocReqs]);
+  }, [selectedDateVisits, selectedDateLocReqs, selectedDateAutoStops]);
 
   // Compute what to display based on hierarchy
   const visibleUsers = useMemo(() => {
@@ -220,7 +293,7 @@ export default function Dashboard() {
     const lowerQ = searchQuery.toLowerCase();
     return visibleUsers.filter(u =>
       u.name.toLowerCase().includes(lowerQ) ||
-      u.employeeId.toLowerCase().includes(lowerQ)
+      (u.regionId && u.regionId.toLowerCase().includes(lowerQ))
     );
   }, [visibleUsers, searchQuery]);
 
@@ -250,6 +323,22 @@ export default function Dashboard() {
     await setDoc(doc(db, 'dailyTracks', dailyTrackId), { status: newStatus }, { merge: true });
   };
 
+  // Zoom to the first location of the route when the route loads/changes
+  useEffect(() => {
+    if (route.length > 0) {
+      setMapCenter(route[0]);
+      setMapZoom(14);
+    }
+  }, [route.length > 0 ? route[0] : null]);
+
+  // Zoom to activity when clicked
+  useEffect(() => {
+    if (selectedActivity && selectedActivity.lat !== undefined && selectedActivity.lng !== undefined) {
+      setMapCenter([selectedActivity.lat, selectedActivity.lng]);
+      setMapZoom(17);
+    }
+  }, [selectedActivity]);
+
   const handleAddAssociate = async (e: React.FormEvent) => {
     e.preventDefault();
     const id = `exec_${Date.now()}`;
@@ -260,13 +349,12 @@ export default function Dashboard() {
         email: newAssociate.email,
         phone: newAssociate.phone,
         role: 'executive',
-        employeeId: `EMP-EXEC-${Math.floor(Math.random() * 1000)}`,
-        regionId: user?.regionId || 'south-1',
+        regionId: newAssociate.regionId || user?.regionId || 'south-1',
         managerId: user?.id,
         active: true,
       }, newAssociate.password);
       setShowAddModal(false);
-      setNewAssociate({ name: '', email: '', phone: '', password: '' });
+      setNewAssociate({ name: '', email: '', phone: '', password: '', regionId: '' });
     } catch (err) {
       alert('Failed to create associate. Check console for details.');
     }
@@ -303,6 +391,10 @@ export default function Dashboard() {
                     <Input required placeholder="+91 9876543210" value={newAssociate.phone} onChange={e => setNewAssociate({...newAssociate, phone: e.target.value})} className="rounded-xl border-zinc-200 focus-visible:ring-zinc-900 focus-visible:ring-1 h-11" />
                   </div>
                   <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Assigned Area</label>
+                    <Input required placeholder="e.g. south-1, north-east" value={newAssociate.regionId} onChange={e => setNewAssociate({...newAssociate, regionId: e.target.value})} className="rounded-xl border-zinc-200 focus-visible:ring-zinc-900 focus-visible:ring-1 h-11" />
+                  </div>
+                  <div className="space-y-1.5">
                     <label className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Temporary Password</label>
                     <Input required type="password" placeholder="Min 6 characters" value={newAssociate.password} onChange={e => setNewAssociate({...newAssociate, password: e.target.value})} className="rounded-xl border-zinc-200 focus-visible:ring-zinc-900 focus-visible:ring-1 h-11" />
                   </div>
@@ -334,7 +426,7 @@ export default function Dashboard() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{u.name}</p>
-                  <p className={`text-[11px] truncate mt-0.5 ${selectedAssociate?.id === u.id ? 'text-zinc-400' : 'text-zinc-500'}`}>{u.employeeId}</p>
+                  <p className={`text-[11px] truncate mt-0.5 ${selectedAssociate?.id === u.id ? 'text-zinc-400' : 'text-zinc-500'}`}>{u.regionId}</p>
                 </div>
                 {selectedAssociate?.id === u.id && <ChevronRight size={16} className={selectedAssociate?.id === u.id ? "text-zinc-400 mr-1" : "text-zinc-300"} />}
               </div>
@@ -375,7 +467,7 @@ export default function Dashboard() {
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="text-xl font-medium truncate tracking-tight pr-2">{selectedAssociate.name}</h3>
-                  <p className="text-zinc-400 text-sm mt-1">{selectedAssociate.employeeId}</p>
+                  <p className="text-zinc-400 text-sm mt-1">{selectedAssociate.regionId}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   {/* Tracking Toggle */}
@@ -401,6 +493,7 @@ export default function Dashboard() {
                       mode="single"
                       selected={selectedDate}
                       onSelect={(date) => date && setSelectedDate(date)}
+                      disabled={(date) => date > new Date()}
                       className="rounded-xl"
                     />
                   </PopoverContent>
@@ -452,10 +545,11 @@ export default function Dashboard() {
                 </button>
               </div>
               <MapContainer
-                center={route.length > 0 ? route[0] : [12.9716, 77.5946]}
-                zoom={13}
+                center={mapCenter}
+                zoom={mapZoom}
                 style={{ width: '100%', height: '100%', zIndex: 10 }}
               >
+                <MapUpdater center={mapCenter} zoom={mapZoom} />
                 <TileLayer
                   url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
                   attribution='&copy; OpenStreetMap &copy; CARTO'

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { Loader2 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 
@@ -23,11 +23,9 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-transparent relative">
       <Card className="w-full max-w-md border border-border shadow-sm bg-card animate-in fade-in zoom-in-95 duration-500 rounded-3xl p-4">
-        <CardHeader className="space-y-2 pb-8 pt-4">
+        <CardHeader className="space-y-2 pb-8 pt-4 text-center">
+          <img src="/LOGO.png" alt="Kalvium" className="h-12 mx-auto mb-2 object-contain" />
           <CardTitle className="text-3xl font-bold tracking-tight text-foreground">Sign In</CardTitle>
-          <CardDescription className="text-base text-muted-foreground">
-            Enter your credentials to manage your team.
-          </CardDescription>
         </CardHeader>
 
         <CardContent className="pb-4">
@@ -53,7 +51,7 @@ export default function Login() {
                 disabled={isLoading}
               />
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground" htmlFor="password">
                 Password
