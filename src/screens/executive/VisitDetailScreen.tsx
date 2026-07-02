@@ -78,7 +78,7 @@ export default function VisitDetailScreen({ navigation, route }: Props) {
               </Text>
             </VStack>
             <Badge variant="default" className="rounded-full bg-primary/10">
-              <BadgeText className="text-primary font-bold">{visit.status.toUpperCase()}</BadgeText>
+              <BadgeText className="text-primary font-bold">{visit.status?.toUpperCase() || 'UNKNOWN'}</BadgeText>
             </Badge>
           </HStack>
         </VStack>

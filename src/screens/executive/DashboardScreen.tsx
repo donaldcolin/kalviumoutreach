@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
-import { ScrollView, TouchableOpacity, Modal, View, TextInput } from 'react-native';
+import { ScrollView, TouchableOpacity, Modal, View, TextInput, Animated, ActivityIndicator } from 'react-native';
+import * as Location from 'expo-location';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../stores/authStore';
 import { useVisitStore } from '../../stores/visitStore';
@@ -26,6 +28,42 @@ export default function DashboardScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<VisitStackParamList>>();
   const { isTracking, startDay, activeSchoolMatch, pendingPrompt, submitClassification } = useOutreachTracking(user?.id);
   const [customNote, setCustomNote] = React.useState('');
+  
+  const [isStarting, setIsStarting] = React.useState(false);
+  const [startCoords, setStartCoords] = React.useState<{ lat: number; lng: number } | null>(null);
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
+
+  const handleStartDay = async () => {
+    setIsStarting(true);
+    
+    Animated.sequence([
+      Animated.timing(scaleAnim, { toValue: 0.95, duration: 100, useNativeDriver: true }),
+      Animated.timing(scaleAnim, { toValue: 1, duration: 150, useNativeDriver: true })
+    ]).start();
+
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setIsStarting(false);
+        startDay(); // fallback
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      setStartCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+      
+      setTimeout(() => {
+        startDay();
+        // Reset state after it closes
+        setTimeout(() => {
+          setIsStarting(false);
+          setStartCoords(null);
+        }, 500);
+      }, 1500);
+    } catch (e) {
+      setIsStarting(false);
+      startDay(); // fallback
+    }
+  };
 
   useEffect(() => {
     if (user?.id) {
@@ -42,9 +80,9 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
-      <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 40 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 12, paddingBottom: 18 }}>
         {/* Header */}
-        <HStack className="w-full justify-between items-center mb-8 mt-2">
+        <HStack className="w-full justify-between items-center mb-4">
           <VStack>
             <Text className="text-muted-foreground text-sm font-medium mb-1">Hello,</Text>
             <Heading size="2xl" className="text-foreground font-bold tracking-tight">{user?.name ?? 'Executive'}</Heading>
@@ -73,16 +111,7 @@ export default function DashboardScreen() {
               <Heading size="3xl" className="text-foreground font-extrabold">{inProgressVisits}</Heading>
             </Card>
           </HStack>
-          <HStack space="md" className="w-full">
-            <Card className="flex-1 bg-card p-5 rounded-2xl border border-border/40 shadow-md">
-              <Text className="text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-2">Yesterday</Text>
-              <Heading size="2xl" className="text-foreground font-extrabold">{yesterdayVisitsCount}</Heading>
-            </Card>
-            <Card className="flex-1 bg-card p-5 rounded-2xl border border-border/40 shadow-md">
-              <Text className="text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-2">All Time</Text>
-              <Heading size="2xl" className="text-foreground font-extrabold">{allTimeVisitsCount}</Heading>
-            </Card>
-          </HStack>
+
         </VStack>
 
         {/* Tracking Status */}
@@ -150,19 +179,40 @@ export default function DashboardScreen() {
               Begin your day to enable location tracking and log visits.
             </Text>
             <TouchableOpacity 
-              onPress={startDay}
-              className="w-48 h-48 rounded-full bg-primary justify-center items-center shadow-md"
-              style={{
-                elevation: 8,
-                shadowColor: '#E11D48',
-                shadowOffset: { width: 0, height: 8 },
-                shadowOpacity: 0.3,
-                shadowRadius: 16,
-              }}
+              onPress={handleStartDay}
+              disabled={isStarting}
+              activeOpacity={0.9}
             >
-              <Text className="text-primary-foreground text-3xl font-extrabold tracking-wider">
-                START
-              </Text>
+              <Animated.View 
+                className={`w-48 h-48 rounded-full ${startCoords ? 'bg-green-500' : 'bg-primary'} justify-center items-center shadow-md`}
+                style={{
+                  transform: [{ scale: scaleAnim }],
+                  elevation: 8,
+                  shadowColor: startCoords ? '#22c55e' : '#E11D48',
+                  shadowOffset: { width: 0, height: 8 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 16,
+                }}
+              >
+                {isStarting && !startCoords ? (
+                  <VStack className="items-center">
+                    <ActivityIndicator size="large" color="#ffffff" />
+                    <Text className="text-white font-medium mt-3 text-sm">Locating you...</Text>
+                  </VStack>
+                ) : startCoords ? (
+                  <VStack className="items-center">
+                    <Ionicons name="location" size={40} color="#ffffff" />
+                    <Text className="text-white text-lg font-bold mt-2">Located!</Text>
+                    <Text className="text-white/90 text-xs mt-1 font-mono">
+                      {startCoords.lat.toFixed(4)}, {startCoords.lng.toFixed(4)}
+                    </Text>
+                  </VStack>
+                ) : (
+                  <Text className="text-primary-foreground text-3xl font-extrabold tracking-wider">
+                    START
+                  </Text>
+                )}
+              </Animated.View>
             </TouchableOpacity>
           </View>
         </View>

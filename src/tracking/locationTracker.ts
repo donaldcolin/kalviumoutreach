@@ -44,6 +44,15 @@ class LocationTracker {
     }
 
     this.isTracking = true;
+
+    // Grab an immediate high-accuracy location fix right when they start
+    try {
+      const initialLoc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      this.addPoints([initialLoc]);
+      this.flushBuffer();
+    } catch (e) {
+      console.warn('Failed to get initial location', e);
+    }
     
     this.unsubscribeMotion = motionDetector.subscribe((state) => {
       this.currentMotionState = state;

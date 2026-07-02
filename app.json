@@ -70,6 +70,10 @@
       "eas": {
         "projectId": "7c3b7db9-8bd9-4b90-985b-44ec35ff2b84"
       }
+    },
+    "ios": {
+      "bundleIdentifier": "com.kalvium.outreach",
+      "googleServicesFile": "./GoogleService-Info.plist"
     }
   }
 }

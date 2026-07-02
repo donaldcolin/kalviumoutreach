@@ -95,9 +95,9 @@ function ProfileScreen() {
         {user?.name && <Text className="text-zinc-600 text-xl font-medium">{user.name}</Text>}
         {user?.email && <Text className="text-zinc-500 text-base">{user.email}</Text>}
       </VStack>
-      <Button 
-        size="lg" 
-        variant="default" 
+      <Button
+        size="lg"
+        variant="default"
         className="w-full max-w-[300px] rounded-2xl bg-primary py-4 h-14 shadow-sm"
         onPress={logout}
       >
@@ -109,18 +109,17 @@ function ProfileScreen() {
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 
 // ─── Header Menu Component ───────────────────────────────────────────────────
 
 function HeaderRightMenu() {
   const [visible, setVisible] = useState(false);
-  const navigation = useNavigation<BottomTabNavigationProp<ExecutiveTabParamList>>();
+  const navigation = useNavigation<any>();
 
   return (
     <>
-      <TouchableOpacity 
-        onPress={() => setVisible(true)} 
+      <TouchableOpacity
+        onPress={() => setVisible(true)}
         style={{ padding: 8, marginRight: 12, borderRadius: 20 }}
       >
         <Ionicons name="menu" size={28} color="#111827" />
@@ -130,11 +129,11 @@ function HeaderRightMenu() {
         <TouchableWithoutFeedback onPress={() => setVisible(false)}>
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.1)' }}>
             <TouchableWithoutFeedback>
-              <View style={{ 
-                position: 'absolute', 
-                top: 60, 
-                right: 16, 
-                backgroundColor: '#FFFFFF', 
+              <View style={{
+                position: 'absolute',
+                top: 60,
+                right: 16,
+                backgroundColor: '#FFFFFF',
                 borderRadius: 16,
                 padding: 8,
                 shadowColor: '#000',
@@ -144,7 +143,7 @@ function HeaderRightMenu() {
                 elevation: 8,
                 minWidth: 160
               }}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={{ padding: 12, flexDirection: 'row', alignItems: 'center', borderRadius: 10 }}
                   onPress={() => {
                     setVisible(false);
@@ -155,7 +154,7 @@ function HeaderRightMenu() {
                   <Text style={{ fontSize: 16, color: '#111827', fontWeight: '500' }}>Profile</Text>
                 </TouchableOpacity>
                 <View style={{ height: 1, backgroundColor: '#F3F4F6', marginVertical: 4 }} />
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={{ padding: 12, flexDirection: 'row', alignItems: 'center', borderRadius: 10 }}
                   onPress={() => {
                     setVisible(false);
@@ -177,10 +176,9 @@ function HeaderRightMenu() {
 // ─── Bottom Tabs ─────────────────────────────────────────────────────────────
 
 const Tab = createBottomTabNavigator<ExecutiveTabParamList>();
+const ExecutiveStack = createNativeStackNavigator();
 
-export default function ExecutiveNavigator() {
-  // Activate real-time location fetch listener for TL requests
-  useLocationPinger();
+function ExecutiveTabs() {
   const insets = useSafeAreaInsets();
 
   return (
@@ -196,10 +194,10 @@ export default function ExecutiveNavigator() {
             borderBottomWidth: 0,
           },
           headerLeft: () => (
-            <Image 
-              source={require('../../assets/LOGO.png')} 
-              style={{ width: 140, height: 40, marginLeft: 16 }} 
-              resizeMode="contain" 
+            <Image
+              source={require('../../assets/LOGO.png')}
+              style={{ width: 140, height: 40, marginLeft: 16 }}
+              resizeMode="contain"
             />
           ),
           headerRight: () => <HeaderRightMenu />,
@@ -243,21 +241,38 @@ export default function ExecutiveNavigator() {
             headerShown: false, // Visit flow has its own headers
           }}
         />
-        <Tab.Screen
-          name="Profile"
-          component={ProfileScreen}
-          options={{
-            tabBarButton: () => null,
-          }}
-        />
-        <Tab.Screen
-          name="SyncQueue"
-          component={SyncQueueScreen}
-          options={{
-            tabBarButton: () => null,
-          }}
-        />
       </Tab.Navigator>
     </View>
+  );
+}
+
+export default function ExecutiveNavigator() {
+  // Activate real-time location fetch listener for TL requests
+  useLocationPinger();
+
+  return (
+    <ExecutiveStack.Navigator screenOptions={{ headerShown: false }}>
+      <ExecutiveStack.Screen name="ExecutiveTabs" component={ExecutiveTabs} />
+      <ExecutiveStack.Screen 
+        name="Profile" 
+        component={ProfileScreen} 
+        options={{ 
+          headerShown: true, 
+          title: 'Profile', 
+          headerStyle: { backgroundColor: '#FAF8F5' }, 
+          headerShadowVisible: false 
+        }} 
+      />
+      <ExecutiveStack.Screen 
+        name="SyncQueue" 
+        component={SyncQueueScreen} 
+        options={{ 
+          headerShown: true, 
+          title: 'Sync Status', 
+          headerStyle: { backgroundColor: '#FAF8F5' }, 
+          headerShadowVisible: false 
+        }} 
+      />
+    </ExecutiveStack.Navigator>
   );
 }

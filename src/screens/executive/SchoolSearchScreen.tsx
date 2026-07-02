@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { FlatList, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { searchSchools } from '../../services/firestore';
 import type { School, VisitStackParamList } from '../../types';
@@ -66,7 +66,11 @@ export default function SchoolSearchScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
-      <Box className="p-4">
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <Box className="p-4">
         <Input className="bg-card rounded-xl border-border/50 h-14">
           <InputSlot className="pl-4">
             <Text className="text-muted-foreground">🔍</Text>
@@ -112,6 +116,7 @@ export default function SchoolSearchScreen({ navigation }: Props) {
           <ButtonText className="text-primary font-bold text-base">+ Add New School</ButtonText>
         </Button>
       </Box>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

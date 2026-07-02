@@ -1,13 +1,20 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Alert } from 'react-native';
 import { locationTracker } from './locationTracker';
-import { visitTracker, VisitEvent, StopClassification } from './visitTracker';
+import { visitTracker, VisitEvent } from './visitTracker';
 import { firestoreSync } from './firestoreSync';
-import { School } from '../types';
+import { School, StopClassification } from '../types';
 import { getAllSchools, onDailyTrack } from '../services/firestore';
 import { format } from 'date-fns';
 
 export function useOutreachTracking(userId: string | undefined) {
   const [isTracking, setIsTracking] = useState(false);
+  const isTrackingRef = useRef(false);
+  
+  useEffect(() => {
+    isTrackingRef.current = isTracking;
+  }, [isTracking]);
+
   const [activeSchoolMatch, setActiveSchoolMatch] = useState<School | null>(null);
   const [pendingPrompt, setPendingPrompt] = useState<{
     event: VisitEvent;
@@ -37,6 +44,13 @@ export function useOutreachTracking(userId: string | undefined) {
           visitTracker.start();
           locationTracker.startTracking();
         } else if (track?.status === 'ended') {
+          if (isTrackingRef.current) {
+            Alert.alert(
+              "Tracking Stopped Remotely",
+              "Your Team Lead has stopped your tracking session. Please ensure your location services are enabled and tap 'Start Day' to resume tracking.",
+              [{ text: "OK" }]
+            );
+          }
           setIsTracking(false);
           visitTracker.stop();
           locationTracker.stopTracking();
@@ -68,10 +82,11 @@ export function useOutreachTracking(userId: string | undefined) {
 
     // Check time immediately and then every minute
     const checkTime = () => {
-      if (new Date().getHours() >= 18) {
-        console.log('[useOutreachTracking] 6 PM reached, auto-stopping day.');
-        endDay();
-      }
+      // DISABLED FOR TESTING
+      // if (new Date().getHours() >= 18) {
+      //   console.log('[useOutreachTracking] 6 PM reached, auto-stopping day.');
+      //   endDay();
+      // }
     };
     
     checkTime();
