@@ -5,13 +5,15 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/LOGOsmall.png",
-    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/LOGO.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FAF8F5"
+    },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0F172A",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#FAF8F5",
+        "foregroundImage": "./assets/LOGOsmall.png"
       },
       "predictiveBackGestureEnabled": false,
       "googleServicesFile": "./google-services.json",
