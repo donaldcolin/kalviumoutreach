@@ -1,0 +1,113 @@
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
+@import "nativewind/theme";
+
+/* ─── Theme: design tokens (light / dark) ─────────────────────────
+   1. :root              — light defaults (all platforms)
+   2. @media dark :root  — dark defaults; nativewind maps this to
+                           Appearance.getColorScheme() on native.
+   3. :root.dark / :root.light — higher specificity for web class toggle. */
+@layer theme {
+  :root {
+    --primary: 225 29 72; /* #E11D48 - Kalvium Rose */
+    --primary-foreground: 255 255 255;
+    --card: 255 255 255; /* White cards */
+    --secondary: 244 240 236; /* Pale beige secondary */
+    --secondary-foreground: 28 25 23;
+    --background: 250 248 245; /* #FAF8F5 - Pale beige-white */
+    --popover: 255 255 255;
+    --popover-foreground: 28 25 23;
+    --muted: 244 240 236;
+    --muted-foreground: 120 113 108;
+    --destructive: 239 68 68;
+    --foreground: 28 25 23; /* Dark text */
+    --border: 231 229 228;
+    --input: 231 229 228;
+    --ring: 225 29 72;
+    --accent: 225 29 72;
+    --accent-foreground: 255 255 255;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --primary: 225 29 72; 
+      --primary-foreground: 255 255 255;
+      --card: 255 255 255; 
+      --secondary: 244 240 236; 
+      --secondary-foreground: 28 25 23;
+      --background: 250 248 245; 
+      --popover: 255 255 255;
+      --popover-foreground: 28 25 23;
+      --muted: 244 240 236;
+      --muted-foreground: 120 113 108;
+      --destructive: 239 68 68;
+      --foreground: 28 25 23; 
+      --border: 231 229 228;
+      --input: 231 229 228;
+      --accent: 225 29 72;
+      --accent-foreground: 255 255 255;
+      --ring: 225 29 72;
+    }
+  }
+
+  :root.dark {
+    --primary: 225 29 72; 
+    --primary-foreground: 255 255 255;
+    --card: 255 255 255; 
+    --secondary: 244 240 236; 
+    --secondary-foreground: 28 25 23;
+    --background: 250 248 245; 
+    --popover: 255 255 255;
+    --popover-foreground: 28 25 23;
+    --muted: 244 240 236;
+    --muted-foreground: 120 113 108;
+    --destructive: 239 68 68;
+    --foreground: 28 25 23; 
+    --border: 231 229 228;
+    --input: 231 229 228;
+    --accent: 225 29 72;
+    --accent-foreground: 255 255 255;
+    --ring: 225 29 72;
+  }
+
+  :root.light {
+    --primary: 225 29 72; 
+    --primary-foreground: 255 255 255;
+    --card: 255 255 255; 
+    --secondary: 244 240 236; 
+    --secondary-foreground: 28 25 23;
+    --background: 250 248 245; 
+    --popover: 255 255 255;
+    --popover-foreground: 28 25 23;
+    --muted: 244 240 236;
+    --muted-foreground: 120 113 108;
+    --destructive: 239 68 68;
+    --foreground: 28 25 23; 
+    --border: 231 229 228;
+    --input: 231 229 228;
+    --accent: 225 29 72;
+    --accent-foreground: 255 255 255;
+    --ring: 225 29 72;
+  }
+}
+
+@theme inline {
+  --color-primary: rgb(var(--primary));
+  --color-primary-foreground: rgb(var(--primary-foreground));
+  --color-card: rgb(var(--card));
+  --color-secondary: rgb(var(--secondary));
+  --color-secondary-foreground: rgb(var(--secondary-foreground));
+  --color-background: rgb(var(--background));
+  --color-popover: rgb(var(--popover));
+  --color-popover-foreground: rgb(var(--popover-foreground));
+  --color-muted: rgb(var(--muted));
+  --color-muted-foreground: rgb(var(--muted-foreground));
+  --color-destructive: rgb(var(--destructive));
+  --color-foreground: rgb(var(--foreground));
+  --color-border: rgb(var(--border));
+  --color-input: rgb(var(--input));
+  --color-ring: rgb(var(--ring));
+  --color-accent: rgb(var(--accent));
+  --color-accent-foreground: rgb(var(--accent-foreground));
+}

@@ -1,0 +1,83 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tw-animate-css";
+@import "@fontsource-variable/geist";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Removed old vanilla CSS, using Tailwind now */
+
+@layer base {
+  .theme {
+    --font-heading: var(--font-sans);
+    --font-sans: 'Geist Variable', sans-serif;
+  }
+  :root {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.1 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.1 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.1 0 0);
+    --primary: oklch(0.1 0 0);
+    --primary-foreground: oklch(0.98 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.1 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.5 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.1 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --destructive-foreground: oklch(0.98 0 0);
+    --border: oklch(0.92 0 0);
+    --input: oklch(0.92 0 0);
+    --ring: oklch(0.1 0 0);
+    --radius: 0.75rem;
+    --sidebar: oklch(1 0 0);
+    --sidebar-foreground: oklch(0.1 0 0);
+    --sidebar-primary: oklch(0.1 0 0);
+    --sidebar-primary-foreground: oklch(0.98 0 0);
+    --sidebar-accent: oklch(0.97 0 0);
+    --sidebar-accent-foreground: oklch(0.1 0 0);
+    --sidebar-border: oklch(0.92 0 0);
+    --sidebar-ring: oklch(0.1 0 0);
+  }
+  
+  /* Disable dark mode by overriding it with the exact same light values */
+  .dark {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.1 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.1 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.1 0 0);
+    --primary: oklch(0.1 0 0);
+    --primary-foreground: oklch(0.98 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.1 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.5 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.1 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --destructive-foreground: oklch(0.98 0 0);
+    --border: oklch(0.92 0 0);
+    --input: oklch(0.92 0 0);
+    --ring: oklch(0.1 0 0);
+    --radius: 0.75rem;
+  }
+  
+  * {
+    border-color: var(--border);
+    outline-color: var(--ring);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    background-image: radial-gradient(var(--border) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-attachment: fixed;
+  }
+}
