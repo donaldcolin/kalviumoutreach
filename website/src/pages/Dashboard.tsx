@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { Calendar } from "../components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
 import { TimelineActivityDialog } from "../components/TimelineActivityDialog";
+import { CrmActivityCard } from "../components/CrmActivityCard";
 import { useToast } from '../hooks/use-toast';
 
 import { Button } from '../components/ui/button';
@@ -45,6 +46,7 @@ export default function Dashboard() {
   const [globalVisitsToday, setGlobalVisitsToday] = useState(0);
   const [selectedDateVisits, setSelectedDateVisits] = useState<any[]>([]);
   const [selectedDateAutoStops, setSelectedDateAutoStops] = useState<any[]>([]);
+  const [selectedDateCrmActivities, setSelectedDateCrmActivities] = useState<any[]>([]);
 
   // Map State
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
@@ -60,6 +62,7 @@ export default function Dashboard() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newAssociate, setNewAssociate] = useState({ name: '', email: '', phone: '', password: '', regionId: '' });
   const [selectedActivity, setSelectedActivity] = useState<any>(null);
+  const [expandedActivityIdx, setExpandedActivityIdx] = useState<number | null>(null);
 
   // Tracking Toggle State
   const [dailyTrackStatus, setDailyTrackStatus] = useState<'active' | 'ended' | null>(null);
@@ -130,6 +133,7 @@ export default function Dashboard() {
       setRawPings([]);
       setSelectedDateLocReqs([]);
       setSelectedDateVisits([]);
+      setSelectedDateCrmActivities([]);
       return;
     }
 
@@ -138,6 +142,7 @@ export default function Dashboard() {
     setRawPings([]);
     setSelectedDateLocReqs([]);
     setSelectedDateVisits([]);
+    setSelectedDateCrmActivities([]);
     setDailyTrackStatus(null);
     setDailyTrackId(null);
 
@@ -217,6 +222,26 @@ export default function Dashboard() {
       setIsFetchingLocation(!snapshot.empty);
     });
 
+    // CRM Activities for this associate
+    const assocEmail = selectedAssociate.email?.toLowerCase();
+    if (assocEmail) {
+      const qCrm = query(
+        collection(db, 'crmActivities'),
+        where('executiveEmail', '==', assocEmail)
+      );
+      var unsubCrm = onSnapshot(qCrm, (snapshot) => {
+        const activities = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+        // Filter by selected date
+        const filtered = activities.filter(a => {
+          const dt = a.walkInDateTime || a.lsqCreatedOn;
+          if (!dt) return false;
+          const ts = new Date(dt).getTime();
+          return ts >= selectedDateStart && ts <= selectedDateEnd;
+        });
+        setSelectedDateCrmActivities(filtered);
+      });
+    }
+
     return () => {
       unsubTrack();
       if (typeof unsubLocations === 'function') unsubLocations();
@@ -224,6 +249,7 @@ export default function Dashboard() {
       unsubAutoStops();
       unsubReqsToday();
       unsubLocationReq();
+      if (typeof unsubCrm === 'function') unsubCrm();
     };
   }, [selectedAssociate, selectedDateStart, selectedDateEnd]);
 
@@ -272,9 +298,32 @@ export default function Dashboard() {
       });
     });
 
+    // CRM Activities from LeadSquared
+    selectedDateCrmActivities.forEach(a => {
+      const dt = a.walkInDateTime || a.lsqCreatedOn;
+      const ts = dt ? new Date(dt).getTime() : Date.now();
+      const date = new Date(ts);
+      const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      const stageLabel = a.walkInStatus || 'Visit';
+      let eventText = `📋 ${a.schoolName || 'School'} — ${stageLabel}`;
+      if (a.typeOfWalkIn) eventText = `📋 ${a.typeOfWalkIn}: ${a.schoolName || 'School'} (${stageLabel})`;
+      
+      merged.push({
+        time: timeStr,
+        event: eventText,
+        type: 'crm',
+        lat: a.lat,
+        lng: a.lng,
+        timestamp: ts,
+        status: a.walkInStatus,
+        data: a,
+      });
+    });
+
     merged.sort((a, b) => a.timestamp - b.timestamp);
     return merged;
-  }, [selectedDateVisits, selectedDateLocReqs, selectedDateAutoStops]);
+  }, [selectedDateVisits, selectedDateLocReqs, selectedDateAutoStops, selectedDateCrmActivities]);
 
   // Compute what to display based on hierarchy
   const visibleUsers = useMemo(() => {
@@ -625,6 +674,22 @@ export default function Dashboard() {
               <div className="flex-1 p-6 overflow-y-auto">
                 <div className="relative border-l border-zinc-200 ml-2 space-y-8 pb-4">
                   {timeline.map((stop, idx) => {
+                    if (stop.type === 'crm') {
+                      return (
+                        <div key={idx} className="relative pl-6 pb-2">
+                          <span className="absolute -left-[5px] top-4 w-2.5 h-2.5 bg-white border-2 border-emerald-500 rounded-full z-10" />
+                          <CrmActivityCard 
+                            activity={stop.data}
+                            isExpanded={expandedActivityIdx === idx}
+                            onToggle={() => setExpandedActivityIdx(expandedActivityIdx === idx ? null : idx)}
+                            onLocate={(lat, lng) => {
+                              setMapCenter([lat, lng]);
+                              setMapZoom(16);
+                            }}
+                          />
+                        </div>
+                      );
+                    }
                     return (
                       <div 
                         key={idx} 

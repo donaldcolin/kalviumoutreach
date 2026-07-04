@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Outlet, Navigate } from 'react-router-dom';
-import { LayoutDashboard, LogOut, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, LogOut, BarChart3, Building2 } from 'lucide-react';
 import './App.css';
 import { useAuthStore } from './stores/authStore';
 import { Toaster } from '@/components/ui/toaster';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Analytics from './pages/Analytics';
+import Pipeline from './pages/Pipeline';
 
 function Sidebar() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ function Sidebar() {
 
   const navItems = [
     { path: '/', icon: LayoutDashboard, label: 'Team Overview' },
+    { path: '/pipeline', icon: Building2, label: 'School Pipeline' },
     { path: '/analytics', icon: BarChart3, label: 'Analytics' },
   ];
 
@@ -98,6 +100,7 @@ function App() {
 
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Dashboard />} />
+          <Route path="pipeline" element={<Pipeline />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

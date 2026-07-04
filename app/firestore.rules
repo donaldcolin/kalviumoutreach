@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users can read their own profile, admins can read all
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only manageable from server/admin SDK
+    }
+
+    // Daily tracks, visits, stops, and pings are scoped to the executive
+    match /dailyTracks/{trackId} {
+      allow read, write: if request.auth != null && trackId.matches(request.auth.uid + '_.*');
+      
+      match /locations/{locationId} {
+        allow read, write: if request.auth != null && trackId.matches(request.auth.uid + '_.*');
+      }
+      match /visits/{visitId} {
+        allow read, write: if request.auth != null && trackId.matches(request.auth.uid + '_.*');
+      }
+    }
+
+    // Visits collection (top level)
+    match /visits/{visitId} {
+      allow read, write: if request.auth != null && resource.data.executiveId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.executiveId == request.auth.uid;
+    }
+
+    // Meetings
+    match /meetings/{meetingId} {
+      allow read, write: if request.auth != null && resource.data.executiveId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.executiveId == request.auth.uid;
+    }
+
+    // Appointments
+    match /appointments/{appId} {
+      allow read, write: if request.auth != null && resource.data.executiveId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.executiveId == request.auth.uid;
+    }
+
+    // Schools are readable by any authenticated user
+    match /schools/{schoolId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only admin can edit schools
+    }
+
+    // CRM Activities synced from LeadSquared — readable by any authenticated user
+    match /crmActivities/{activityId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only sync script (admin SDK) can write
+    }
+
+    // Discreet meeting recordings
+    match /meetingRecordings/{recordingId} {
+      allow read, write: if request.auth != null && resource.data.executiveId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.executiveId == request.auth.uid;
+    }
+  }
+}

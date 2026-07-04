@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "656712790429",
+    "project_id": "kalvium-outreach-53f54",
+    "storage_bucket": "kalvium-outreach-53f54.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:656712790429:android:9c06fb7586242a34413f74",
+        "android_client_info": {
+          "package_name": "com.kalvium.outreach"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyADMJ5b1P0x3XnocjcstqiPGlZI0ydtXCc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
