@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
 import { Button } from './ui/button';
-import { MapPin, Clock, Info, CheckCircle, FileAudio, Image as ImageIcon, X } from 'lucide-react';
+import { MapPin, Clock, Info, CheckCircle, FileAudio, Image as ImageIcon, X, ArrowRight, User, Phone, FileText, Calendar as CalendarIcon } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
+import { STAGE_SHORT, STAGE_COLORS, getStageIndex } from './CrmActivityCard';
 
 interface TimelineActivityDialogProps {
   open: boolean;
@@ -58,6 +59,110 @@ export function TimelineActivityDialog({ open, onOpenChange, stop }: TimelineAct
         </SheetHeader>
         <div className="py-2 px-6 space-y-6 max-h-[calc(100vh-180px)] overflow-y-auto pb-24">
           
+          {/* CRM Details */}
+          {stop.type === 'crm' && stop.data && (
+            <div className="bg-white rounded-2xl p-5 border border-zinc-200 shadow-sm space-y-6">
+              {/* Stage Progress Bar */}
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold mb-3">Visit Progress</p>
+                <div className="flex items-center gap-1">
+                  {STAGE_SHORT.map((label, i) => (
+                    <div key={label} className="flex items-center gap-1 flex-1">
+                      <div className={`flex-1 h-2 rounded-full ${i <= getStageIndex(stop.data.walkInStatus) ? STAGE_COLORS[i] : 'bg-zinc-200'}`} />
+                      {i < STAGE_SHORT.length - 1 && <ArrowRight size={10} className="text-zinc-300 shrink-0" />}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-between mt-2">
+                  {STAGE_SHORT.map((label, i) => (
+                    <span key={label} className={`text-[9px] font-bold tracking-wider ${i <= getStageIndex(stop.data.walkInStatus) ? 'text-zinc-700' : 'text-zinc-400'}`}>{label}</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Outcome */}
+              {(stop.data.refusedEntryReason || stop.data.statusFrontDesk || stop.data.statusPIC || stop.data.statusPrincipal) && (
+                <div className="bg-zinc-50 p-4 rounded-xl border border-zinc-100">
+                  <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold mb-2">Outcome</p>
+                  <p className="text-sm text-zinc-900 font-medium">
+                    {getStageIndex(stop.data.walkInStatus) === 0 ? stop.data.refusedEntryReason :
+                     getStageIndex(stop.data.walkInStatus) === 1 ? stop.data.statusFrontDesk :
+                     getStageIndex(stop.data.walkInStatus) === 2 ? stop.data.statusPIC :
+                     stop.data.statusPrincipal}
+                  </p>
+                </div>
+              )}
+
+              {/* Contact Info */}
+              {(stop.data.picName || stop.data.principalName) && (
+                <div className="grid grid-cols-2 gap-3">
+                  {stop.data.picName && (
+                    <div className="bg-zinc-50 p-4 rounded-xl border border-zinc-100">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <User size={12} className="text-zinc-400" />
+                        <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold">PIC</p>
+                      </div>
+                      <p className="text-sm font-semibold text-zinc-900 truncate">{stop.data.picName}</p>
+                      {stop.data.picPhone && (
+                        <p className="text-xs text-zinc-500 mt-1 flex items-center gap-1.5">
+                          <Phone size={10} /> {stop.data.picPhone}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {stop.data.principalName && (
+                    <div className="bg-zinc-50 p-4 rounded-xl border border-zinc-100">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <User size={12} className="text-zinc-400" />
+                        <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold">Principal</p>
+                      </div>
+                      <p className="text-sm font-semibold text-zinc-900 truncate">{stop.data.principalName}</p>
+                      {stop.data.principalPhone && (
+                        <p className="text-xs text-zinc-500 mt-1 flex items-center gap-1.5">
+                          <Phone size={10} /> {stop.data.principalPhone}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Notes */}
+              {stop.data.notes && (
+                <div className="bg-zinc-50 p-4 rounded-xl border border-zinc-100">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <FileText size={12} className="text-zinc-400" />
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold">Notes</p>
+                  </div>
+                  <p className="text-sm text-zinc-700 leading-relaxed">{stop.data.notes}</p>
+                </div>
+              )}
+
+              {/* Metadata */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {stop.data.boardOfSchool && (
+                  <span className="px-3 py-1.5 bg-zinc-100 text-zinc-700 text-[10px] font-bold uppercase tracking-wider rounded-lg">
+                    {stop.data.boardOfSchool}
+                  </span>
+                )}
+                {stop.data.studentStrength && (
+                  <span className="px-3 py-1.5 bg-zinc-100 text-zinc-700 text-[10px] font-bold uppercase tracking-wider rounded-lg">
+                    {stop.data.studentStrength} Students
+                  </span>
+                )}
+                {stop.data.proposalSentToSchool === 'Yes' && (
+                  <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-emerald-100">
+                    Proposal Sent
+                  </span>
+                )}
+                {stop.data.followUpDate && (
+                  <span className="px-3 py-1.5 bg-blue-50 text-blue-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-blue-100 flex items-center gap-1.5">
+                    <CalendarIcon size={12} /> Follow-up: {new Date(stop.data.followUpDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
           <div className="bg-zinc-50 rounded-2xl p-5 border border-zinc-100 space-y-4">
             <div className="flex items-start gap-3">
               <Clock className="w-5 h-5 text-zinc-400 mt-0.5" />

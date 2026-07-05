@@ -10,7 +10,6 @@ import { Image, TouchableOpacity, Modal, View, StyleSheet, TouchableWithoutFeedb
 import { Ionicons } from '@expo/vector-icons';
 
 import DashboardScreen from '../screens/executive/DashboardScreen';
-import TasksScreen from '../screens/executive/TasksScreen';
 import MeetingNotesScreen from './../screens/executive/MeetingNotesScreen';
 
 import { Box } from '@/components/ui/box';
@@ -161,16 +160,7 @@ function ExecutiveTabs() {
             ),
           }}
         />
-        <Tab.Screen
-          name="Tasks"
-          component={TasksScreen}
-          options={{
-            tabBarLabel: 'Tasks',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="calendar" size={size} color={color} />
-            ),
-          }}
-        />
+
         <Tab.Screen
           name="Notes"
           component={MeetingNotesScreen}

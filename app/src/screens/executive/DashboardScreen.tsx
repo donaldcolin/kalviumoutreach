@@ -21,8 +21,30 @@ export default function DashboardScreen() {
   const navigation = useNavigation<any>();
   const { isTracking, startDay, activeSchoolMatch, pendingPrompt, submitClassification } = useOutreachTracking(user?.id);
   const [customNote, setCustomNote] = React.useState('');
-  const [crmActivities, setCrmActivities] = React.useState<any[]>([]);
-  
+  const [allActivities, setAllActivities] = React.useState<any[]>([]);
+  const [selectedDate, setSelectedDate] = React.useState(new Date());
+
+  const filteredActivities = React.useMemo(() => {
+    const start = new Date(selectedDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(selectedDate);
+    end.setHours(23, 59, 59, 999);
+    return allActivities.filter(a => {
+      const dt = a.walkInDateTime || a.lsqCreatedOn;
+      if (!dt) return false;
+      const ts = new Date(dt).getTime();
+      return ts >= start.getTime() && ts <= end.getTime();
+    });
+  }, [allActivities, selectedDate]);
+
+  const dates = React.useMemo(() => {
+    return Array.from({length: 15}).map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      return d;
+    });
+  }, []);
+
   const [isStarting, setIsStarting] = React.useState(false);
   const [startCoords, setStartCoords] = React.useState<{ lat: number; lng: number } | null>(null);
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
@@ -65,20 +87,8 @@ export default function DashboardScreen() {
         .where('executiveEmail', '==', user.email.toLowerCase())
         .onSnapshot((snapshot) => {
           if (!snapshot) return;
-          const todayStart = new Date();
-          todayStart.setHours(0, 0, 0, 0);
-          const todayEnd = new Date();
-          todayEnd.setHours(23, 59, 59, 999);
-
           const activities = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
-          const todayActs = activities.filter(a => {
-            const dt = a.walkInDateTime || a.lsqCreatedOn;
-            if (!dt) return false;
-            const ts = new Date(dt).getTime();
-            return ts >= todayStart.getTime() && ts <= todayEnd.getTime();
-          });
-          
-          setCrmActivities(todayActs);
+          setAllActivities(activities);
         });
 
       return () => unsub();
@@ -89,18 +99,45 @@ export default function DashboardScreen() {
     <SafeAreaView className="flex-1 bg-background">
       <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 12, paddingBottom: 18 }}>
         {/* Header */}
-        <HStack className="w-full justify-between items-center mb-4">
+        <HStack className="w-full justify-between items-center mb-6">
           <VStack>
             <Text className="text-muted-foreground text-sm font-medium mb-1">Hello,</Text>
             <Heading size="2xl" className="text-foreground font-bold tracking-tight">{user?.name ?? 'Executive'}</Heading>
           </VStack>
         </HStack>
 
+        {/* Date Picker */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-6 -mx-4 px-4" contentContainerStyle={{ paddingRight: 32 }}>
+          {dates.map((d, i) => {
+            const isSelected = d.toDateString() === selectedDate.toDateString();
+            const isToday = d.toDateString() === new Date().toDateString();
+            return (
+              <TouchableOpacity
+                key={i}
+                onPress={() => setSelectedDate(d)}
+                className={`px-4 py-3 mr-3 rounded-xl border ${isSelected ? 'bg-primary border-primary' : 'bg-card border-border/40'} shadow-sm items-center justify-center min-w-[72px]`}
+              >
+                <Text className={`text-xs font-semibold uppercase mb-1 tracking-wider ${isSelected ? 'text-primary-foreground' : (isToday ? 'text-primary' : 'text-muted-foreground')}`}>
+                  {d.toLocaleDateString('en-US', { weekday: 'short' })}
+                </Text>
+                <Text className={`text-xl font-bold ${isSelected ? 'text-primary-foreground' : 'text-foreground'}`}>
+                  {d.getDate()}
+                </Text>
+                {isToday && !isSelected && (
+                  <Box className="w-1.5 h-1.5 rounded-full bg-primary mt-1 absolute bottom-1" />
+                )}
+              </TouchableOpacity>
+            )
+          })}
+        </ScrollView>
+
         <VStack space="md" className="w-full mb-6">
           <HStack space="md" className="w-full">
             <Card className="flex-1 bg-card p-5 rounded-2xl border border-border/40 shadow-md">
-              <Text className="text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-2">Schools Visited Today</Text>
-              <Heading size="3xl" className="text-foreground font-extrabold">{crmActivities.length}</Heading>
+              <Text className="text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-2">
+                Schools Visited on {selectedDate.toDateString() === new Date().toDateString() ? 'Today' : selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </Text>
+              <Heading size="3xl" className="text-foreground font-extrabold">{filteredActivities.length}</Heading>
             </Card>
           </HStack>
         </VStack>
@@ -130,16 +167,18 @@ export default function DashboardScreen() {
         {/* Remove New Visit button */}
 
         {/* Today's Visits */}
-        <Heading size="lg" className="text-foreground font-bold mb-4 tracking-tight w-full">Today's Visits</Heading>
-        {crmActivities.length === 0 ? (
+        <Heading size="lg" className="text-foreground font-bold mb-4 tracking-tight w-full">
+          {selectedDate.toDateString() === new Date().toDateString() ? "Today's Visits" : `Visits on ${selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+        </Heading>
+        {filteredActivities.length === 0 ? (
           <VStack className="w-full items-center justify-center py-12 bg-card rounded-2xl border border-border/40 border-dashed shadow-md mb-8">
             <Text className="text-5xl mb-4">🏫</Text>
-            <Text className="text-foreground font-semibold text-lg">No schools visited today</Text>
+            <Text className="text-foreground font-semibold text-lg">No schools visited</Text>
             <Text className="text-muted-foreground text-sm mt-1 text-center px-4">Schools logged in LeadSquared will appear here automatically.</Text>
           </VStack>
         ) : (
           <VStack space="md" className="w-full mb-8">
-            {crmActivities.map((act) => (
+            {filteredActivities.map((act) => (
               <Box key={act.id} className="bg-card p-5 rounded-2xl border border-border/40 shadow-sm">
                 <Text className="font-bold text-lg text-foreground mb-1">{act.schoolName || 'Unknown School'}</Text>
                 <Text className="text-sm text-muted-foreground">

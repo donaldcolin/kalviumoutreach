@@ -90,18 +90,6 @@ function uploadToCloudinary(
   });
 }
 
-/**
- * Upload a check-in photo.
- */
-export async function uploadPhoto(
-  localUri: string,
-  visitId: string,
-  type: 'original' | 'watermarked',
-  onProgress?: UploadProgressCallback,
-): Promise<string> {
-  // We use the image endpoint for photos
-  return uploadToCloudinary(localUri, 'image', onProgress);
-}
 
 /**
  * Upload a meeting audio recording.
