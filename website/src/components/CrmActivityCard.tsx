@@ -1,4 +1,3 @@
-import { ChevronRight, MapPin, Phone, User, Calendar, FileText, ArrowRight } from 'lucide-react';
 
 interface CrmActivity {
   lsqActivityId: string;

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Users, MapPin, Briefcase } from 'lucide-react';
 
 interface GlobalStatsProps {

@@ -7,10 +7,11 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { ExecutiveTabParamList } from '../types';
 import { useLocationPinger } from '../hooks/useLocationPinger';
 import { Image, TouchableOpacity, Modal, View, StyleSheet, TouchableWithoutFeedback } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { User, Menu, MapPin, FileText, List } from 'lucide-react-native';
 
 import DashboardScreen from '../screens/executive/DashboardScreen';
 import MeetingNotesScreen from './../screens/executive/MeetingNotesScreen';
+import TasksScreen from '../screens/executive/TasksScreen';
 
 import { Box } from '@/components/ui/box';
 import { VStack } from '@/components/ui/vstack';
@@ -29,21 +30,22 @@ function ProfileScreen() {
   return (
     <VStack className="flex-1 justify-center items-center bg-background p-6 space-y-6">
       <VStack className="items-center mb-12">
-        <Box className="w-28 h-28 rounded-full bg-zinc-200 items-center justify-center mb-6 shadow-sm">
-          <Ionicons name="person" size={56} color="#A1A1AA" />
+        <Box className="w-28 h-28 rounded-full bg-slate-50 items-center justify-center mb-6 border border-slate-200">
+          <User color="#94A3B8" size={48} strokeWidth={1.5} />
         </Box>
-        <Text className="text-foreground text-3xl font-bold mb-2">Profile</Text>
-        {user?.name && <Text className="text-zinc-600 text-xl font-medium">{user.name}</Text>}
-        {user?.email && <Text className="text-zinc-500 text-base">{user.email}</Text>}
+        {user?.name && <Text className="text-foreground text-2xl font-bold">{user.name}</Text>}
+        {user?.email && <Text className="text-zinc-500 text-base mt-1">{user.email}</Text>}
       </VStack>
-      <Button
-        size="lg"
-        variant="default"
-        className="w-full max-w-[300px] rounded-2xl bg-primary py-4 h-14 shadow-sm"
-        onPress={logout}
-      >
-        <ButtonText className="text-primary-foreground font-bold text-lg tracking-wider">Logout</ButtonText>
-      </Button>
+      <View style={{ marginTop: 'auto', width: '100%', alignItems: 'center' }}>
+        <Button
+          size="lg"
+          variant="outline"
+          className="w-full max-w-[300px] rounded-2xl border-red-600 bg-transparent py-4 h-14"
+          onPress={logout}
+        >
+          <ButtonText className="text-red-600 font-bold text-lg tracking-wider">Logout</ButtonText>
+        </Button>
+      </View>
     </VStack>
   );
 }
@@ -61,9 +63,9 @@ function HeaderRightMenu() {
     <>
       <TouchableOpacity
         onPress={() => setVisible(true)}
-        style={{ padding: 8, marginRight: 12, borderRadius: 20 }}
+        style={{ padding: 8, marginRight: 12, marginTop: 8, borderRadius: 20 }}
       >
-        <Ionicons name="menu" size={28} color="#111827" />
+        <Menu color="#0F172A" size={28} strokeWidth={1.5} />
       </TouchableOpacity>
 
       <Modal visible={visible} transparent={true} animationType="fade">
@@ -91,8 +93,8 @@ function HeaderRightMenu() {
                     navigation.navigate('Profile');
                   }}
                 >
-                  <Ionicons name="person-outline" size={20} color="#111827" style={{ marginRight: 12 }} />
-                  <Text style={{ fontSize: 16, color: '#111827', fontWeight: '500' }}>Profile</Text>
+                  <User color="#0F172A" size={20} strokeWidth={1.5} style={{ marginRight: 12 }} />
+                  <Text style={{ fontSize: 16, color: '#0F172A', fontWeight: '500' }}>Profile</Text>
                 </TouchableOpacity>
               </View>
             </TouchableWithoutFeedback>
@@ -112,13 +114,13 @@ function ExecutiveTabs() {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
+    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
       <Tab.Navigator
         screenOptions={{
           headerShown: true,
           headerTitle: '',
           headerStyle: {
-            backgroundColor: '#FAF8F5',
+            backgroundColor: '#F8FAFC',
             elevation: 0,
             shadowOpacity: 0,
             borderBottomWidth: 0,
@@ -126,7 +128,7 @@ function ExecutiveTabs() {
           headerLeft: () => (
             <Image
               source={require('../../assets/LOGO.png')}
-              style={{ width: 140, height: 40, marginLeft: 16 }}
+              style={{ width: 140, height: 40, marginLeft: 16, marginTop: 8 }}
               resizeMode="contain"
             />
           ),
@@ -134,12 +136,9 @@ function ExecutiveTabs() {
           tabBarStyle: {
             backgroundColor: '#FFFFFF',
             borderTopWidth: 1,
-            borderTopColor: '#F3F4F6',
-            elevation: 10,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: -4 },
-            shadowOpacity: 0.05,
-            shadowRadius: 12,
+            borderTopColor: '#F1F5F9',
+            elevation: 0,
+            shadowOpacity: 0,
           },
           tabBarActiveTintColor: '#E11D48',
           tabBarInactiveTintColor: '#94A3B8',
@@ -156,7 +155,7 @@ function ExecutiveTabs() {
           options={{
             tabBarLabel: 'Tracking',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="location" size={size} color={color} />
+              <MapPin size={size} color={color} strokeWidth={2} />
             ),
           }}
         />
@@ -167,7 +166,18 @@ function ExecutiveTabs() {
           options={{
             tabBarLabel: 'Notes',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="document-text" size={size} color={color} />
+              <FileText size={size} color={color} strokeWidth={2} />
+            ),
+          }}
+        />
+
+        <Tab.Screen
+          name="Tasks"
+          component={TasksScreen}
+          options={{
+            tabBarLabel: 'Tasks',
+            tabBarIcon: ({ color, size }) => (
+              <List size={size} color={color} strokeWidth={2} />
             ),
           }}
         />
@@ -183,15 +193,15 @@ export default function ExecutiveNavigator() {
   return (
     <ExecutiveStack.Navigator screenOptions={{ headerShown: false }}>
       <ExecutiveStack.Screen name="ExecutiveTabs" component={ExecutiveTabs} />
-      <ExecutiveStack.Screen 
-        name="Profile" 
-        component={ProfileScreen} 
-        options={{ 
-          headerShown: true, 
-          title: 'Profile', 
-          headerStyle: { backgroundColor: '#FAF8F5' }, 
-          headerShadowVisible: false 
-        }} 
+      <ExecutiveStack.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{
+          headerShown: true,
+          title: 'Profile',
+          headerStyle: { backgroundColor: '#F8FAFC' },
+          headerShadowVisible: false
+        }}
       />
     </ExecutiveStack.Navigator>
   );

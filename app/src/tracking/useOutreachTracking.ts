@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 
 export function useOutreachTracking(userId: string | undefined) {
   const [isTracking, setIsTracking] = useState(false);
+  const [isTrackingInitialized, setIsTrackingInitialized] = useState(false);
   const isTrackingRef = useRef(false);
   
   useEffect(() => {
@@ -39,6 +40,7 @@ export function useOutreachTracking(userId: string | undefined) {
     if (userId) {
       const today = format(new Date(), 'yyyyMMdd');
       unsubTrack = onDailyTrack(userId, today, (track) => {
+        setIsTrackingInitialized(true);
         if (track?.status === 'active') {
           setIsTracking(true);
           visitTracker.start();
@@ -114,6 +116,7 @@ export function useOutreachTracking(userId: string | undefined) {
 
   return {
     isTracking,
+    isTrackingInitialized,
     startDay,
     endDay,
     activeSchoolMatch,

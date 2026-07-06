@@ -1,4 +1,3 @@
-import React from 'react';
 import { User, Phone, FileText, Calendar, Building2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../ui/sheet';
 import { ScrollArea } from '../ui/scroll-area';

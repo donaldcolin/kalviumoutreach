@@ -1,33 +1,54 @@
-import React, { useState, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Alert, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, TextInput, TouchableOpacity, SectionList, KeyboardAvoidingView, Platform, Alert, StyleSheet, ActivityIndicator } from 'react-native';
 import { Box } from '@/components/ui/box';
 import { VStack } from '@/components/ui/vstack';
 import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
-import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInUp } from 'react-native-reanimated';
+import { Play, Pause, Mic } from 'lucide-react-native';
 import { useAudioRecorder, RecordingPresets, requestRecordingPermissionsAsync, useAudioPlayer } from 'expo-audio';
 import { useAuthStore } from '../../stores/authStore';
 import firestore from '@react-native-firebase/firestore';
 import { uploadRecording as uploadToCloudinary } from '../../services/storage';
 
-function RecordingItem({ item }: { item: any }) {
+function RecordingItem({ item, index }: { item: any, index: number }) {
   const player = useAudioPlayer(item.storageUrl);
   
   return (
-    <Box className="p-4 bg-white rounded-xl mb-3 shadow-sm border border-zinc-100">
-      <HStack className="justify-between items-center mb-2">
-        <Text className="text-zinc-800 font-medium">
-          Note - {item.timestamp?.toDate ? new Date(item.timestamp.toDate()).toLocaleString() : 'Just now'}
-        </Text>
-        <TouchableOpacity onPress={() => player.playing ? player.pause() : player.play()}>
-          <Ionicons name={player.playing ? "pause-circle" : "play-circle"} size={28} color="#E11D48" />
-        </TouchableOpacity>
-      </HStack>
-      <Text className="text-zinc-500 text-xs">{(item.duration / 1000).toFixed(1)} seconds</Text>
-      <View style={{ height: 4, backgroundColor: '#F3F4F6', borderRadius: 2, marginTop: 8 }}>
-        <View style={{ height: '100%', backgroundColor: '#E11D48', borderRadius: 2, width: `${player.currentTime / (item.duration / 1000) * 100}%` }} />
+    <Animated.View entering={FadeInUp.delay(index * 100).springify()}>
+      <Box className="p-4 bg-white rounded-xl mb-3 border border-slate-100">
+        <HStack className="justify-between items-center mb-2">
+          <Text className="text-slate-900 font-medium">
+            {item.timestamp?.toDate ? item.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
+          </Text>
+          <TouchableOpacity activeOpacity={0.7} onPress={() => player.playing ? player.pause() : player.play()}>
+            {player.playing ? (
+              <Pause color="#94A3B8" size={28} strokeWidth={1.5} />
+            ) : (
+              <Play color="#94A3B8" size={28} strokeWidth={1.5} />
+            )}
+          </TouchableOpacity>
+        </HStack>
+        <Text className="text-slate-500 text-xs">{(item.duration / 1000).toFixed(1)} seconds</Text>
+      <View style={{ height: 4, backgroundColor: '#F1F5F9', borderRadius: 2, marginTop: 16, position: 'relative' }}>
+        <View style={{ height: '100%', backgroundColor: '#ef4444', borderRadius: 2, width: `${(player.currentTime / (item.duration / 1000)) * 100}%` }} />
+        <View 
+          style={{ 
+            position: 'absolute', 
+            top: -4, 
+            left: `${(player.currentTime / (item.duration / 1000)) * 100}%`, 
+            width: 12, 
+            height: 12, 
+            borderRadius: 6, 
+            backgroundColor: '#ef4444',
+            marginLeft: -6,
+            borderWidth: 2,
+            borderColor: '#FFFFFF',
+          }} 
+        />
       </View>
-    </Box>
+      </Box>
+    </Animated.View>
   );
 }
 
@@ -52,6 +73,24 @@ export default function MeetingNotesScreen() {
       });
     return unsub;
   }, [user]);
+
+  const groupedRecordings = useMemo(() => {
+    const groups: { title: string; data: any[] }[] = [];
+    recordings.forEach(rec => {
+      const d = rec.timestamp?.toDate ? rec.timestamp.toDate() : new Date();
+      let title = d.toLocaleDateString();
+      if (d.toDateString() === new Date().toDateString()) title = 'Today';
+      else if (d.toDateString() === new Date(Date.now() - 86400000).toDateString()) title = 'Yesterday';
+      
+      let group = groups.find(g => g.title === title);
+      if (!group) {
+        group = { title, data: [] };
+        groups.push(group);
+      }
+      group.data.push(rec);
+    });
+    return groups;
+  }, [recordings]);
 
   const toggleRecording = async () => {
     if (recorder.isRecording) {
@@ -96,26 +135,28 @@ export default function MeetingNotesScreen() {
       <VStack className="flex-1 bg-background pt-2 pb-0 px-4">
         {/* Discreet Header */}
         <HStack className="justify-between items-center mb-4 mt-2">
-          <Text className="text-xl font-bold text-zinc-800">Quick Notes</Text>
+          <Text className="text-xl font-bold text-slate-900 tracking-tight">Quick Notes</Text>
           {isUploading && <ActivityIndicator size="small" color="#A1A1AA" />}
         </HStack>
 
-        <FlatList
-          data={recordings}
+        <SectionList
+          sections={groupedRecordings}
           keyExtractor={item => item.id}
-          renderItem={({ item }) => <RecordingItem item={item} />}
+          renderItem={({ item, index }) => <RecordingItem item={item} index={index} />}
+          renderSectionHeader={({ section: { title } }) => (
+            <Text className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 mt-4 ml-1">{title}</Text>
+          )}
           contentContainerStyle={{ paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <Box className="flex-1 justify-center items-center mt-20">
-              <Ionicons name="document-text-outline" size={48} color="#D4D4D8" />
-              <Text className="text-zinc-400 mt-4 text-center px-8">No notes yet. Start typing or tap the mic icon below to add a quick voice memo.</Text>
+              <Text className="text-slate-500 mt-4 text-center px-8">No notes yet. Start typing or tap the mic icon below to add a quick voice memo.</Text>
             </Box>
           }
         />
 
         {/* Note input area (disguised UI) */}
-        <Box className="bg-white rounded-3xl p-2 flex-row items-end shadow-lg border border-zinc-100 mb-6 mx-2">
+        <Box className="bg-white rounded-3xl p-2 flex-row items-end border border-slate-100 mb-6 mx-2">
           <TextInput
             style={styles.input}
             placeholder="Type a note here..."
@@ -125,16 +166,17 @@ export default function MeetingNotesScreen() {
             onChangeText={setText}
           />
           <TouchableOpacity 
+            activeOpacity={0.7}
             onPress={toggleRecording}
             style={styles.recordButton}
           >
-            <Ionicons 
-              name="mic" 
+            <Mic 
               size={22} 
-              color={recorder.isRecording ? "#E11D48" : "#94A3B8"} 
+              color={recorder.isRecording ? "#BE123C" : "#94A3B8"} 
+              strokeWidth={1.5}
             />
             {recorder.isRecording && (
-              <View style={styles.recordingIndicator} />
+              <View style={[styles.recordingIndicator, { backgroundColor: '#BE123C' }]} />
             )}
           </TouchableOpacity>
         </Box>

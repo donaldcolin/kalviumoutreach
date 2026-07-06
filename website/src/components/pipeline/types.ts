@@ -20,4 +20,5 @@ export interface SchoolPipelineEntry {
   executiveName: string;
   executiveEmail: string;
   seminarDate?: string;
+  followUpDate?: string;
 }

@@ -1,7 +1,9 @@
-import { Calendar as CalendarIcon, MapPin } from 'lucide-react';
+import { Calendar as CalendarIcon, MapPin, Plus } from 'lucide-react';
+import React, { useState } from 'react';
 import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
+import { AssignTaskModal } from './AssignTaskModal';
 
 interface User {
   id: string;
@@ -28,8 +30,11 @@ export function AssociateHeader({
   toggleTrackingStatus,
   timelineVisitsCount
 }: AssociateHeaderProps) {
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+
   return (
-    <div className="grid grid-cols-2 gap-6 shrink-0 animate-in slide-in-from-top-4 duration-500">
+    <>
+      <div className="grid grid-cols-2 gap-6 shrink-0 animate-in slide-in-from-top-4 duration-500">
       <div className="bg-zinc-900 text-white p-6 shadow-xl flex flex-col justify-between min-h-[140px] rounded-xl relative overflow-hidden">
         <div className="flex justify-between items-start">
           <div>
@@ -79,8 +84,23 @@ export function AssociateHeader({
           <span className="text-xs font-bold text-zinc-400 tracking-wider uppercase">Visits (Selected Date)</span>
           <MapPin className="h-5 w-5 text-zinc-300 group-hover:text-zinc-900 transition-colors" />
         </div>
-        <div className="text-5xl font-light text-zinc-900 tracking-tighter">{timelineVisitsCount}</div>
+        <div className="flex items-end justify-between mt-auto pt-4">
+          <div className="text-5xl font-light text-zinc-900 tracking-tighter">{timelineVisitsCount}</div>
+          <button 
+            onClick={() => setIsAssignModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+          >
+            <Plus className="h-4 w-4" />
+            Assign Task
+          </button>
+        </div>
       </div>
     </div>
+    <AssignTaskModal 
+      isOpen={isAssignModalOpen} 
+      onClose={() => setIsAssignModalOpen(false)} 
+      selectedAssociate={selectedAssociate} 
+    />
+    </>
   );
 }

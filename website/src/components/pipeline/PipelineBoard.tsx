@@ -1,34 +1,21 @@
-import React from 'react';
-import { Search, Building2 } from 'lucide-react';
-import { Input } from '../ui/input';
+import { Building2 } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import { type SchoolPipelineEntry, STAGES } from './types';
 
 interface PipelineBoardProps {
   pipelineData: SchoolPipelineEntry[];
   stageGroups: Record<number, SchoolPipelineEntry[]>;
-  searchQuery: string;
-  setSearchQuery: (val: string) => void;
-  dateFilter: string;
-  setDateFilter: (val: string) => void;
-  associateFilter: string;
-  setAssociateFilter: (val: string) => void;
   selectedSchool: SchoolPipelineEntry | null;
   setSelectedSchool: (school: SchoolPipelineEntry | null) => void;
 }
 
 export function PipelineBoard({
-  pipelineData,
   stageGroups,
-  searchQuery,
-  setSearchQuery,
-  dateFilter,
-  setDateFilter,
-  associateFilter,
-  setAssociateFilter,
   selectedSchool,
   setSelectedSchool
 }: PipelineBoardProps) {
+  const filteredCount = Object.values(stageGroups).reduce((acc, curr) => acc + curr.length, 0);
+
   return (
     <div className="w-full shrink-0 snap-center flex flex-col h-full p-6 border-r border-zinc-200">
       {/* Header */}
@@ -39,37 +26,7 @@ export function PipelineBoard({
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-zinc-900">School Pipeline</h1>
-            <p className="text-sm text-zinc-500 mt-0.5">{pipelineData.length} schools tracked</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <Input 
-            type="date"
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="rounded-xl border-zinc-200 bg-white h-11 text-sm w-36 px-3"
-          />
-          <select
-            value={associateFilter}
-            onChange={(e) => setAssociateFilter(e.target.value)}
-            className="rounded-xl border-zinc-200 bg-white h-11 text-sm px-3 border outline-none focus:ring-1 focus:ring-zinc-900"
-          >
-            <option value="all">All Associates</option>
-            {Array.from(new Set(pipelineData.map(s => s.executiveEmail))).filter(Boolean).map(email => {
-              const assoc = pipelineData.find(s => s.executiveEmail === email);
-              return (
-                <option key={email} value={email}>{assoc?.executiveName || email}</option>
-              );
-            })}
-          </select>
-          <div className="relative w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-            <Input 
-              placeholder="Search..." 
-              className="pl-10 rounded-xl border-zinc-200 bg-white h-11 text-sm"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+            <p className="text-sm text-zinc-500 mt-0.5">{filteredCount} schools tracked</p>
           </div>
         </div>
       </div>

@@ -10,89 +10,90 @@
    3. :root.dark / :root.light — higher specificity for web class toggle. */
 @layer theme {
   :root {
-    --primary: 225 29 72; /* #E11D48 - Kalvium Rose */
+    --primary: 190 18 60; /* #BE123C - Rose 700 */
     --primary-foreground: 255 255 255;
     --card: 255 255 255; /* White cards */
-    --secondary: 244 240 236; /* Pale beige secondary */
-    --secondary-foreground: 28 25 23;
-    --background: 250 248 245; /* #FAF8F5 - Pale beige-white */
+    --secondary: 244 240 236; 
+    --secondary-foreground: 15 23 42; /* slate-900 */
+    --background: 248 250 252; /* #F8FAFC - slate-50 */
     --popover: 255 255 255;
-    --popover-foreground: 28 25 23;
-    --muted: 244 240 236;
-    --muted-foreground: 120 113 108;
+    --popover-foreground: 15 23 42;
+    --muted: 241 245 249; /* slate-100 */
+    --muted-foreground: 100 116 139; /* slate-500 */
     --destructive: 239 68 68;
-    --foreground: 28 25 23; /* Dark text */
-    --border: 231 229 228;
-    --input: 231 229 228;
-    --ring: 225 29 72;
-    --accent: 225 29 72;
+    --foreground: 15 23 42; /* slate-900 */
+    --border: 241 245 249; /* slate-100 */
+    --input: 241 245 249;
+    --ring: 190 18 60;
+    --accent: 190 18 60;
     --accent-foreground: 255 255 255;
   }
 
   @media (prefers-color-scheme: dark) {
     :root {
-      --primary: 225 29 72; 
+      --primary: 190 18 60; 
       --primary-foreground: 255 255 255;
       --card: 255 255 255; 
       --secondary: 244 240 236; 
-      --secondary-foreground: 28 25 23;
-      --background: 250 248 245; 
+      --secondary-foreground: 15 23 42;
+      --background: 248 250 252; 
       --popover: 255 255 255;
-      --popover-foreground: 28 25 23;
-      --muted: 244 240 236;
-      --muted-foreground: 120 113 108;
+      --popover-foreground: 15 23 42;
+      --muted: 241 245 249;
+      --muted-foreground: 100 116 139;
       --destructive: 239 68 68;
-      --foreground: 28 25 23; 
-      --border: 231 229 228;
-      --input: 231 229 228;
-      --accent: 225 29 72;
+      --foreground: 15 23 42; 
+      --border: 241 245 249;
+      --input: 241 245 249;
+      --accent: 190 18 60;
       --accent-foreground: 255 255 255;
-      --ring: 225 29 72;
+      --ring: 190 18 60;
     }
   }
 
   :root.dark {
-    --primary: 225 29 72; 
+    --primary: 190 18 60; 
     --primary-foreground: 255 255 255;
     --card: 255 255 255; 
     --secondary: 244 240 236; 
-    --secondary-foreground: 28 25 23;
-    --background: 250 248 245; 
+    --secondary-foreground: 15 23 42;
+    --background: 248 250 252; 
     --popover: 255 255 255;
-    --popover-foreground: 28 25 23;
-    --muted: 244 240 236;
-    --muted-foreground: 120 113 108;
+    --popover-foreground: 15 23 42;
+    --muted: 241 245 249;
+    --muted-foreground: 100 116 139;
     --destructive: 239 68 68;
-    --foreground: 28 25 23; 
-    --border: 231 229 228;
-    --input: 231 229 228;
-    --accent: 225 29 72;
+    --foreground: 15 23 42; 
+    --border: 241 245 249;
+    --input: 241 245 249;
+    --accent: 190 18 60;
     --accent-foreground: 255 255 255;
-    --ring: 225 29 72;
+    --ring: 190 18 60;
   }
 
   :root.light {
-    --primary: 225 29 72; 
+    --primary: 190 18 60; 
     --primary-foreground: 255 255 255;
     --card: 255 255 255; 
     --secondary: 244 240 236; 
-    --secondary-foreground: 28 25 23;
-    --background: 250 248 245; 
+    --secondary-foreground: 15 23 42;
+    --background: 248 250 252; 
     --popover: 255 255 255;
-    --popover-foreground: 28 25 23;
-    --muted: 244 240 236;
-    --muted-foreground: 120 113 108;
+    --popover-foreground: 15 23 42;
+    --muted: 241 245 249;
+    --muted-foreground: 100 116 139;
     --destructive: 239 68 68;
-    --foreground: 28 25 23; 
-    --border: 231 229 228;
-    --input: 231 229 228;
-    --accent: 225 29 72;
+    --foreground: 15 23 42; 
+    --border: 241 245 249;
+    --input: 241 245 249;
+    --accent: 190 18 60;
     --accent-foreground: 255 255 255;
-    --ring: 225 29 72;
+    --ring: 190 18 60;
   }
 }
 
 @theme inline {
+  --font-sans: 'Inter_400Regular', sans-serif;
   --color-primary: rgb(var(--primary));
   --color-primary-foreground: rgb(var(--primary-foreground));
   --color-card: rgb(var(--card));
