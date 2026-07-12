@@ -1,5 +1,5 @@
 import { Calendar as CalendarIcon, MapPin, Plus } from 'lucide-react';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';

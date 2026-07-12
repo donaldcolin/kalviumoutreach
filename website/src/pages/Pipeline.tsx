@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuthStore } from '../stores/authStore';
 
@@ -40,7 +40,7 @@ export default function Pipeline() {
     );
 
     const unsub = onSnapshot(q, (snapshot) => {
-      const activities = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      const activities: any[] = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       activities.sort((a, b) => {
         const da = new Date(a.lsqCreatedOn || 0).getTime();
         const db2 = new Date(b.lsqCreatedOn || 0).getTime();
