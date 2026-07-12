@@ -458,6 +458,7 @@ const corsOptions = {
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
+app.use(express.json());
 
 app.get('/api/health', (req, res) => {
   res.json({
@@ -467,21 +468,58 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.get('/api/sync-now', async (req, res) => {
+app.get('/api/sync-now', (req, res) => {
   console.log('🔔 Manual sync triggered via /api/sync-now (24-hour backfill)');
-  // Backfill 24 hours when manually triggered
-  const result = await syncActivities(24);
-  res.json(result);
+  
+  // Put-and-forget: Start the heavy sync in the background without `await`
+  syncActivities(24).catch(err => {
+    console.error('❌ Background manual sync failed:', err);
+  });
+  
+  // Immediately respond to the frontend so it doesn't pause or timeout
+  res.json({ 
+    status: 'Sync started in the background.',
+    message: 'Check /api/last-sync in a few minutes for results.'
+  });
 });
 
 app.get('/api/last-sync', (req, res) => {
   res.json(lastSyncResult);
 });
 
+app.post('/api/push-recording', async (req, res) => {
+  try {
+    const { activityId, storageUrl, recordingId } = req.body;
+    if (!activityId || !storageUrl) {
+      return res.status(400).json({ error: 'activityId and storageUrl are required' });
+    }
+
+    console.log(`Queuing recording push for activity ${activityId}`);
+
+    // Put-and-forget: Add it to the Firestore queue instead of awaiting the LSQ API here
+    await db.collection('pushQueue').add({
+      activityId,
+      storageUrl,
+      recordingId: recordingId || null,
+      status: 'pending',
+      createdAt: FieldValue.serverTimestamp()
+    });
+
+    // Immediately respond to the client so it doesn't pause
+    res.json({ 
+      success: true, 
+      message: 'Push queued to run in the background.' 
+    });
+  } catch (err) {
+    console.error('Failed to queue recording push:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Start Server + Cron ────────────────────────────────────────────────────
 
-app.listen(PORT, () => {
-  console.log(`\n🚀 Sync server running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n🚀 Sync server running on http://0.0.0.0:${PORT}`);
   console.log(`   📋 Endpoints:`);
   console.log(`      GET /api/health     → server status`);
   console.log(`      GET /api/sync-now   → trigger sync manually`);
@@ -514,3 +552,85 @@ cron.schedule(`*/${SYNC_INTERVAL_MINUTES} * * * *`, () => {
 // Run an initial sync on startup
 console.log('🏁 Running initial sync on startup...');
 syncActivities();
+
+// ─── Push Queue Listener ────────────────────────────────────────────────────
+// Watches Firestore `pushQueue` for pending items written by the mobile app.
+// When a new item appears, it calls the LeadSquared API to update the activity
+// notes with the recording link, then marks the queue item as completed.
+
+console.log('👂 Starting pushQueue listener...');
+db.collection('pushQueue')
+  .where('status', '==', 'pending')
+  .onSnapshot((snapshot) => {
+    if (!snapshot) return;
+
+    snapshot.docChanges().forEach(async (change) => {
+      if (change.type !== 'added') return;
+
+      const doc = change.doc;
+      const data = doc.data();
+      const { activityId, storageUrl, recordingId } = data;
+
+      if (!activityId || !storageUrl) {
+        console.warn(`⚠️ pushQueue/${doc.id}: missing activityId or storageUrl, skipping.`);
+        await doc.ref.update({ status: 'failed', error: 'Missing activityId or storageUrl' });
+        return;
+      }
+
+      console.log(`📤 Processing pushQueue/${doc.id} → activity ${activityId}`);
+
+      try {
+        // 1. Fetch existing notes from our Firestore copy to append (not overwrite)
+        const activityDoc = await db.collection('crmActivities').doc(activityId).get();
+        let existingNote = '';
+        if (activityDoc.exists) {
+          existingNote = activityDoc.data().notes || '';
+        }
+
+        const newNote = existingNote
+          ? `${existingNote}\n\nRecording: ${storageUrl}`
+          : `Recording: ${storageUrl}`;
+
+        // 2. Update the LeadSquared custom activity
+        const updateBody = {
+          ProspectActivityId: activityId,
+          ActivityEvent: 232,
+          ActivityNote: newNote,
+        };
+
+        const lsqResp = await lsqFetch('/v2/ProspectActivity.svc/CustomActivity/Update', 'POST', updateBody);
+        console.log(`   ✅ LSQ updated for activity ${activityId}`, lsqResp);
+
+        // 3. Update our local Firestore crmActivities immediately
+        await db.collection('crmActivities').doc(activityId).update({
+          notes: newNote,
+          lsqModifiedOn: new Date().toISOString()
+        });
+
+        // 4. Ensure the meetingRecordings doc is marked as pushed
+        if (recordingId) {
+          await db.collection('meetingRecordings').doc(recordingId).update({
+            pushedToLS: true,
+          });
+        }
+
+        // 5. Mark queue item as completed
+        await doc.ref.update({
+          status: 'completed',
+          completedAt: FieldValue.serverTimestamp(),
+        });
+
+        console.log(`   ✅ pushQueue/${doc.id} completed successfully.`);
+
+      } catch (err) {
+        console.error(`   ❌ pushQueue/${doc.id} failed:`, err.message);
+        await doc.ref.update({
+          status: 'failed',
+          error: err.message,
+          failedAt: FieldValue.serverTimestamp(),
+        });
+      }
+    });
+  }, (err) => {
+    console.error('❌ pushQueue listener error:', err.message);
+  });

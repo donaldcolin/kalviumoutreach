@@ -13,7 +13,7 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#FAF8F5",
-        "foregroundImage": "./assets/LOGOsmall.png"
+        "foregroundImage": "./assets/adaptive-icon.png"
       },
       "predictiveBackGestureEnabled": false,
       "googleServicesFile": "./google-services.json",
@@ -38,7 +38,8 @@
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_LOCATION",
         "android.permission.MODIFY_AUDIO_SETTINGS",
-        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.POST_NOTIFICATIONS"
       ]
     },
     "plugins": [
@@ -62,7 +63,8 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Kalvium Outreach needs microphone access to record meetings."
+          "microphonePermission": "Kalvium Outreach needs microphone access to record meetings.",
+          "backgroundRecording": true
         }
       ]
     ],
