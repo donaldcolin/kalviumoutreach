@@ -356,7 +356,7 @@ export default function Dashboard() {
       toast({ title: 'Syncing LeadSquared...', description: 'Fetching latest activities globally.' });
       
       const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://us-central1-kalvium-outreach-53f54.cloudfunctions.net/api';
-      const res = await fetch(`${API_BASE_URL}/sync-now`);
+      const res = await fetch(`${API_BASE_URL}/api/sync-now`);
       const data = await res.json();
       
       toast({ 
