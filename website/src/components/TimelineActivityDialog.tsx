@@ -193,12 +193,12 @@ export function TimelineActivityDialog({ open, onOpenChange, stop }: TimelineAct
               </div>
             )}
 
-            {stop.lat !== undefined && stop.lng !== undefined && (
+            {stop.lat != null && stop.lng != null && (
               <div className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-zinc-400 mt-0.5" />
                 <div>
                   <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Coordinates</p>
-                  <p className="text-sm text-zinc-600 font-mono bg-zinc-100 px-2 py-1 rounded-md">{stop.lat.toFixed(6)}, {stop.lng.toFixed(6)}</p>
+                  <p className="text-sm text-zinc-600 font-mono bg-zinc-100 px-2 py-1 rounded-md">{stop.lat?.toFixed(6)}, {stop.lng?.toFixed(6)}</p>
                 </div>
               </div>
             )}
