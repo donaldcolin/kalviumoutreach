@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "description": "LeadSquared → Firestore cron sync server for outreach activities",
+  "main": "server.js",
+  "engines": {
+    "node": "20"
+  },
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js"
@@ -13,6 +17,6 @@
     "dotenv": "^17.4.2",
     "express": "^5.1.0",
     "firebase-admin": "^13.4.0",
-    "node-cron": "^3.0.3"
+    "firebase-functions": "^6.3.2"
   }
 }

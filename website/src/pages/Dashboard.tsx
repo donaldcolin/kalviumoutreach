@@ -354,14 +354,17 @@ export default function Dashboard() {
   const handleSyncLSQ = async () => {
     try {
       toast({ title: 'Syncing LeadSquared...', description: 'Fetching latest activities globally.' });
-      const res = await fetch('http://localhost:3001/api/sync-now');
+      
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://us-central1-kalvium-outreach-53f54.cloudfunctions.net/api';
+      const res = await fetch(`${API_BASE_URL}/sync-now`);
       const data = await res.json();
+      
       toast({ 
         title: 'Sync Complete', 
-        description: `Fetched ${data.activitiesFetched} activities. Written: ${data.activitiesWritten}.`
+        description: data.message || `Sync started in the background.`
       });
     } catch (err) {
-      toast({ title: 'Sync Failed', description: 'Make sure the sync server is running on port 3001.', variant: 'destructive' });
+      toast({ title: 'Sync Failed', description: 'Make sure the Firebase Emulator or Cloud Function is running.', variant: 'destructive' });
     }
   };
 

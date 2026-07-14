@@ -17,11 +17,13 @@
 import express from 'express';
 import cors from 'cors';
 import fetch from 'node-fetch';
-import cron from 'node-cron';
 import fs from 'fs';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import 'dotenv/config';
+import { onRequest } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
+import { onDocumentCreated } from "firebase-functions/v2/firestore";
+import dotenv from 'dotenv';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -38,6 +40,10 @@ process.on('unhandledRejection', (reason, promise) => {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// Load environment variables from config.env (Firebase auto-parses .env and .env.local, so we avoid those)
+// In production Cloud Functions, env vars and secrets are injected automatically.
+dotenv.config({ path: resolve(__dirname, 'config.env') });
+
 const PORT = process.env.PORT || 3001;
 const LSQ_HOST = 'https://api-in21.leadsquared.com';
 const ACCESS_KEY = process.env.LSQ_ACCESS_KEY;
@@ -47,31 +53,33 @@ const SYNC_INTERVAL_MINUTES = 5;
 const SYNC_LOOKBACK_MINUTES = 30; // overlap window for safety
 
 if (!ACCESS_KEY || !SECRET_KEY) {
-  console.error("❌ ERROR: LSQ_ACCESS_KEY and LSQ_SECRET_KEY must be set in the environment variables.");
-  process.exit(1);
+  console.error("❌ WARNING: LSQ_ACCESS_KEY and LSQ_SECRET_KEY are not set. API calls will fail.");
 }
 
 // ─── Firebase Admin Setup ───────────────────────────────────────────────────
 
-let serviceAccount;
+let fbApp;
 if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+  // Explicit service account JSON (e.g. for local dev outside emulator)
   try {
-    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    fbApp = initializeApp({ credential: cert(serviceAccount) });
   } catch (e) {
     console.error("❌ ERROR: Could not parse FIREBASE_SERVICE_ACCOUNT json.");
-    process.exit(1);
+    fbApp = initializeApp();
   }
 } else {
+  // In Cloud Functions, Application Default Credentials are provided automatically.
+  // Locally with a service account file, try loading it as a fallback.
   const saPath = resolve(__dirname, '../serviceAccountKey.json');
   try {
-    serviceAccount = JSON.parse(fs.readFileSync(saPath, 'utf8'));
+    const serviceAccount = JSON.parse(fs.readFileSync(saPath, 'utf8'));
+    fbApp = initializeApp({ credential: cert(serviceAccount) });
   } catch (err) {
-    console.error(`❌ Could not read serviceAccountKey.json at ${saPath}`);
-    process.exit(1);
+    // No service account file found — we're likely running in Cloud Functions
+    fbApp = initializeApp();
   }
 }
-
-const fbApp = initializeApp({ credential: cert(serviceAccount) });
 const db = getFirestore(fbApp);
 
 // ─── State ──────────────────────────────────────────────────────────────────
@@ -158,7 +166,7 @@ function buildFirestoreDoc(raw, fields, emailToFirestoreId) {
   let lat = null, lng = null;
   let address = raw.Address || '';
   const locationStr = fields.mx_Custom_34 || raw.mx_Custom_34 || address;
-  
+
   if (locationStr) {
     try {
       if (locationStr.includes(',')) {
@@ -168,7 +176,7 @@ function buildFirestoreDoc(raw, fields, emailToFirestoreId) {
           lng = parts[1];
         }
       }
-      
+
       if (lat === null && locationStr.startsWith('{')) {
         const loc = JSON.parse(locationStr);
         lat = loc.Latitude || loc.lat || null;
@@ -321,13 +329,13 @@ async function syncActivities(hours = SYNC_LOOKBACK_MINUTES / 60) {
           const fullData = await fullRes.json();
           const fullList = fullData.ProspectActivities || [];
           const fullAct = fullList.find(a => a.Id === slimAct.ProspectActivityId || a.ActivityId === slimAct.ProspectActivityId);
-          
+
           if (fullAct) {
             // Merge the full activity data (Lat, Lng, Address) into the slim activity
             slimAct.Latitude = fullAct.Latitude;
             slimAct.Longitude = fullAct.Longitude;
             slimAct.Address = fullAct.Address;
-            
+
             // ActivityFields (mx_Custom_34) is inside ActivityFields if we need it
             if (fullAct.ActivityFields) {
               slimAct.mx_Custom_34 = fullAct.ActivityFields.mx_Custom_34;
@@ -374,7 +382,7 @@ async function syncActivities(hours = SYNC_LOOKBACK_MINUTES / 60) {
     // 4. Fetch missing Lead Names from LeadSquared
     const uniqueLeadIds = [...new Set(allActivities.map(a => a.RelatedProspectId).filter(Boolean))];
     const leadIdToName = {};
-    
+
     if (uniqueLeadIds.length > 0) {
       console.log(`   📡 Fetching names for ${uniqueLeadIds.length} leads...`);
       for (const leadId of uniqueLeadIds) {
@@ -470,14 +478,14 @@ app.get('/api/health', (req, res) => {
 
 app.get('/api/sync-now', (req, res) => {
   console.log('🔔 Manual sync triggered via /api/sync-now (24-hour backfill)');
-  
+
   // Put-and-forget: Start the heavy sync in the background without `await`
   syncActivities(24).catch(err => {
     console.error('❌ Background manual sync failed:', err);
   });
-  
+
   // Immediately respond to the frontend so it doesn't pause or timeout
-  res.json({ 
+  res.json({
     status: 'Sync started in the background.',
     message: 'Check /api/last-sync in a few minutes for results.'
   });
@@ -506,9 +514,9 @@ app.post('/api/push-recording', async (req, res) => {
     });
 
     // Immediately respond to the client so it doesn't pause
-    res.json({ 
-      success: true, 
-      message: 'Push queued to run in the background.' 
+    res.json({
+      success: true,
+      message: 'Push queued to run in the background.'
     });
   } catch (err) {
     console.error('Failed to queue recording push:', err);
@@ -516,121 +524,98 @@ app.post('/api/push-recording', async (req, res) => {
   }
 });
 
-// ─── Start Server + Cron ────────────────────────────────────────────────────
+// ─── Export Firebase API ──────────────────────────────────────────────────
+export const api = onRequest({ secrets: ["LSQ_ACCESS_KEY", "LSQ_SECRET_KEY"] }, app);
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n🚀 Sync server running on http://0.0.0.0:${PORT}`);
-  console.log(`   📋 Endpoints:`);
-  console.log(`      GET /api/health     → server status`);
-  console.log(`      GET /api/sync-now   → trigger sync manually`);
-  console.log(`      GET /api/last-sync  → last sync result`);
-  console.log(`   ⏰ Cron: syncing every ${SYNC_INTERVAL_MINUTES} minutes\n`);
-});
-
-// Schedule cron: every SYNC_INTERVAL_MINUTES minutes
-cron.schedule(`*/${SYNC_INTERVAL_MINUTES} * * * *`, () => {
+// ─── Scheduled Cron Function ─────────────────────────────────────────────────
+export const syncCron = onSchedule({ schedule: `every ${SYNC_INTERVAL_MINUTES} minutes`, secrets: ["LSQ_ACCESS_KEY", "LSQ_SECRET_KEY"] }, async (event) => {
   // Limit automatic sync to IST working hours (08:45 to 18:15) to save API costs
   const now = new Date();
   const istTime = new Date(now.getTime() + (5.5 * 60 * 60 * 1000)); // UTC + 5:30
   const hours = istTime.getUTCHours();
   const minutes = istTime.getUTCMinutes();
-  
+
   const totalMinutes = hours * 60 + minutes;
   const startMinutes = 8 * 60 + 45; // 08:45
   const endMinutes = 18 * 60 + 15;  // 18:15
-  
+
   if (totalMinutes >= startMinutes && totalMinutes <= endMinutes) {
-    syncActivities();
+    await syncActivities();
   } else {
     // Only log once an hour to avoid spamming the console overnight
     if (minutes < 5) {
-      console.log(`💤 [${now.toISOString()}] Outside working hours (IST ${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}). Auto-sync paused.`);
+      console.log(`💤 [${now.toISOString()}] Outside working hours (IST ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}). Auto-sync paused.`);
     }
   }
 });
 
-// Run an initial sync on startup
-console.log('🏁 Running initial sync on startup...');
-syncActivities();
+// ─── Push Queue Trigger ─────────────────────────────────────────────────────
+// Wakes up automatically when a new document is written to the pushQueue collection.
+export const processPushQueue = onDocumentCreated({ document: "pushQueue/{docId}", secrets: ["LSQ_ACCESS_KEY", "LSQ_SECRET_KEY"] }, async (event) => {
+  const snapshot = event.data;
+  if (!snapshot) return;
 
-// ─── Push Queue Listener ────────────────────────────────────────────────────
-// Watches Firestore `pushQueue` for pending items written by the mobile app.
-// When a new item appears, it calls the LeadSquared API to update the activity
-// notes with the recording link, then marks the queue item as completed.
+  const docId = event.params.docId;
+  const data = snapshot.data();
+  const { activityId, storageUrl, recordingId } = data;
 
-console.log('👂 Starting pushQueue listener...');
-db.collection('pushQueue')
-  .where('status', '==', 'pending')
-  .onSnapshot((snapshot) => {
-    if (!snapshot) return;
+  if (!activityId || !storageUrl) {
+    console.warn(`⚠️ pushQueue/${docId}: missing activityId or storageUrl, skipping.`);
+    await snapshot.ref.update({ status: 'failed', error: 'Missing activityId or storageUrl' });
+    return;
+  }
 
-    snapshot.docChanges().forEach(async (change) => {
-      if (change.type !== 'added') return;
+  console.log(`📤 Processing pushQueue/${docId} → activity ${activityId}`);
 
-      const doc = change.doc;
-      const data = doc.data();
-      const { activityId, storageUrl, recordingId } = data;
+  try {
+    // 1. Fetch existing notes from our Firestore copy to append (not overwrite)
+    const activityDoc = await db.collection('crmActivities').doc(activityId).get();
+    let existingNote = '';
+    if (activityDoc.exists) {
+      existingNote = activityDoc.data().notes || '';
+    }
 
-      if (!activityId || !storageUrl) {
-        console.warn(`⚠️ pushQueue/${doc.id}: missing activityId or storageUrl, skipping.`);
-        await doc.ref.update({ status: 'failed', error: 'Missing activityId or storageUrl' });
-        return;
-      }
+    const newNote = existingNote
+      ? `${existingNote}\n\nRecording: ${storageUrl}`
+      : `Recording: ${storageUrl}`;
 
-      console.log(`📤 Processing pushQueue/${doc.id} → activity ${activityId}`);
+    // 2. Update the LeadSquared custom activity
+    const updateBody = {
+      ProspectActivityId: activityId,
+      ActivityEvent: 232,
+      ActivityNote: newNote,
+    };
 
-      try {
-        // 1. Fetch existing notes from our Firestore copy to append (not overwrite)
-        const activityDoc = await db.collection('crmActivities').doc(activityId).get();
-        let existingNote = '';
-        if (activityDoc.exists) {
-          existingNote = activityDoc.data().notes || '';
-        }
+    const lsqResp = await lsqFetch('/v2/ProspectActivity.svc/CustomActivity/Update', 'POST', updateBody);
+    console.log(`   ✅ LSQ updated for activity ${activityId}`, lsqResp);
 
-        const newNote = existingNote
-          ? `${existingNote}\n\nRecording: ${storageUrl}`
-          : `Recording: ${storageUrl}`;
-
-        // 2. Update the LeadSquared custom activity
-        const updateBody = {
-          ProspectActivityId: activityId,
-          ActivityEvent: 232,
-          ActivityNote: newNote,
-        };
-
-        const lsqResp = await lsqFetch('/v2/ProspectActivity.svc/CustomActivity/Update', 'POST', updateBody);
-        console.log(`   ✅ LSQ updated for activity ${activityId}`, lsqResp);
-
-        // 3. Update our local Firestore crmActivities immediately
-        await db.collection('crmActivities').doc(activityId).update({
-          notes: newNote,
-          lsqModifiedOn: new Date().toISOString()
-        });
-
-        // 4. Ensure the meetingRecordings doc is marked as pushed
-        if (recordingId) {
-          await db.collection('meetingRecordings').doc(recordingId).update({
-            pushedToLS: true,
-          });
-        }
-
-        // 5. Mark queue item as completed
-        await doc.ref.update({
-          status: 'completed',
-          completedAt: FieldValue.serverTimestamp(),
-        });
-
-        console.log(`   ✅ pushQueue/${doc.id} completed successfully.`);
-
-      } catch (err) {
-        console.error(`   ❌ pushQueue/${doc.id} failed:`, err.message);
-        await doc.ref.update({
-          status: 'failed',
-          error: err.message,
-          failedAt: FieldValue.serverTimestamp(),
-        });
-      }
+    // 3. Update our local Firestore crmActivities immediately
+    await db.collection('crmActivities').doc(activityId).update({
+      notes: newNote,
+      lsqModifiedOn: new Date().toISOString()
     });
-  }, (err) => {
-    console.error('❌ pushQueue listener error:', err.message);
-  });
+
+    // 4. Ensure the meetingRecordings doc is marked as pushed
+    if (recordingId) {
+      await db.collection('meetingRecordings').doc(recordingId).update({
+        pushedToLS: true,
+      });
+    }
+
+    // 5. Mark queue item as completed
+    await snapshot.ref.update({
+      status: 'completed',
+      completedAt: FieldValue.serverTimestamp(),
+    });
+
+    console.log(`   ✅ pushQueue/${docId} completed successfully.`);
+
+  } catch (err) {
+    console.error(`   ❌ pushQueue/${docId} failed:`, err.message);
+    await snapshot.ref.update({
+      status: 'failed',
+      error: err.message,
+      failedAt: FieldValue.serverTimestamp(),
+    });
+  }
+});
