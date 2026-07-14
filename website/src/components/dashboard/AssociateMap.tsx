@@ -58,9 +58,9 @@ export function AssociateMap({
           attribution='&copy; OpenStreetMap &copy; CARTO'
         />
         {route.length > 0 && <Polyline positions={route} color="#ef4444" weight={4} opacity={0.9} dashArray="6, 8" />}
-        {timeline.filter(t => t.lat !== undefined && t.lng !== undefined).length > 1 && (
+        {timeline.filter(t => t.lat != null && t.lng != null).length > 1 && (
           <Polyline 
-            positions={timeline.filter(t => t.lat !== undefined && t.lng !== undefined).map(t => [t.lat, t.lng] as [number, number])} 
+            positions={timeline.filter(t => t.lat != null && t.lng != null).map(t => [t.lat, t.lng] as [number, number])} 
             color="#3b82f6" 
             weight={3} 
             opacity={0.8} 
@@ -75,7 +75,7 @@ export function AssociateMap({
             <Popup className="rounded-xl">Current Location</Popup>
           </Marker>
         )}
-        {timeline.filter(t => t.lat !== undefined && t.lng !== undefined).map((stop, idx) => {
+        {timeline.filter(t => t.lat != null && t.lng != null).map((stop, idx) => {
           let iconHtml = '';
           let iconSize: [number, number] = [24, 24];
           let iconAnchor: [number, number] = [12, 24];
