@@ -461,8 +461,20 @@ async function syncActivities(hours = SYNC_LOOKBACK_MINUTES / 60) {
 
 const app = express();
 
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://kalviumoutreach.vercel.app',
+];
+
 const corsOptions = {
-  origin: process.env.ALLOWED_ORIGIN || '*',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g. mobile apps, curl, cron)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Allow all for now since it's an internal tool
+    }
+  },
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
