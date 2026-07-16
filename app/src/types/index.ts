@@ -86,6 +86,13 @@ export type ExecutiveTabParamList = {
   Tasks: undefined;
   Notes: undefined;
   Profile: undefined;
+  Leads: undefined;
+};
+
+export type ExecutiveStackParamList = {
+  ExecutiveTabs: undefined;
+  Profile: undefined;
+  ActivityForm: { leadId: string; leadName: string };
 };
 
 // Removed VisitStackParamList as visits are handled via CRM now

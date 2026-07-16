@@ -17,5 +17,5 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 
 // Secondary Firebase app for securely adding associates without logging out the primary user
-export const secondaryApp = initializeApp(firebaseConfig, 'SecondaryApp');
+export const secondaryApp = getApps().find(app => app.name === 'SecondaryApp') || initializeApp(firebaseConfig, 'SecondaryApp');
 export const secondaryAuth = getAuth(secondaryApp);

@@ -61,7 +61,13 @@ service cloud.firestore {
     // CRM Activities synced from LeadSquared — readable by any authenticated user
     match /crmActivities/{activityId} {
       allow read: if request.auth != null;
-      allow write: if false; // Only sync script (admin SDK) can write
+      allow write: if request.auth != null && (resource == null || resource.data.executiveId == request.auth.uid) && (request.resource == null || request.resource.data.executiveId == request.auth.uid);
+    }
+
+    // Push queue for syncing to LeadSquared
+    match /pushQueue/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (resource == null || resource.data.executiveId == request.auth.uid) && (request.resource == null || request.resource.data.executiveId == request.auth.uid);
     }
 
     // Discreet meeting recordings

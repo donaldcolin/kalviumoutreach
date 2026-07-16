@@ -11,6 +11,7 @@ export function usePushToLs(userId: string | undefined) {
     setIsPushing(true);
     try {
       await firestore().collection('pushQueue').add({
+        action: 'PUSH_RECORDING',
         activityId: activity.lsqActivityId || activity.id,
         storageUrl: mappingItem.storageUrl,
         recordingId: mappingItem.id,

@@ -34,7 +34,7 @@ import { Spinner } from '@/components/ui/spinner';
 import '@/global.css';
 
 export default function App() {
-  const initialize = useAuthStore(s => (s as any).initialize);
+  const initialize = useAuthStore(s => s.initialize);
   const [appReady, setAppReady] = useState(false);
   const [fontsLoaded] = useFonts({
     Inter_400Regular,

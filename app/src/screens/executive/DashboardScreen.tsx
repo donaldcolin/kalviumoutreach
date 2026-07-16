@@ -147,7 +147,7 @@ export default function DashboardScreen() {
         {activeSchoolMatch && (
           <GeofenceAlert
             schoolName={activeSchoolMatch.name}
-            onCheckIn={() => navigation.navigate('CheckIn', { schoolId: activeSchoolMatch.id, schoolName: activeSchoolMatch.name })}
+            onCheckIn={() => navigation.navigate('ActivityForm', { leadId: activeSchoolMatch.id, leadName: activeSchoolMatch.name })}
           />
         )}
 

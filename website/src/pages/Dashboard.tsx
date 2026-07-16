@@ -48,8 +48,8 @@ export default function Dashboard() {
   const [dailyTrackId, setDailyTrackId] = useState<string | null>(null);
 
   // Time boundaries
-  const todayStart = new Date().setHours(0, 0, 0, 0);
-  const todayEnd = new Date().setHours(23, 59, 59, 999);
+  const todayStart = useMemo(() => new Date().setHours(0, 0, 0, 0), []);
+  const todayEnd = useMemo(() => new Date().setHours(23, 59, 59, 999), []);
   
   const selectedDateStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 0, 0, 0, 0).getTime();
   const selectedDateEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 23, 59, 59, 999).getTime();
@@ -191,9 +191,10 @@ export default function Dashboard() {
     });
 
     const assocEmail = selectedAssociate.email?.toLowerCase();
+    let unsubCrm: (() => void) | undefined;
     if (assocEmail) {
       const qCrm = query(collection(db, 'crmActivities'), where('executiveEmail', '==', assocEmail));
-      var unsubCrm = onSnapshot(qCrm, (snapshot) => {
+      unsubCrm = onSnapshot(qCrm, (snapshot) => {
         const activities = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
         const filtered = activities.filter(a => {
           const dt = a.walkInDateTime || a.lsqCreatedOn;
@@ -312,7 +313,7 @@ export default function Dashboard() {
     await setDoc(doc(db, 'dailyTracks', dailyTrackId), { 
       status: newStatus,
       executiveId: selectedAssociate.id,
-      date: format(selectedDate, 'yyyy-MM-dd')
+      date: format(selectedDate, 'yyyyMMdd')
     }, { merge: true });
   };
 
