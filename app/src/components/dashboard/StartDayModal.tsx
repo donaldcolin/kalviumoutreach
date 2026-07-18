@@ -27,7 +27,7 @@ export function StartDayModal({
         <View className="bg-white p-8 rounded-3xl w-full items-center border border-slate-100">
           <Text className="text-3xl font-bold mb-3 text-center text-slate-900 tracking-tight">Start Your Day</Text>
           <Text className="text-slate-500 mb-8 text-center text-base">
-            Begin your day to enable location tracking and log visits.
+            Begin your day to enable location tracking.
           </Text>
           
           <TouchableOpacity

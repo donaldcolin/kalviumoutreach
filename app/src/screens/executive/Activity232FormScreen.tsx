@@ -9,7 +9,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useWalkInSync } from '../../hooks/useWalkInSync';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { ChevronDownIcon, CalendarIcon, ClockIcon, MapPinIcon, RefreshCwIcon } from 'lucide-react-native';
+import { ChevronDownIcon, CalendarIcon, ClockIcon, MapPinIcon, RefreshCwIcon, ChevronLeftIcon, Building2Icon } from 'lucide-react-native';
 import {
   Select,
   SelectTrigger,
@@ -23,33 +23,48 @@ import {
   SelectItem
 } from '@/components/ui/select';
 
-// Custom Select Component Wrapper
-const CustomSelect = ({ label, options, value, onChange, placeholder = "Select option" }: { label: string, options: string[], value: string, onChange: (val: string) => void, placeholder?: string }) => {
-  return (
-    <VStack space="xs">
-      <Text className="text-slate-600 text-sm font-medium">{label}</Text>
-      <Select onValueChange={onChange} selectedValue={value}>
-        <SelectTrigger variant="outline" size="md" className="bg-slate-50 border-slate-200">
-          <SelectInput placeholder={placeholder} className="flex-1" />
-          <SelectIcon as={ChevronDownIcon} className="mr-3 text-slate-400" />
-        </SelectTrigger>
-        <SelectPortal>
-          <SelectBackdrop />
-          <SelectContent>
-            <SelectDragIndicatorWrapper>
-              <SelectDragIndicator />
-            </SelectDragIndicatorWrapper>
-            {options.map((opt) => (
-              <SelectItem key={opt} label={opt} value={opt} />
-            ))}
-          </SelectContent>
-        </SelectPortal>
-      </Select>
-    </VStack>
-  );
-};
+// Custom Select Component
+const CustomSelect = ({ label, options, value, onChange, placeholder = "Select option" }: { label: string, options: string[], value: string, onChange: (val: string) => void, placeholder?: string }) => (
+  <VStack space="xs">
+    <Text className="text-slate-500 text-xs font-semibold uppercase tracking-wider">{label}</Text>
+    <Select onValueChange={onChange} selectedValue={value}>
+      <SelectTrigger variant="outline" size="md" className="bg-white border-slate-200 rounded-xl h-12">
+        <SelectInput placeholder={placeholder} className="flex-1 text-sm" />
+        <SelectIcon as={ChevronDownIcon} className="mr-3 text-slate-400" />
+      </SelectTrigger>
+      <SelectPortal>
+        <SelectBackdrop />
+        <SelectContent>
+          <SelectDragIndicatorWrapper>
+            <SelectDragIndicator />
+          </SelectDragIndicatorWrapper>
+          {options.map((opt) => (
+            <SelectItem key={opt} label={opt} value={opt} />
+          ))}
+        </SelectContent>
+      </SelectPortal>
+    </Select>
+  </VStack>
+);
 
-// Date Time Picker Wrapper
+// Compact Input Field
+const FormInput = ({ label, value, onChangeText, keyboardType = 'default', placeholder = '', multiline = false }: any) => (
+  <VStack space="xs">
+    <Text className="text-slate-500 text-xs font-semibold uppercase tracking-wider">{label}</Text>
+    <TextInput
+      className={`border border-slate-200 bg-white rounded-xl px-4 ${multiline ? 'py-3 min-h-[80px]' : 'py-3 h-12'} text-sm text-slate-900`}
+      value={value}
+      onChangeText={onChangeText}
+      keyboardType={keyboardType}
+      placeholder={placeholder}
+      placeholderTextColor="#94A3B8"
+      multiline={multiline}
+      textAlignVertical={multiline ? 'top' : 'center'}
+    />
+  </VStack>
+);
+
+// DateTime Picker
 const CustomDateTimePicker = ({ label, date, setDate }: { label: string, date: Date | null, setDate: (d: Date) => void }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -74,47 +89,45 @@ const CustomDateTimePicker = ({ label, date, setDate }: { label: string, date: D
 
   return (
     <VStack space="xs">
-      <Text className="text-slate-600 text-sm font-medium">{label}</Text>
-      <HStack space="md">
-        <Pressable 
-          className="flex-1 border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 flex-row items-center justify-between"
+      <Text className="text-slate-500 text-xs font-semibold uppercase tracking-wider">{label}</Text>
+      <HStack space="sm">
+        <Pressable
+          className="flex-1 border border-slate-200 bg-white rounded-xl px-4 py-3 h-12 flex-row items-center justify-between"
           onPress={() => setShowDatePicker(true)}
         >
-          <Text className={date ? "text-slate-900" : "text-slate-400"}>
+          <Text className={`text-sm ${date ? "text-slate-900" : "text-slate-400"}`}>
             {date ? date.toLocaleDateString() : 'DD/MM/YYYY'}
           </Text>
-          <CalendarIcon size={16} color="#94A3B8" />
+          <CalendarIcon size={14} color="#94A3B8" />
         </Pressable>
-        
-        <Pressable 
-          className="flex-1 border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 flex-row items-center justify-between"
+
+        <Pressable
+          className="flex-1 border border-slate-200 bg-white rounded-xl px-4 py-3 h-12 flex-row items-center justify-between"
           onPress={() => setShowTimePicker(true)}
         >
-          <Text className={date ? "text-slate-900" : "text-slate-400"}>
-            {date ? date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'hh:mm AM/PM'}
+          <Text className={`text-sm ${date ? "text-slate-900" : "text-slate-400"}`}>
+            {date ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'hh:mm'}
           </Text>
-          <ClockIcon size={16} color="#94A3B8" />
+          <ClockIcon size={14} color="#94A3B8" />
         </Pressable>
       </HStack>
 
       {showDatePicker && (
-        <DateTimePicker
-          value={date || new Date()}
-          mode="date"
-          display="default"
-          onChange={handleDateChange}
-        />
+        <DateTimePicker value={date || new Date()} mode="date" display="default" onChange={handleDateChange} />
       )}
       {showTimePicker && (
-        <DateTimePicker
-          value={date || new Date()}
-          mode="time"
-          display="default"
-          onChange={handleTimeChange}
-        />
+        <DateTimePicker value={date || new Date()} mode="time" display="default" onChange={handleTimeChange} />
       )}
     </VStack>
   );
+};
+
+// Status color configs
+const STATUS_CONFIG: Record<string, { bg: string; border: string; titleColor: string; icon: string }> = {
+  'Refused Entry - RE': { bg: 'bg-red-50', border: 'border-red-200', titleColor: 'text-red-800', icon: '🚫' },
+  'Front Desk Interaction - FDI': { bg: 'bg-blue-50', border: 'border-blue-200', titleColor: 'text-blue-800', icon: '🏢' },
+  'PIC Interaction - PCI': { bg: 'bg-purple-50', border: 'border-purple-200', titleColor: 'text-purple-800', icon: '👤' },
+  'Principal Interaction - PI': { bg: 'bg-amber-50', border: 'border-amber-200', titleColor: 'text-amber-800', icon: '👨‍💼' },
 };
 
 export default function Activity232FormScreen() {
@@ -124,18 +137,17 @@ export default function Activity232FormScreen() {
   const { startWalkIn, isSyncing } = useWalkInSync(user?.id, user?.email);
   const { leadId, leadName } = route.params || {};
 
-  // Form State
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [activityType, setActivityType] = useState('Walk-in Activity');
+  // Core form state
   const [typeOfWalkIn, setTypeOfWalkIn] = useState('');
   const [walkInDateTime, setWalkInDateTime] = useState<Date | null>(new Date());
   const [walkInStatus, setWalkInStatus] = useState('');
   const [followUpDate, setFollowUpDate] = useState<Date | null>(null);
   const [notes, setNotes] = useState('');
 
-  // Sub-sections State
+  // RE
   const [reasonForRefusal, setReasonForRefusal] = useState('');
-  
+
+  // FDI
   const [statusFDI, setStatusFDI] = useState('');
   const [strength12th, setStrength12th] = useState('');
   const [schoolFees, setSchoolFees] = useState('');
@@ -145,375 +157,375 @@ export default function Activity232FormScreen() {
   const [picDesignation, setPicDesignation] = useState('');
   const [picPhone, setPicPhone] = useState('');
   const [picEmail, setPicEmail] = useState('');
-  
+
+  // PCI
   const [statusPCI, setStatusPCI] = useState('');
   const [proposalSentToPIC, setProposalSentToPIC] = useState('');
-  
+
+  // PI
   const [statusPI, setStatusPI] = useState('');
   const [principalName, setPrincipalName] = useState('');
   const [principalPhone, setPrincipalPhone] = useState('');
   const [principalEmail, setPrincipalEmail] = useState('');
   const [proposalSentToPrincipal, setProposalSentToPrincipal] = useState('');
 
-  // Shared DateTime fields for sub-sections
+  // DateTime fields
   const [picAppointmentDateTime, setPicAppointmentDateTime] = useState<Date | null>(null);
   const [princiAppointmentDateTime, setPrinciAppointmentDateTime] = useState<Date | null>(null);
   const [seminarAppointmentDateTime, setSeminarAppointmentDateTime] = useState<Date | null>(null);
 
-  // Location State
+  // Location
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<'fetching' | 'success' | 'error' | 'denied'>('fetching');
   const [locationAddress, setLocationAddress] = useState('');
 
-  // Auto-fetch location on mount
-  useEffect(() => {
-    fetchLocation();
-  }, []);
+  useEffect(() => { fetchLocation(); }, []);
 
   const fetchLocation = async () => {
     setLocationStatus('fetching');
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setLocationStatus('denied');
-        Alert.alert('Location Permission', 'Location permission is required to log activities. Please enable it in settings.');
-        return;
-      }
+      if (status !== 'granted') { setLocationStatus('denied'); return; }
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       setLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
       setLocationStatus('success');
-
-      // Reverse geocode for display
       try {
-        const addresses = await Location.reverseGeocodeAsync({
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
-        });
+        const addresses = await Location.reverseGeocodeAsync({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
         if (addresses.length > 0) {
           const addr = addresses[0];
-          const parts = [addr.name, addr.street, addr.city, addr.region].filter(Boolean);
-          setLocationAddress(parts.join(', '));
+          setLocationAddress([addr.name, addr.street, addr.city, addr.region].filter(Boolean).join(', '));
         }
-      } catch { /* ignore geocode errors */ }
-    } catch (err) {
-      console.error('Location error:', err);
-      setLocationStatus('error');
-    }
+      } catch { /* ignore */ }
+    } catch { setLocationStatus('error'); }
   };
+
+  // Reset sub-section state when walk-in status changes
+  useEffect(() => {
+    setReasonForRefusal('');
+    setStatusFDI(''); setStrength12th(''); setSchoolFees(''); setBoardOfSchool('');
+    setProposalSentToFD(''); setPicName(''); setPicDesignation(''); setPicPhone(''); setPicEmail('');
+    setStatusPCI(''); setProposalSentToPIC('');
+    setStatusPI(''); setPrincipalName(''); setPrincipalPhone(''); setPrincipalEmail(''); setProposalSentToPrincipal('');
+    setPicAppointmentDateTime(null); setPrinciAppointmentDateTime(null); setSeminarAppointmentDateTime(null);
+  }, [walkInStatus]);
 
   const handleSubmit = async () => {
     if (!leadId) return;
 
-    // Build the payload using actual LeadSquared mx_Custom_* schema names
     const formatDateTime = (d: Date | null) => d ? d.toISOString().replace('T', ' ').split('.')[0] : '';
 
+    // LSQ activity fields
     const activityData = [
-      { SchemaName: 'mx_Custom_2', Value: activityType },           // activityType
-      { SchemaName: 'mx_Custom_36', Value: typeOfWalkIn },          // typeOfWalkIn
-      { SchemaName: 'mx_Custom_1', Value: formatDateTime(walkInDateTime) }, // walkInDateTime
-      { SchemaName: 'mx_Custom_4', Value: walkInStatus },           // walkInStatus
-      { SchemaName: 'mx_Custom_6', Value: formatDateTime(followUpDate) },   // followUpDate
+      { SchemaName: 'mx_Custom_2', Value: 'Walk-in Activity' },
+      { SchemaName: 'mx_Custom_36', Value: typeOfWalkIn },
+      { SchemaName: 'mx_Custom_1', Value: formatDateTime(walkInDateTime) },
+      { SchemaName: 'mx_Custom_4', Value: walkInStatus },
+      { SchemaName: 'mx_Custom_6', Value: formatDateTime(followUpDate) },
       { SchemaName: 'ActivityEvent_Note', Value: notes },
     ];
 
     if (walkInStatus === 'Refused Entry - RE') {
-      activityData.push({ SchemaName: 'mx_Custom_5', Value: reasonForRefusal }); // refusedEntryReason
+      activityData.push({ SchemaName: 'mx_Custom_5', Value: reasonForRefusal });
     }
 
     if (walkInStatus === 'Front Desk Interaction - FDI') {
       activityData.push(
-        { SchemaName: 'mx_Custom_7', Value: statusFDI },           // statusFrontDesk
-        { SchemaName: 'mx_Custom_35', Value: strength12th },       // studentStrength
-        { SchemaName: 'mx_Custom_33', Value: schoolFees },         // schoolFees
-        { SchemaName: 'mx_Custom_37', Value: boardOfSchool }       // boardOfSchool
+        { SchemaName: 'mx_Custom_7', Value: statusFDI },
+        { SchemaName: 'mx_Custom_35', Value: strength12th },
+        { SchemaName: 'mx_Custom_33', Value: schoolFees },
+        { SchemaName: 'mx_Custom_37', Value: boardOfSchool }
       );
-      if (statusFDI === 'Asking to sent proposal') activityData.push({ SchemaName: 'mx_Custom_12', Value: proposalSentToFD }); // proposalSentToSchool
+      if (statusFDI === 'Asking to sent proposal') activityData.push({ SchemaName: 'mx_Custom_12', Value: proposalSentToFD });
       if (statusFDI === 'Fixed meeting with PIC') {
         activityData.push(
-          { SchemaName: 'mx_Custom_13', Value: picName },             // picName
-          { SchemaName: 'mx_Custom_16', Value: picDesignation },      // picDesignation
-          { SchemaName: 'mx_Custom_15', Value: picPhone },            // picPhone
-          { SchemaName: 'mx_Custom_17', Value: formatDateTime(picAppointmentDateTime) } // picAppointmentDate
+          { SchemaName: 'mx_Custom_13', Value: picName },
+          { SchemaName: 'mx_Custom_16', Value: picDesignation },
+          { SchemaName: 'mx_Custom_15', Value: picPhone },
+          { SchemaName: 'mx_Custom_17', Value: formatDateTime(picAppointmentDateTime) }
         );
       }
     }
 
     if (walkInStatus === 'PIC Interaction - PCI') {
-      activityData.push({ SchemaName: 'mx_Custom_8', Value: statusPCI }); // statusPIC
-      if (statusPCI === 'Asking to sent proposal') activityData.push({ SchemaName: 'mx_Custom_25', Value: proposalSentToPIC }); // proposalSentToPIC
-      if (statusPCI === 'Appointment fixed with Principal') activityData.push({ SchemaName: 'mx_Custom_27', Value: formatDateTime(princiAppointmentDateTime) }); // principalAppointmentDate
-      if (statusPCI === 'Appointment fixed for Seminar') activityData.push({ SchemaName: 'mx_Custom_18', Value: formatDateTime(seminarAppointmentDateTime) }); // seminarAppointmentDate
+      activityData.push({ SchemaName: 'mx_Custom_8', Value: statusPCI });
+      if (statusPCI === 'Asking to sent proposal') activityData.push({ SchemaName: 'mx_Custom_25', Value: proposalSentToPIC });
+      if (statusPCI === 'Appointment fixed with Principal') activityData.push({ SchemaName: 'mx_Custom_27', Value: formatDateTime(princiAppointmentDateTime) });
+      if (statusPCI === 'Appointment fixed for Seminar') activityData.push({ SchemaName: 'mx_Custom_18', Value: formatDateTime(seminarAppointmentDateTime) });
     }
 
     if (walkInStatus === 'Principal Interaction - PI') {
       activityData.push(
-        { SchemaName: 'mx_Custom_9', Value: statusPI },            // statusPrincipal
-        { SchemaName: 'mx_Custom_21', Value: principalName },      // principalName
-        { SchemaName: 'mx_Custom_23', Value: principalPhone },     // principalPhone
+        { SchemaName: 'mx_Custom_9', Value: statusPI },
+        { SchemaName: 'mx_Custom_21', Value: principalName },
+        { SchemaName: 'mx_Custom_23', Value: principalPhone },
       );
-      if (statusPI === 'Asking to sent proposal') activityData.push({ SchemaName: 'mx_Custom_26', Value: proposalSentToPrincipal }); // proposalSentToPrincipal
+      if (statusPI === 'Asking to sent proposal') activityData.push({ SchemaName: 'mx_Custom_26', Value: proposalSentToPrincipal });
       if (statusPI === 'Appointment fixed for Seminar') activityData.push({ SchemaName: 'mx_Custom_18', Value: formatDateTime(seminarAppointmentDateTime) });
     }
 
     const filteredData = activityData.filter(item => item.Value && item.Value.trim() !== '');
 
-    // Pass location as separate param (not as an LSQ activity field — mx_Custom_34 is not an activity field)
-    const success = await startWalkIn(leadId, leadName || 'Unknown', filteredData, location);
+    // Build extra data for local Firestore (timeline display)
+    const extraData: Record<string, any> = {
+      typeOfWalkIn,
+      walkInStatus,
+      activityType: 'Walk-in Activity',
+      followUpDate: followUpDate?.toISOString() || '',
+      notes,
+    };
+
+    if (walkInStatus === 'Refused Entry - RE') {
+      extraData.refusedEntryReason = reasonForRefusal;
+    }
+    if (walkInStatus === 'Front Desk Interaction - FDI') {
+      extraData.statusFrontDesk = statusFDI;
+      extraData.studentStrength = strength12th;
+      extraData.schoolFees = schoolFees;
+      extraData.boardOfSchool = boardOfSchool;
+      if (statusFDI === 'Asking to sent proposal') extraData.proposalSentToSchool = proposalSentToFD;
+      if (statusFDI === 'Fixed meeting with PIC') {
+        extraData.picName = picName;
+        extraData.picDesignation = picDesignation;
+        extraData.picPhone = picPhone;
+        extraData.picEmail = picEmail;
+        extraData.picAppointmentDate = picAppointmentDateTime?.toISOString() || '';
+      }
+    }
+    if (walkInStatus === 'PIC Interaction - PCI') {
+      extraData.statusPIC = statusPCI;
+      if (statusPCI === 'Asking to sent proposal') extraData.proposalSentToPIC = proposalSentToPIC;
+      if (statusPCI === 'Appointment fixed with Principal') extraData.principalAppointmentDate = princiAppointmentDateTime?.toISOString() || '';
+      if (statusPCI === 'Appointment fixed for Seminar') extraData.seminarAppointmentDate = seminarAppointmentDateTime?.toISOString() || '';
+    }
+    if (walkInStatus === 'Principal Interaction - PI') {
+      extraData.statusPrincipal = statusPI;
+      extraData.principalName = principalName;
+      extraData.principalPhone = principalPhone;
+      if (statusPI === 'Asking to sent proposal') extraData.proposalSentToPrincipal = proposalSentToPrincipal;
+      if (statusPI === 'Appointment fixed for Seminar') extraData.seminarAppointmentDate = seminarAppointmentDateTime?.toISOString() || '';
+    }
+
+    const locationPayload = location ? {
+      startLocation: location,
+      endLocation: null,
+      distanceMeters: null,
+      isValidWalkIn: null
+    } : undefined;
+
+    const success = await startWalkIn(leadId, leadName || 'Unknown', filteredData, locationPayload, extraData);
     if (success) {
       navigation.goBack();
     }
   };
 
+  const statusConfig = walkInStatus ? STATUS_CONFIG[walkInStatus] : null;
+
   return (
-    <ScrollView className="flex-1 bg-white">
-      <VStack space="xl" className="p-4 pb-12">
-        <Text className="text-xl font-bold text-slate-900">Outreach Activity V3</Text>
-        
-        {/* Location Status */}
+    <ScrollView className="flex-1 bg-slate-50" keyboardShouldPersistTaps="handled">
+      <VStack className="pb-12">
+
+        {/* Header */}
+        <View className="bg-white px-4 pt-3 pb-4 border-b border-slate-100">
+          <Pressable onPress={() => navigation.goBack()} className="flex-row items-center mb-3">
+            <ChevronLeftIcon size={20} color="#64748B" />
+            <Text className="text-slate-500 text-sm ml-1">Back</Text>
+          </Pressable>
+          <HStack className="items-center" space="md">
+            <View className="w-11 h-11 rounded-xl bg-rose-50 items-center justify-center">
+              <Building2Icon size={22} color="#E11D48" />
+            </View>
+            <VStack>
+              <Text className="text-lg font-bold text-slate-900" numberOfLines={1}>{leadName || 'Unknown School'}</Text>
+              <Text className="text-xs text-slate-400">Log Activity</Text>
+            </VStack>
+          </HStack>
+        </View>
+
+        {/* Location Banner */}
         <Pressable onPress={locationStatus !== 'fetching' ? fetchLocation : undefined}>
-          <HStack space="sm" className={`p-3 rounded-xl items-center ${
-            locationStatus === 'success' ? 'bg-emerald-50 border border-emerald-200' :
-            locationStatus === 'fetching' ? 'bg-blue-50 border border-blue-200' :
-            'bg-red-50 border border-red-200'
-          }`}>
+          <HStack space="sm" className={`mx-4 mt-3 px-3 py-2 rounded-xl items-center ${locationStatus === 'success' ? 'bg-emerald-50 border border-emerald-200' :
+              locationStatus === 'fetching' ? 'bg-blue-50 border border-blue-200' :
+                'bg-red-50 border border-red-200'
+            }`}>
             {locationStatus === 'fetching' ? (
               <ActivityIndicator size="small" color="#3B82F6" />
             ) : (
-              <MapPinIcon size={18} color={locationStatus === 'success' ? '#10B981' : '#EF4444'} />
+              <MapPinIcon size={14} color={locationStatus === 'success' ? '#10B981' : '#EF4444'} />
             )}
-            <VStack className="flex-1">
-              <Text className={`text-xs font-semibold ${
-                locationStatus === 'success' ? 'text-emerald-700' :
-                locationStatus === 'fetching' ? 'text-blue-700' :
-                'text-red-700'
-              }`}>
-                {locationStatus === 'fetching' ? 'Capturing location...' :
-                 locationStatus === 'success' ? 'Location captured' :
-                 locationStatus === 'denied' ? 'Location permission denied' :
-                 'Location capture failed'}
-              </Text>
-              {locationStatus === 'success' && locationAddress ? (
-                <Text className="text-xs text-emerald-600" numberOfLines={1}>{locationAddress}</Text>
-              ) : null}
-              {locationStatus === 'success' && location ? (
-                <Text className="text-[10px] text-emerald-500">{location.lat.toFixed(6)}, {location.lng.toFixed(6)}</Text>
-              ) : null}
-            </VStack>
+            <Text className={`text-xs flex-1 ${locationStatus === 'success' ? 'text-emerald-700' :
+                locationStatus === 'fetching' ? 'text-blue-700' : 'text-red-700'
+              }`} numberOfLines={1}>
+              {locationStatus === 'fetching' ? 'Capturing location...' :
+                locationStatus === 'success' ? (locationAddress || `${location?.lat.toFixed(4)}, ${location?.lng.toFixed(4)}`) :
+                  locationStatus === 'denied' ? 'Location denied — tap to retry' : 'Location failed — tap to retry'}
+            </Text>
             {(locationStatus === 'error' || locationStatus === 'denied') && (
-              <RefreshCwIcon size={16} color="#EF4444" />
+              <RefreshCwIcon size={12} color="#EF4444" />
             )}
           </HStack>
         </Pressable>
-        {/* Walk-in Core Details */}
-        <VStack space="md" className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-          <Text className="font-bold text-slate-900">Walk-In Details</Text>
-          
-          <VStack space="xs">
-            <Text className="text-slate-600 text-sm font-medium">Phone Number</Text>
-            <TextInput 
-              className="border border-slate-200 bg-white rounded-xl px-4 py-3" 
-              value={phoneNumber} 
-              onChangeText={setPhoneNumber} 
-              keyboardType="phone-pad"
-              placeholder="+91"
-            />
-          </VStack>
 
-          <CustomSelect 
-            label="Activity Type*" 
-            options={['Walk-in Activity']} 
-            value={activityType} 
-            onChange={setActivityType} 
+        {/* Core Fields */}
+        <VStack space="md" className="px-4 mt-4">
+          <CustomSelect
+            label="Type of Walk-In"
+            options={['First Visit', 'Follow-up Visit']}
+            value={typeOfWalkIn}
+            onChange={setTypeOfWalkIn}
           />
 
-          <CustomSelect 
-            label="Type of Walk-In*" 
-            options={['First Visit', 'Follow-up Visit']} 
-            value={typeOfWalkIn} 
-            onChange={setTypeOfWalkIn} 
-          />
+          <CustomDateTimePicker label="Walk-In Date & Time" date={walkInDateTime} setDate={setWalkInDateTime} />
 
-          <CustomDateTimePicker 
-            label="Walk-In Date & Time*" 
-            date={walkInDateTime} 
-            setDate={setWalkInDateTime} 
-          />
-
-          <CustomSelect 
-            label="Walk-In Status*" 
+          <CustomSelect
+            label="Walk-In Status"
             options={[
-              'Refused Entry - RE', 
-              'Front Desk Interaction - FDI', 
-              'PIC Interaction - PCI', 
+              'Refused Entry - RE',
+              'Front Desk Interaction - FDI',
+              'PIC Interaction - PCI',
               'Principal Interaction - PI'
-            ]} 
-            value={walkInStatus} 
-            onChange={setWalkInStatus} 
-            placeholder="Type to search"
+            ]}
+            value={walkInStatus}
+            onChange={setWalkInStatus}
+            placeholder="Select walk-in status"
           />
 
-          <CustomDateTimePicker 
-            label="Follow Up Date*" 
-            date={followUpDate} 
-            setDate={setFollowUpDate} 
-          />
+          <CustomDateTimePicker label="Follow Up Date" date={followUpDate} setDate={setFollowUpDate} />
 
-          <VStack space="xs">
-            <Text className="text-slate-600 text-sm font-medium">Notes</Text>
-            <TextInput
-              className="border border-slate-200 bg-white rounded-xl p-4 min-h-[80px]"
-              multiline
-              textAlignVertical="top"
-              value={notes}
-              onChangeText={setNotes}
-            />
-          </VStack>
+          <FormInput label="Notes" value={notes} onChangeText={setNotes} multiline placeholder="Optional notes..." />
         </VStack>
 
-        {/* Conditional Sub-Sections */}
-        {walkInStatus === 'Refused Entry - RE' && (
-          <VStack space="md" className="bg-red-50 p-4 rounded-2xl border border-red-100">
-            <Text className="font-bold text-red-900">Refused Entry</Text>
-            <CustomSelect 
-              label="Reason for Refusal*" 
-              options={['Did not get permission to enter', 'Security/Front Desk denied entry', 'Other']} 
-              value={reasonForRefusal} 
-              onChange={setReasonForRefusal} 
-            />
-          </VStack>
-        )}
+        {/* Dynamic Sub-Section */}
+        {walkInStatus !== '' && (
+          <View className={`mx-4 mt-4 p-4 rounded-2xl ${statusConfig?.bg} border ${statusConfig?.border}`}>
+            <Text className={`font-bold text-base mb-3 ${statusConfig?.titleColor}`}>
+              {statusConfig?.icon} {walkInStatus.split(' - ')[0]}
+            </Text>
 
-        {walkInStatus === 'Front Desk Interaction - FDI' && (
-          <VStack space="md" className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
-            <Text className="font-bold text-blue-900">Front Desk Interaction</Text>
-            <CustomSelect 
-              label="Status Front Desk Interaction*" 
-              options={[
-                'Asking to sent proposal', 
-                'Need prior appointment', 
-                'Fixed meeting with PIC', 
-                'Not Interested'
-              ]} 
-              value={statusFDI} 
-              onChange={setStatusFDI} 
-            />
+            <VStack space="md">
+              {/* RE Section */}
+              {walkInStatus === 'Refused Entry - RE' && (
+                <CustomSelect
+                  label="Reason for Refusal"
+                  options={['Did not get permission to enter', 'Security/Front Desk denied entry', 'Other']}
+                  value={reasonForRefusal} onChange={setReasonForRefusal}
+                />
+              )}
 
-            {(statusFDI === 'Asking to sent proposal' || statusFDI === 'Need prior appointment' || statusFDI === 'Fixed meeting with PIC' || statusFDI === 'Not Interested') && (
-              <>
-                <VStack space="xs">
-                  <Text className="text-slate-600 text-sm font-medium">Strength of 12th student*</Text>
-                  <TextInput className="border border-slate-200 bg-white rounded-xl px-4 py-3" value={strength12th} onChangeText={setStrength12th} keyboardType="numeric" />
-                </VStack>
-                <VStack space="xs">
-                  <Text className="text-slate-600 text-sm font-medium">School Fees*</Text>
-                  <TextInput className="border border-slate-200 bg-white rounded-xl px-4 py-3" value={schoolFees} onChangeText={setSchoolFees} keyboardType="numeric" />
-                </VStack>
-                <CustomSelect label="Board of School*" options={['STATE', 'CBSE', 'ICSE', 'IB', 'Others']} value={boardOfSchool} onChange={setBoardOfSchool} />
-              </>
-            )}
+              {/* FDI Section */}
+              {walkInStatus === 'Front Desk Interaction - FDI' && (
+                <>
+                  <CustomSelect
+                    label="Status Front Desk Interaction"
+                    options={['Asking to sent proposal', 'Need prior appointment', 'Fixed meeting with PIC', 'Not Interested']}
+                    value={statusFDI} onChange={setStatusFDI}
+                  />
 
-            {statusFDI === 'Asking to sent proposal' && (
-              <CustomSelect label="Proposal sent to Front Desk*" options={['Yes', 'No']} value={proposalSentToFD} onChange={setProposalSentToFD} />
-            )}
-            {statusFDI === 'Fixed meeting with PIC' && (
-              <>
-                <VStack space="xs">
-                  <Text className="text-slate-600 text-sm font-medium">PIC Name*</Text>
-                  <TextInput className="border border-slate-200 bg-white rounded-xl px-4 py-3" value={picName} onChangeText={setPicName} />
-                </VStack>
-                <VStack space="xs">
-                  <Text className="text-slate-600 text-sm font-medium">PIC Designation*</Text>
-                  <TextInput className="border border-slate-200 bg-white rounded-xl px-4 py-3" value={picDesignation} onChangeText={setPicDesignation} />
-                </VStack>
-                <VStack space="xs">
-                  <Text className="text-slate-600 text-sm font-medium">PIC Phone Number*</Text>
-                  <TextInput className="border border-slate-200 bg-white rounded-xl px-4 py-3" value={picPhone} onChangeText={setPicPhone} keyboardType="phone-pad" />
-                </VStack>
-                <VStack space="xs">
-                  <Text className="text-slate-600 text-sm font-medium">PIC Email ID*</Text>
-                  <TextInput className="border border-slate-200 bg-white rounded-xl px-4 py-3" value={picEmail} onChangeText={setPicEmail} keyboardType="email-address" />
-                </VStack>
-                <CustomDateTimePicker label="PIC Appointment Date & Time*" date={picAppointmentDateTime} setDate={setPicAppointmentDateTime} />
-              </>
-            )}
-          </VStack>
-        )}
+                  <HStack space="sm">
+                    <View className="flex-1">
+                      <FormInput label="12th Strength" value={strength12th} onChangeText={setStrength12th} keyboardType="numeric" />
+                    </View>
+                    <View className="flex-1">
+                      <FormInput label="School Fees" value={schoolFees} onChangeText={setSchoolFees} keyboardType="numeric" />
+                    </View>
+                  </HStack>
 
-        {walkInStatus === 'PIC Interaction - PCI' && (
-          <VStack space="md" className="bg-purple-50 p-4 rounded-2xl border border-purple-100">
-            <Text className="font-bold text-purple-900">PIC Interaction</Text>
-            <CustomSelect 
-              label="Status PIC Interaction*" 
-              options={[
-                'Asking to sent proposal', 
-                'Appointment fixed with Principal', 
-                'Appointment fixed for Seminar', 
-                'Not Interested'
-              ]} 
-              value={statusPCI} 
-              onChange={setStatusPCI} 
-            />
+                  <CustomSelect label="Board of School" options={['STATE', 'CBSE', 'ICSE', 'IB', 'Others']} value={boardOfSchool} onChange={setBoardOfSchool} />
 
-            {statusPCI === 'Asking to sent proposal' && (
-              <CustomSelect label="Proposal sent to PIC*" options={['Yes', 'No']} value={proposalSentToPIC} onChange={setProposalSentToPIC} />
-            )}
-            {statusPCI === 'Appointment fixed with Principal' && (
-              <CustomDateTimePicker label="Princi Appointment Date & Time*" date={princiAppointmentDateTime} setDate={setPrinciAppointmentDateTime} />
-            )}
-            {statusPCI === 'Appointment fixed for Seminar' && (
-              <CustomDateTimePicker label="Seminar Appointment Date&Time*" date={seminarAppointmentDateTime} setDate={setSeminarAppointmentDateTime} />
-            )}
-          </VStack>
-        )}
+                  {statusFDI === 'Asking to sent proposal' && (
+                    <CustomSelect label="Proposal sent to Front Desk" options={['Yes', 'No']} value={proposalSentToFD} onChange={setProposalSentToFD} />
+                  )}
 
-        {walkInStatus === 'Principal Interaction - PI' && (
-          <VStack space="md" className="bg-orange-50 p-4 rounded-2xl border border-orange-100">
-            <Text className="font-bold text-orange-900">Principal Interaction</Text>
-            <CustomSelect 
-              label="Status Principal Interaction*" 
-              options={[
-                'Asking to sent proposal', 
-                'Appointment fixed for Seminar', 
-                'Not Interested'
-              ]} 
-              value={statusPI} 
-              onChange={setStatusPI} 
-            />
+                  {statusFDI === 'Fixed meeting with PIC' && (
+                    <>
+                      <HStack space="sm">
+                        <View className="flex-1">
+                          <FormInput label="PIC Name" value={picName} onChangeText={setPicName} />
+                        </View>
+                        <View className="flex-1">
+                          <FormInput label="PIC Designation" value={picDesignation} onChangeText={setPicDesignation} />
+                        </View>
+                      </HStack>
+                      <HStack space="sm">
+                        <View className="flex-1">
+                          <FormInput label="PIC Phone" value={picPhone} onChangeText={setPicPhone} keyboardType="phone-pad" />
+                        </View>
+                        <View className="flex-1">
+                          <FormInput label="PIC Email" value={picEmail} onChangeText={setPicEmail} keyboardType="email-address" />
+                        </View>
+                      </HStack>
+                      <CustomDateTimePicker label="PIC Appointment Date & Time" date={picAppointmentDateTime} setDate={setPicAppointmentDateTime} />
+                    </>
+                  )}
+                </>
+              )}
 
-            <VStack space="xs">
-              <Text className="text-slate-600 text-sm font-medium">Principal / PIC Name*</Text>
-              <TextInput className="border border-slate-200 bg-white rounded-xl px-4 py-3" value={principalName} onChangeText={setPrincipalName} />
+              {/* PCI Section */}
+              {walkInStatus === 'PIC Interaction - PCI' && (
+                <>
+                  <CustomSelect
+                    label="Status PIC Interaction"
+                    options={['Asking to sent proposal', 'Appointment fixed with Principal', 'Appointment fixed for Seminar', 'Not Interested']}
+                    value={statusPCI} onChange={setStatusPCI}
+                  />
+                  {statusPCI === 'Asking to sent proposal' && (
+                    <CustomSelect label="Proposal sent to PIC" options={['Yes', 'No']} value={proposalSentToPIC} onChange={setProposalSentToPIC} />
+                  )}
+                  {statusPCI === 'Appointment fixed with Principal' && (
+                    <CustomDateTimePicker label="Principal Appointment" date={princiAppointmentDateTime} setDate={setPrinciAppointmentDateTime} />
+                  )}
+                  {statusPCI === 'Appointment fixed for Seminar' && (
+                    <CustomDateTimePicker label="Seminar Appointment" date={seminarAppointmentDateTime} setDate={setSeminarAppointmentDateTime} />
+                  )}
+                </>
+              )}
+
+              {/* PI Section */}
+              {walkInStatus === 'Principal Interaction - PI' && (
+                <>
+                  <CustomSelect
+                    label="Status Principal Interaction"
+                    options={['Asking to sent proposal', 'Appointment fixed for Seminar', 'Not Interested']}
+                    value={statusPI} onChange={setStatusPI}
+                  />
+                  <HStack space="sm">
+                    <View className="flex-1">
+                      <FormInput label="Principal Name" value={principalName} onChangeText={setPrincipalName} />
+                    </View>
+                    <View className="flex-1">
+                      <FormInput label="Principal Phone" value={principalPhone} onChangeText={setPrincipalPhone} keyboardType="phone-pad" />
+                    </View>
+                  </HStack>
+                  <FormInput label="Principal Email" value={principalEmail} onChangeText={setPrincipalEmail} keyboardType="email-address" />
+                  {statusPI === 'Asking to sent proposal' && (
+                    <CustomSelect label="Proposal sent to Principal" options={['Yes', 'No']} value={proposalSentToPrincipal} onChange={setProposalSentToPrincipal} />
+                  )}
+                  {statusPI === 'Appointment fixed for Seminar' && (
+                    <CustomDateTimePicker label="Seminar Appointment" date={seminarAppointmentDateTime} setDate={setSeminarAppointmentDateTime} />
+                  )}
+                </>
+              )}
             </VStack>
-            <VStack space="xs">
-              <Text className="text-slate-600 text-sm font-medium">Principal / PIC Phone Number*</Text>
-              <TextInput className="border border-slate-200 bg-white rounded-xl px-4 py-3" value={principalPhone} onChangeText={setPrincipalPhone} keyboardType="phone-pad" />
-            </VStack>
-            <VStack space="xs">
-              <Text className="text-slate-600 text-sm font-medium">Principal / PIC Email ID*</Text>
-              <TextInput className="border border-slate-200 bg-white rounded-xl px-4 py-3" value={principalEmail} onChangeText={setPrincipalEmail} keyboardType="email-address" />
-            </VStack>
-
-            {statusPI === 'Asking to sent proposal' && (
-              <CustomSelect label="Proposal sent to Principal*" options={['Yes', 'No']} value={proposalSentToPrincipal} onChange={setProposalSentToPrincipal} />
-            )}
-            {statusPI === 'Appointment fixed for Seminar' && (
-              <CustomDateTimePicker label="Seminar Appointment Date&Time*" date={seminarAppointmentDateTime} setDate={setSeminarAppointmentDateTime} />
-            )}
-          </VStack>
+          </View>
         )}
 
-        <Button
-          size="lg"
-          className="rounded-xl bg-primary mt-6 h-14"
-          disabled={isSyncing}
-          onPress={handleSubmit}
-        >
-          {isSyncing ? (
-            <ActivityIndicator color="#FFF" />
-          ) : (
-            <ButtonText className="text-white font-bold text-lg">Push to LeadSquared</ButtonText>
+        {/* Submit */}
+        <View className="px-4 mt-6">
+          <Button
+            size="lg"
+            className="rounded-xl bg-rose-600 h-14"
+            disabled={isSyncing || !typeOfWalkIn || !walkInStatus}
+            onPress={handleSubmit}
+          >
+            {isSyncing ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <ButtonText className="text-white font-bold text-base">Push to LeadSquared</ButtonText>
+            )}
+          </Button>
+          {(!typeOfWalkIn || !walkInStatus) && (
+            <Text className="text-xs text-slate-400 text-center mt-2">Select Type of Walk-In and Walk-In Status to submit</Text>
           )}
-        </Button>
+        </View>
       </VStack>
     </ScrollView>
   );

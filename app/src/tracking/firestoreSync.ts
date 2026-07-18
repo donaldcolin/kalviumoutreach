@@ -1,7 +1,6 @@
 import firestore from '@react-native-firebase/firestore';
 import { format } from 'date-fns';
 import { locationTracker, LocationPoint } from './locationTracker';
-import { visitTracker, VisitEvent } from './visitTracker';
 import * as Crypto from 'expo-crypto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -10,7 +9,6 @@ class FirestoreSync {
   private dateStr: string | null = null;
   
   private unsubscribeLocation: (() => void) | null = null;
-  private unsubscribeVisits: (() => void) | null = null;
 
   public async startSession(userId: string) {
     this.userId = userId;
@@ -33,7 +31,6 @@ class FirestoreSync {
     }
 
     this.unsubscribeLocation = locationTracker.subscribe((points) => this.handleLocationBatch(points));
-    this.unsubscribeVisits = visitTracker.subscribeToVisits((visit) => this.handleVisitEvent(visit));
   }
 
   public async endSession() {
@@ -58,10 +55,7 @@ class FirestoreSync {
       this.unsubscribeLocation = null;
     }
     
-    if (this.unsubscribeVisits) {
-      this.unsubscribeVisits();
-      this.unsubscribeVisits = null;
-    }
+
     
     this.userId = null;
     this.dateStr = null;
@@ -95,29 +89,6 @@ class FirestoreSync {
   private async handleLocationBatch(points: LocationPoint[]) {
     if (!this.userId || !this.dateStr) return;
     await this.appendHeadlessLocations(this.userId, this.dateStr, points);
-  }
-
-  private async handleVisitEvent(visit: VisitEvent) {
-    if (!this.userId || !this.dateStr) return;
-
-    const trackDocId = `${this.userId}_${this.dateStr}`;
-    const visitId = Crypto.randomUUID();
-    
-    const visitDocRef = firestore()
-      .collection('dailyTracks')
-      .doc(trackDocId)
-      .collection('visits')
-      .doc(visitId);
-
-    try {
-      await visitDocRef.set({
-        id: visitId,
-        ...visit
-      });
-    } catch (e) {
-      console.warn('Failed to write visit to Firestore', e);
-      // Known gap: Implement retry queue in v2
-    }
   }
 }
 

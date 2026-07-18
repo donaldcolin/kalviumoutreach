@@ -5,15 +5,28 @@ import * as Crypto from 'expo-crypto';
 export function useWalkInSync(userId?: string, executiveEmail?: string) {
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const startWalkIn = async (schoolId: string, schoolName: string, activityData?: any[], location?: { lat: number; lng: number } | null) => {
+  const startWalkIn = async (
+    schoolId: string,
+    schoolName: string,
+    activityData?: any[],
+    locationPayload?: {
+      startLocation: { lat: number; lng: number } | null;
+      endLocation: { lat: number; lng: number } | null;
+      distanceMeters: number | null;
+      isValidWalkIn: boolean | null;
+    },
+    extraData?: Record<string, any>,
+    storageUrl?: string | null
+  ) => {
     if (!userId || !executiveEmail) return null;
     setIsSyncing(true);
     
     try {
       const activityId = Crypto.randomUUID();
       const now = new Date().toISOString();
+      const notesWithUrl = storageUrl ? `Walk-in Started\n\nRecording: ${storageUrl}` : 'Walk-in Started';
 
-      // 1. Create local crmActivity
+      // 1. Create local crmActivity with all form data for timeline display
       await firestore().collection('crmActivities').doc(activityId).set({
         id: activityId,
         executiveId: userId,
@@ -21,9 +34,13 @@ export function useWalkInSync(userId?: string, executiveEmail?: string) {
         lsqLeadId: schoolId,
         schoolName: schoolName,
         walkInDateTime: now,
-        notes: 'Walk-in Started',
+        notes: notesWithUrl,
         source: 'app-push',
-        ...(location ? { lat: location.lat, lng: location.lng } : {}),
+        // Top-level lat/lng for map markers on the website dashboard
+        lat: locationPayload?.startLocation?.lat ?? null,
+        lng: locationPayload?.startLocation?.lng ?? null,
+        ...(locationPayload || {}),
+        ...(extraData || {}),
         syncedAt: firestore.FieldValue.serverTimestamp(),
       });
 
@@ -33,9 +50,9 @@ export function useWalkInSync(userId?: string, executiveEmail?: string) {
         activityId: activityId,
         leadId: schoolId,
         executiveId: userId,
-        notes: 'Walk-in Started',
+        notes: notesWithUrl,
         activityData: activityData || [],
-        ...(location ? { lat: location.lat, lng: location.lng } : {}),
+        ...(locationPayload || {}),
         status: 'pending',
         createdAt: firestore.FieldValue.serverTimestamp(),
       });
@@ -49,7 +66,7 @@ export function useWalkInSync(userId?: string, executiveEmail?: string) {
     }
   };
 
-  const endWalkIn = async (activityId: string, additionalNotes: string = '', activityData?: any[]) => {
+  const endWalkIn = async (activityId: string, additionalNotes: string = '', activityData?: any[], storageUrl?: string | null) => {
     if (!userId) return false;
     setIsSyncing(true);
 
@@ -58,9 +75,15 @@ export function useWalkInSync(userId?: string, executiveEmail?: string) {
       const activityDoc = await firestore().collection('crmActivities').doc(activityId).get();
       let newNote = additionalNotes;
       
-      if (activityDoc.exists) {
+      if (activityDoc.exists()) {
         const existingNote = activityDoc.data()?.notes || '';
-        newNote = existingNote ? `${existingNote}\n\nWalk-in Ended: ${additionalNotes}` : `Walk-in Ended: ${additionalNotes}`;
+        newNote = existingNote && existingNote !== 'Walk-in Started' 
+          ? `${existingNote}\n\nWalk-in Ended: ${additionalNotes}` 
+          : `Walk-in Ended: ${additionalNotes}`;
+      }
+
+      if (storageUrl) {
+        newNote = `${newNote}\n\nRecording: ${storageUrl}`;
       }
 
       // 2. Update local crmActivity

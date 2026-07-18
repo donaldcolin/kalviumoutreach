@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
 import { locationTracker } from './locationTracker';
-import { visitTracker, VisitEvent } from './visitTracker';
 import { firestoreSync } from './firestoreSync';
-import { School, StopClassification } from '../types';
+import { School } from '../types';
 import { getAllSchools, onDailyTrack } from '../services/firestore';
 import { format } from 'date-fns';
 
@@ -17,24 +16,8 @@ export function useOutreachTracking(userId: string | undefined) {
   }, [isTracking]);
 
   const [activeSchoolMatch, setActiveSchoolMatch] = useState<School | null>(null);
-  const [pendingPrompt, setPendingPrompt] = useState<{
-    event: VisitEvent;
-    resolve: (result: { type: StopClassification; notes?: string }) => void;
-  } | null>(null);
 
   useEffect(() => {
-    // Load schools for geofencing
-    getAllSchools().then(schools => {
-      visitTracker.setSchools(schools);
-    });
-
-    visitTracker.setSchoolMatchCallback((school) => {
-      setActiveSchoolMatch(school);
-    });
-
-    visitTracker.setPromptCallback((event, resolve) => {
-      setPendingPrompt({ event, resolve });
-    });
 
     let unsubTrack = () => {};
     if (userId) {
@@ -43,7 +26,6 @@ export function useOutreachTracking(userId: string | undefined) {
         setIsTrackingInitialized(true);
         if (track?.status === 'active') {
           setIsTracking(true);
-          visitTracker.start();
           locationTracker.startTracking();
         } else if (track?.status === 'ended') {
           if (isTrackingRef.current) {
@@ -54,7 +36,6 @@ export function useOutreachTracking(userId: string | undefined) {
             );
           }
           setIsTracking(false);
-          visitTracker.stop();
           locationTracker.stopTracking();
         }
       });
@@ -62,10 +43,6 @@ export function useOutreachTracking(userId: string | undefined) {
 
     return () => {
       unsubTrack();
-      // Cleanup on unmount not strictly necessary as these are singletons, 
-      // but good practice if hook is remounted
-      visitTracker.setSchoolMatchCallback(() => {});
-      visitTracker.setPromptCallback(() => {});
     };
   }, [userId]);
 
@@ -73,7 +50,6 @@ export function useOutreachTracking(userId: string | undefined) {
     // If called from the auto-stop timer, we just want to stop everything.
     setIsTracking(false);
     await locationTracker.stopTracking();
-    visitTracker.stop();
     if (userId) {
       await firestoreSync.endSession();
     }
@@ -101,26 +77,14 @@ export function useOutreachTracking(userId: string | undefined) {
     
     setIsTracking(true);
     await firestoreSync.startSession(userId);
-    visitTracker.start();
     await locationTracker.startTracking();
   }, [userId, isTracking]);
-
-  // Removed duplicate endDay definition
-
-  const submitClassification = useCallback((type: StopClassification, notes?: string) => {
-    if (pendingPrompt) {
-      pendingPrompt.resolve({ type, notes });
-      setPendingPrompt(null);
-    }
-  }, [pendingPrompt]);
 
   return {
     isTracking,
     isTrackingInitialized,
     startDay,
     endDay,
-    activeSchoolMatch,
-    pendingPrompt,
-    submitClassification
+    activeSchoolMatch
   };
 }

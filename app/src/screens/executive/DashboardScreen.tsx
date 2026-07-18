@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
 import { ScrollView, View } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, interpolateColor, Easing } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, interpolateColor, Easing, FadeInUp } from 'react-native-reanimated';
 import * as Location from 'expo-location';
 import { useAuthStore } from '../../stores/authStore';
+import { useWalkInStore } from '../../stores/walkInStore';
 import firestore from '@react-native-firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 import { useOutreachTracking } from '../../tracking/useOutreachTracking';
@@ -14,20 +15,24 @@ import {
   DashboardDatePicker,
   DailyStatsCard,
   TrackingStatusIndicator,
-  GeofenceAlert,
+  OngoingWalkInCard,
   UpcomingTasksList,
-  VisitsList,
-  StartDayModal,
-  ClassificationPromptModal
+  StartDayModal
 } from '../../components/dashboard';
 
 export default function DashboardScreen() {
   const { user } = useAuthStore();
   const navigation = useNavigation<any>();
-  const { isTracking, isTrackingInitialized, startDay, activeSchoolMatch, pendingPrompt, submitClassification } = useOutreachTracking(user?.id);
-  const [customNote, setCustomNote] = React.useState('');
+  const { isTracking, isTrackingInitialized, startDay, activeSchoolMatch } = useOutreachTracking(user?.id);
   const allActivities = useCrmActivities(user?.email);
   const { appointments, completeTask } = usePendingAppointments(user?.id);
+  const { ongoingWalkIn, loadOngoing } = useWalkInStore();
+
+  useEffect(() => {
+    if (user?.id) {
+      loadOngoing(user.id);
+    }
+  }, [user?.id]);
   const [selectedDate, setSelectedDate] = React.useState(new Date());
 
   const filteredActivities = React.useMemo(() => {
@@ -126,10 +131,8 @@ export default function DashboardScreen() {
 
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-white">
       <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 12, paddingBottom: 18 }}>
-        <DashboardHeader userName={user?.name ?? 'Executive'} />
-
         <DashboardDatePicker
           dates={dates}
           selectedDate={selectedDate}
@@ -144,21 +147,22 @@ export default function DashboardScreen() {
 
         <TrackingStatusIndicator isTracking={isTracking} />
 
-        {activeSchoolMatch && (
-          <GeofenceAlert
-            schoolName={activeSchoolMatch.name}
-            onCheckIn={() => navigation.navigate('ActivityForm', { leadId: activeSchoolMatch.id, leadName: activeSchoolMatch.name })}
+        {ongoingWalkIn && (
+          <OngoingWalkInCard
+            walkIn={ongoingWalkIn}
+            onResume={() => navigation.navigate('ActivityForm', {
+              leadId: ongoingWalkIn.leadId,
+              leadName: ongoingWalkIn.leadName,
+              resumeWalkIn: true,
+              startLocation: ongoingWalkIn.startLocation,
+              startTime: ongoingWalkIn.startTime,
+            })}
           />
         )}
 
         <UpcomingTasksList
           tasks={appointments}
           onCompleteTask={completeTask}
-        />
-
-        <VisitsList
-          selectedDate={selectedDate}
-          activities={filteredActivities}
         />
       </ScrollView>
 
@@ -169,13 +173,6 @@ export default function DashboardScreen() {
         startCoords={startCoords}
         animatedButtonStyle={animatedButtonStyle}
         onStartDay={handleStartDay}
-      />
-
-      <ClassificationPromptModal
-        pendingPrompt={pendingPrompt}
-        customNote={customNote}
-        setCustomNote={setCustomNote}
-        submitClassification={submitClassification}
       />
     </View>
   );

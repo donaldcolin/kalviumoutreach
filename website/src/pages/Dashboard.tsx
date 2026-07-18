@@ -5,6 +5,7 @@ import { db } from '../firebase';
 import 'leaflet/dist/leaflet.css';
 import { useToast } from '../hooks/use-toast';
 import { TimelineActivityDialog } from "../components/TimelineActivityDialog";
+import { calculateDistanceMeters } from '../lib/distance';
 
 import { TeamSidebar } from '../components/dashboard/TeamSidebar';
 import { GlobalStats } from '../components/dashboard/GlobalStats';
@@ -20,19 +21,16 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAssociate, setSelectedAssociate] = useState<User | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  
+
   // Analytics State
-  const [globalVisitsToday, setGlobalVisitsToday] = useState(0);
-  const [selectedDateVisits, setSelectedDateVisits] = useState<any[]>([]);
-  const [selectedDateAutoStops, setSelectedDateAutoStops] = useState<any[]>([]);
   const [selectedDateCrmActivities, setSelectedDateCrmActivities] = useState<any[]>([]);
 
   // Map State
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
   const [route, setRoute] = useState<[number, number][]>([]);
-  const [, setRawPings] = useState<any[]>([]);
+  const [rawPings, setRawPings] = useState<any[]>([]);
   const [selectedDateLocReqs, setSelectedDateLocReqs] = useState<any[]>([]);
-  
+
   // Dynamic Map Zoom/Center State
   const [mapCenter, setMapCenter] = useState<[number, number]>([12.9716, 77.5946]);
   const [mapZoom, setMapZoom] = useState(13);
@@ -42,57 +40,87 @@ export default function Dashboard() {
   const [newAssociate, setNewAssociate] = useState({ name: '', email: '', phone: '', password: '', regionId: '' });
   const [selectedActivity, setSelectedActivity] = useState<any>(null);
   const [expandedActivityIdx, setExpandedActivityIdx] = useState<number | null>(null);
+  const [, setSelectedAssociateTasks] = useState<any[]>([]);
 
   // Tracking Toggle State
   const [dailyTrackStatus, setDailyTrackStatus] = useState<'active' | 'ended' | null>(null);
   const [dailyTrackId, setDailyTrackId] = useState<string | null>(null);
 
+  // Live Walk-Ins State
+  const [ongoingWalkIns, setOngoingWalkIns] = useState<Record<string, any>>({});
+
+  // Team Tracking Status
+  const [teamTrackingStatus, setTeamTrackingStatus] = useState<Record<string, 'active' | 'ended'>>({});
+
   // Time boundaries
   const todayStart = useMemo(() => new Date().setHours(0, 0, 0, 0), []);
   const todayEnd = useMemo(() => new Date().setHours(23, 59, 59, 999), []);
-  
+
   const selectedDateStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 0, 0, 0, 0).getTime();
   const selectedDateEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 23, 59, 59, 999).getTime();
 
-  // 1. Global Dashboard Stats
+  // 1. Global Dashboard Stats & Live Walk-Ins
   useEffect(() => {
     if (!user) return;
-    const q = query(
-      collection(db, 'visits'),
-      where('timestamp', '>=', todayStart),
-      where('timestamp', '<=', todayEnd)
-    );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const visibleUserIds = Object.keys(users).filter(id =>
-        user.role === 'admin' || users[id].managerId === user.id
-      );
-      const relevantVisits = snapshot.docs.filter(doc => visibleUserIds.includes(doc.data().executiveId));
-      setGlobalVisitsToday(relevantVisits.length);
+
+
+
+    // Global ongoing walk-ins
+    const qWalkIns = collection(db, 'ongoingWalkIns');
+    const unsubscribeWalkIns = onSnapshot(qWalkIns, (snapshot) => {
+      const currentWalkIns: Record<string, any> = {};
+      snapshot.docs.forEach(doc => {
+        currentWalkIns[doc.id] = doc.data();
+      });
+      setOngoingWalkIns(currentWalkIns);
     });
-    return () => unsubscribe();
+
+    // Global team tracking status for today
+    const dateObj = new Date();
+    const dateStr = `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}${String(dateObj.getDate()).padStart(2, '0')}`;
+
+    const qTracks = query(
+      collection(db, 'dailyTracks'),
+      where('date', '==', dateStr)
+    );
+    const unsubscribeTracks = onSnapshot(qTracks, (snapshot) => {
+      const statuses: Record<string, 'active' | 'ended'> = {};
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        if (data.userId && data.status) {
+          statuses[data.userId] = data.status;
+        }
+      });
+      setTeamTrackingStatus(statuses);
+    });
+
+    return () => {
+      unsubscribeWalkIns();
+      unsubscribeTracks();
+    };
   }, [user, users, todayStart, todayEnd]);
 
   // Global Toast Notifications for new checks
   useEffect(() => {
     let initialLoad = true;
     const q = query(collection(db, 'visits'), where('timestamp', '>=', todayStart));
-    
+
     const unsub = onSnapshot(q, (snapshot) => {
       if (initialLoad) {
         initialLoad = false;
         return;
       }
-      
+
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
           const data = change.doc.data();
           const assoc = users[data.executiveId];
           const name = assoc ? assoc.name : 'An associate';
-          
+
           let action = `checked in at ${data.schoolName || 'Unknown School'}`;
           if (data.type === 'break') action = 'took a break';
           else if (data.type === 'unclassified') action = 'recorded an unclassified stop';
-          
+
           toast({
             title: "Live Update",
             description: `${name} just ${action}.`,
@@ -100,7 +128,7 @@ export default function Dashboard() {
         }
       });
     });
-    
+
     return () => unsub();
   }, [users, toast, todayStart]);
 
@@ -110,7 +138,6 @@ export default function Dashboard() {
       setRoute([]);
       setRawPings([]);
       setSelectedDateLocReqs([]);
-      setSelectedDateVisits([]);
       setSelectedDateCrmActivities([]);
       return;
     }
@@ -118,8 +145,8 @@ export default function Dashboard() {
     setRoute([]);
     setRawPings([]);
     setSelectedDateLocReqs([]);
-    setSelectedDateVisits([]);
     setSelectedDateCrmActivities([]);
+    setSelectedAssociateTasks([]);
     setDailyTrackStatus(null);
     setDailyTrackId(null);
 
@@ -127,7 +154,7 @@ export default function Dashboard() {
     const dateStr = `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}${String(dateObj.getDate()).padStart(2, '0')}`;
     const trackDocId = `${selectedAssociate.id}_${dateStr}`;
     setDailyTrackId(trackDocId);
-    
+
     const unsubTrack = onSnapshot(doc(db, 'dailyTracks', trackDocId), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
@@ -147,26 +174,7 @@ export default function Dashboard() {
       }
     );
 
-    const vqToday = query(
-      collection(db, 'visits'),
-      where('executiveId', '==', selectedAssociate.id),
-      where('timestamp', '>=', selectedDateStart),
-      where('timestamp', '<=', selectedDateEnd),
-      orderBy('timestamp', 'asc')
-    );
-    const unsubVToday = onSnapshot(vqToday, (snapshot) => {
-      const visits = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
-      setSelectedDateVisits(visits);
-    });
 
-    const unsubAutoStops = onSnapshot(
-      collection(db, 'dailyTracks', trackDocId, 'visits'),
-      (snapshot) => {
-        const stops = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
-        setSelectedDateAutoStops(stops);
-      },
-      (error) => console.error("Error fetching auto stops:", error)
-    );
 
     const qReqsToday = query(
       collection(db, 'locationRequests'),
@@ -206,44 +214,27 @@ export default function Dashboard() {
       });
     }
 
+    const qTasks = query(
+      collection(db, 'appointments'),
+      where('executiveId', '==', selectedAssociate.id)
+    );
+    const unsubTasks = onSnapshot(qTasks, (snapshot) => {
+      const tasks = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+      setSelectedAssociateTasks(tasks);
+    });
+
     return () => {
       unsubTrack();
       if (typeof unsubLocations === 'function') unsubLocations();
-      unsubVToday();
-      unsubAutoStops();
       unsubReqsToday();
       unsubLocationReq();
       if (typeof unsubCrm === 'function') unsubCrm();
+      unsubTasks();
     };
   }, [selectedAssociate, selectedDateStart, selectedDateEnd]);
 
   const timeline = useMemo(() => {
     const merged: any[] = [];
-    const allVisitsAndStops = [...selectedDateVisits, ...selectedDateAutoStops];
-
-    allVisitsAndStops.forEach(v => {
-      const ts = v.timestamp?.toMillis ? v.timestamp.toMillis() : (v.timestamp || 0);
-      const date = new Date(ts);
-      const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      
-      let eventText = `Checked in at ${v.schoolName || 'Unknown School'}`;
-      if (v.type === 'location_ping') eventText = 'Location Updated';
-      else if (v.type === 'break') eventText = 'Took a break';
-      else if (v.type === 'unclassified') eventText = 'Unclassified Stop';
-      else if (v.type === 'school') eventText = `Visited ${v.schoolName || 'Unknown School'}`;
-      else if (v.type === 'teashop' || v.type === 'park') eventText = `Stopped at ${v.type}`;
-
-      merged.push({
-        time: timeStr,
-        event: eventText,
-        type: v.type === 'location_ping' ? 'ping' : 'visit',
-        lat: v.checkInLat || v.location?.lat || v.lat,
-        lng: v.checkInLng || v.location?.lng || v.lng,
-        timestamp: ts,
-        status: v.status || (v.type === 'location_ping' ? undefined : 'completed'),
-        data: v,
-      });
-    });
 
     selectedDateLocReqs.forEach(r => {
       const ts = r.requestedAt?.toMillis ? r.requestedAt.toMillis() : (r.requestedAt || Date.now());
@@ -257,20 +248,96 @@ export default function Dashboard() {
       const ts = dt ? new Date(dt).getTime() : Date.now();
       const date = new Date(ts);
       const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      
+
       const stageLabel = a.walkInStatus || 'Visit';
       let eventText = `📋 ${a.schoolName || 'School'} — ${stageLabel}`;
       if (a.typeOfWalkIn) eventText = `📋 ${a.typeOfWalkIn}: ${a.schoolName || 'School'} (${stageLabel})`;
-      
+
       merged.push({
-        time: timeStr, event: eventText, type: 'crm', lat: a.lat, lng: a.lng,
+        time: timeStr, event: eventText, type: 'crm',
+        lat: a.lat ?? a.startLocation?.lat ?? null,
+        lng: a.lng ?? a.startLocation?.lng ?? null,
         timestamp: ts, status: a.walkInStatus, data: a,
       });
     });
 
+    // 3. GPS Signal Lost Gaps
+    for (let i = 1; i < rawPings.length; i++) {
+      const prev = rawPings[i - 1];
+      const curr = rawPings[i];
+      const prevTs = prev.ts?.toMillis ? prev.ts.toMillis() : (prev.ts || 0);
+      const currTs = curr.ts?.toMillis ? curr.ts.toMillis() : (curr.ts || 0);
+
+      const gapMs = currTs - prevTs;
+      if (gapMs > 3600000) { // > 1 hour gap
+        const date = new Date(currTs);
+        const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const gapMins = Math.round(gapMs / 60000);
+        merged.push({
+          time: timeStr,
+          event: 'GPS Signal Lost',
+          details: `No background location data received for ${gapMins > 120 ? Math.round(gapMins / 60) + ' hours' : gapMins + ' minutes'}`,
+          type: 'warning',
+          timestamp: currTs - 1000,
+          isWarning: true
+        });
+      }
+    }
+
     merged.sort((a, b) => a.timestamp - b.timestamp);
-    return merged;
-  }, [selectedDateVisits, selectedDateLocReqs, selectedDateAutoStops, selectedDateCrmActivities]);
+
+    // Anti-Cheat: Impossible Travel & Short Duration
+    const finalTimeline: any[] = [];
+    let lastLoc: { lat: number, lng: number, timestamp: number } | null = null;
+
+    merged.forEach(item => {
+      // 1. Short Duration Warning for CRM activities
+      if (item.type === 'crm' && item.data) {
+        const a = item.data;
+        const walkInTs = a.walkInDateTime ? new Date(a.walkInDateTime).getTime() : 0;
+        const createdTs = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+        if (walkInTs > 0 && createdTs > 0) {
+          const durationMs = createdTs - walkInTs;
+          if (durationMs > 0 && durationMs < 180000 && (a.walkInStatus?.includes('PI') || a.walkInStatus?.includes('Principal') || a.walkInStatus?.includes('Seminar'))) {
+            finalTimeline.push({
+              time: item.time,
+              event: 'Suspiciously Short Duration',
+              details: `Principal Interaction lasted only ${Math.round(durationMs / 1000)}s`,
+              type: 'warning',
+              timestamp: item.timestamp - 1,
+              isWarning: true
+            });
+          }
+        }
+      }
+
+      // 2. Impossible Travel
+      if (item.lat && item.lng && item.timestamp) {
+        if (lastLoc) {
+          const distMeters = calculateDistanceMeters(lastLoc.lat, lastLoc.lng, item.lat, item.lng);
+          const timeHours = (item.timestamp - lastLoc.timestamp) / 3600000;
+          if (timeHours > 0) {
+            const speedKmh = (distMeters / 1000) / timeHours;
+            if (speedKmh > 100) {
+              finalTimeline.push({
+                time: item.time,
+                event: 'Impossible Travel Detected',
+                details: `Speed ~${Math.round(speedKmh)} km/h between check-ins (${(distMeters / 1000).toFixed(1)}km in ${Math.round(timeHours * 60)}m)`,
+                type: 'warning',
+                timestamp: item.timestamp - 1,
+                isWarning: true
+              });
+            }
+          }
+        }
+        lastLoc = { lat: item.lat, lng: item.lng, timestamp: item.timestamp };
+      }
+
+      finalTimeline.push(item);
+    });
+
+    return finalTimeline;
+  }, [selectedDateLocReqs, selectedDateCrmActivities, rawPings]);
 
   const visibleUsers = useMemo(() => {
     const allUsers = Object.values(users);
@@ -310,7 +377,7 @@ export default function Dashboard() {
     if (!dailyTrackId || !selectedAssociate) return;
     const newStatus = dailyTrackStatus === 'active' ? 'ended' : 'active';
     setDailyTrackStatus(newStatus);
-    await setDoc(doc(db, 'dailyTracks', dailyTrackId), { 
+    await setDoc(doc(db, 'dailyTracks', dailyTrackId), {
       status: newStatus,
       executiveId: selectedAssociate.id,
       date: format(selectedDate, 'yyyyMMdd')
@@ -355,13 +422,13 @@ export default function Dashboard() {
   const handleSyncLSQ = async () => {
     try {
       toast({ title: 'Syncing LeadSquared...', description: 'Fetching latest activities globally.' });
-      
+
       const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://us-central1-kalvium-outreach-53f54.cloudfunctions.net/api';
       const res = await fetch(`${API_BASE_URL}/api/sync-now`);
       const data = await res.json();
-      
-      toast({ 
-        title: 'Sync Complete', 
+
+      toast({
+        title: 'Sync Complete',
         description: data.message || `Sync started in the background.`
       });
     } catch (err) {
@@ -371,7 +438,7 @@ export default function Dashboard() {
 
   return (
     <div className="flex h-[calc(100vh-48px)] gap-6 p-6 bg-[#fafafa] text-zinc-900 animate-in fade-in duration-700">
-      <TeamSidebar 
+      <TeamSidebar
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         filteredUsers={filteredUsers}
@@ -383,23 +450,26 @@ export default function Dashboard() {
         newAssociate={newAssociate}
         setNewAssociate={setNewAssociate}
         handleAddAssociate={handleAddAssociate}
+        ongoingWalkIns={ongoingWalkIns}
+        teamTrackingStatus={teamTrackingStatus}
       />
 
       <div className="flex-1 flex flex-col h-full gap-6 overflow-hidden">
         {!selectedAssociate ? (
-          <GlobalStats 
-            totalAssociates={totalAssociates} 
-            globalVisitsToday={globalVisitsToday} 
-            totalLeads={totalLeads} 
+          <GlobalStats
+            totalAssociates={totalAssociates}
+            activeWalkIns={Object.keys(ongoingWalkIns).length}
+            totalLeads={totalLeads}
           />
         ) : (
-          <AssociateHeader 
+          <AssociateHeader
             selectedAssociate={selectedAssociate}
             selectedDate={selectedDate}
             setSelectedDate={setSelectedDate}
             dailyTrackStatus={dailyTrackStatus}
             toggleTrackingStatus={toggleTrackingStatus}
-            timelineVisitsCount={timeline.filter(t => t.type === 'visit').length}
+            timelineVisitsCount={timeline.filter(t => t.type === 'crm').length}
+            ongoingWalkIn={selectedAssociate ? ongoingWalkIns[selectedAssociate.id] : null}
           />
         )}
 
@@ -411,21 +481,22 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-medium text-zinc-900 tracking-tight">Select an associate</h3>
               <p className="text-zinc-500 text-sm mt-3 leading-relaxed">
-                Choose a team member from the sidebar to view their real-time location and visit analytics.
+                Choose a team member from the sidebar to view their real-time location and activity timeline.
               </p>
             </div>
           </div>
         ) : (
           <div className="flex-1 flex gap-6 overflow-hidden animate-in fade-in duration-700">
-            <AssociateMap 
+            <AssociateMap
               isFetchingLocation={isFetchingLocation}
               handleFetchLocation={handleFetchLocation}
               mapCenter={mapCenter}
               mapZoom={mapZoom}
               route={route}
               timeline={timeline}
+              ongoingWalkIn={selectedAssociate ? ongoingWalkIns[selectedAssociate.id] : null}
             />
-            <AssociateTimeline 
+            <AssociateTimeline
               timeline={timeline}
               selectedDate={selectedDate}
               expandedActivityIdx={expandedActivityIdx}
@@ -437,11 +508,11 @@ export default function Dashboard() {
           </div>
         )}
       </div>
-      
-      <TimelineActivityDialog 
-        open={!!selectedActivity} 
-        onOpenChange={(open) => !open && setSelectedActivity(null)} 
-        stop={selectedActivity} 
+
+      <TimelineActivityDialog
+        open={!!selectedActivity}
+        onOpenChange={(open) => !open && setSelectedActivity(null)}
+        stop={selectedActivity}
       />
     </div>
   );

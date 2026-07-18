@@ -1,6 +1,5 @@
 import React from 'react';
-import { HStack } from '@/components/ui/hstack';
-import { Box } from '@/components/ui/box';
+import { View } from 'react-native';
 import { Text } from '@/components/ui/text';
 
 export interface TrackingStatusIndicatorProps {
@@ -8,14 +7,14 @@ export interface TrackingStatusIndicatorProps {
 }
 
 export function TrackingStatusIndicator({ isTracking }: TrackingStatusIndicatorProps) {
+  if (!isTracking) return null; // Minimalist approach: hide when not tracking or show a neutral message
+
   return (
-    <HStack className="w-full bg-white rounded-2xl p-4 mb-8 border border-slate-100 items-center justify-between">
-      <HStack space="sm" className="items-center">
-        <Box className={`w-2.5 h-2.5 rounded-full ${isTracking ? 'bg-green-500' : 'bg-muted-foreground'}`} />
-        <Text className="text-foreground text-sm font-medium">
-          {isTracking ? 'Location tracking active' : 'Tracking paused'}
-        </Text>
-      </HStack>
-    </HStack>
+    <View className="flex-row items-center bg-white border border-gray-200 rounded-xl p-3 mb-6 shadow-sm">
+      <View className="w-2 h-2 rounded-full bg-red-600 mr-3 animate-pulse" />
+      <Text className="text-gray-600 text-xs tracking-wide">
+        Location tracking active
+      </Text>
+    </View>
   );
 }

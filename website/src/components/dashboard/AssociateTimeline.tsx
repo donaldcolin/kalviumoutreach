@@ -23,7 +23,7 @@ export function AssociateTimeline({
   setMapZoom
 }: AssociateTimelineProps) {
   return (
-    <div className="w-[340px] flex flex-col bg-white border border-zinc-200 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] rounded-xl">
+    <div className="w-[280px] flex flex-col bg-white border border-zinc-200 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] rounded-xl">
       <div className="p-6 border-b border-zinc-100 flex items-center justify-between">
         <h3 className="text-sm font-bold tracking-widest uppercase text-zinc-900">Activity on {format(selectedDate, "MMM d")}</h3>
         <Clock size={14} className="text-zinc-400" />
@@ -31,11 +31,24 @@ export function AssociateTimeline({
       <div className="flex-1 p-6 overflow-y-auto">
         <div className="relative border-l border-zinc-200 ml-2 space-y-8 pb-4">
           {timeline.map((stop, idx) => {
+            if (stop.isWarning) {
+              return (
+                <div key={idx} className="relative pl-6 group my-4">
+                  <span className="absolute -left-[5px] top-1.5 w-2.5 h-2.5 bg-red-500 rounded-full z-10 shadow-[0_0_8px_rgba(239,68,68,0.6)] animate-pulse" />
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 shadow-sm">
+                    <p className="text-xs font-bold text-red-700 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                      🚨 {stop.event}
+                    </p>
+                    <p className="text-sm font-medium text-red-900">{stop.details}</p>
+                  </div>
+                </div>
+              );
+            }
             if (stop.type === 'crm') {
               return (
                 <div key={idx} className="relative pl-6 group">
                   <span className="absolute -left-[5px] top-1.5 w-2.5 h-2.5 bg-white border-2 border-emerald-500 rounded-full z-10 transition-colors group-hover:bg-emerald-500" />
-                  <CrmActivityCard 
+                  <CrmActivityCard
                     activity={stop.data}
                     isExpanded={expandedActivityIdx === idx}
                     onToggle={() => setExpandedActivityIdx(expandedActivityIdx === idx ? null : idx)}
@@ -49,8 +62,8 @@ export function AssociateTimeline({
               );
             }
             return (
-              <div 
-                key={idx} 
+              <div
+                key={idx}
                 className="relative pl-6 group cursor-pointer"
                 onClick={() => {
                   if (stop.lat && stop.lng) {
@@ -65,7 +78,7 @@ export function AssociateTimeline({
                 </p>
                 <div className="flex items-center justify-between mt-1.5">
                   <p className="text-[11px] font-semibold text-zinc-400 tracking-wider uppercase text-left">{stop.time}</p>
-                  <button 
+                  <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedActivity(stop);

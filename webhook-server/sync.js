@@ -152,6 +152,21 @@ export async function syncActivities(hours = SYNC_LOOKBACK_MINUTES / 60) {
       const chunk = allActivities.slice(i, i + BATCH_LIMIT);
       const batch = db.batch();
 
+      // Find local documents that might have been created by the app (UUID as doc ID, but lsqActivityId set)
+      const chunkIds = chunk.map(r => String(r.ProspectActivityId || r.Id || r.ActivityId || '')).filter(Boolean);
+      const mappedDocs = {};
+      
+      if (chunkIds.length > 0) {
+        // Firestore 'in' queries are limited to 30 items
+        for (let j = 0; j < chunkIds.length; j += 30) {
+          const subChunk = chunkIds.slice(j, j + 30);
+          const snap = await db.collection('crmActivities').where('lsqActivityId', 'in', subChunk).get();
+          snap.forEach(d => {
+            mappedDocs[d.data().lsqActivityId] = d.ref;
+          });
+        }
+      }
+
       for (const raw of chunk) {
         const activityId = String(raw.ProspectActivityId || raw.Id || raw.ActivityId || '');
         if (!activityId) {
@@ -165,7 +180,10 @@ export async function syncActivities(hours = SYNC_LOOKBACK_MINUTES / 60) {
           raw.LeadName = leadIdToName[raw.RelatedProspectId];
         }
         const doc = buildFirestoreDoc(raw, fields, emailToFirestoreId);
-        const docRef = db.collection('crmActivities').doc(activityId);
+        
+        // If we found a mapped local doc, update it. Otherwise, use the LSQ ID as the doc ID.
+        const docRef = mappedDocs[activityId] || db.collection('crmActivities').doc(activityId);
+        
         batch.set(docRef, doc, { merge: true });
         written++;
       }

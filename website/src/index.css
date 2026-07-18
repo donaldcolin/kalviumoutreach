@@ -13,6 +13,7 @@
     --font-heading: var(--font-sans);
     --font-sans: 'Geist Variable', sans-serif;
   }
+
   :root {
     --background: oklch(1 0 0);
     --foreground: oklch(0.1 0 0);
@@ -43,7 +44,7 @@
     --sidebar-border: oklch(0.92 0 0);
     --sidebar-ring: oklch(0.1 0 0);
   }
-  
+
   /* Disable dark mode by overriding it with the exact same light values */
   .dark {
     --background: oklch(1 0 0);
@@ -67,11 +68,12 @@
     --ring: oklch(0.1 0 0);
     --radius: 0.75rem;
   }
-  
+
   * {
     border-color: var(--border);
     outline-color: var(--ring);
   }
+
   body {
     background-color: var(--background);
     color: var(--foreground);

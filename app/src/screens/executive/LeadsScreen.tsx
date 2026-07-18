@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, FlatList, TouchableOpacity, ActivityIndicator, TextInput, Platform } from 'react-native';
+import { View, FlatList, TouchableOpacity, ActivityIndicator, TextInput, Platform, Alert, Image } from 'react-native';
 import { Box } from '@/components/ui/box';
 import { VStack } from '@/components/ui/vstack';
 import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import { Button, ButtonText } from '@/components/ui/button';
 import { useAuthStore } from '../../stores/authStore';
-import { MapPin, Building2, Search, X } from 'lucide-react-native';
+import { MapPin, Building2, Search, X, Menu } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 
 const API_BASE = 'https://us-central1-kalvium-outreach-53f54.cloudfunctions.net/api';
@@ -16,7 +16,13 @@ export default function LeadsScreen() {
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
   const navigation = useNavigation<any>();
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
 
   useEffect(() => {
     if (user?.email) {
@@ -46,26 +52,26 @@ export default function LeadsScreen() {
     return name.includes(q) || city.includes(q);
   });
 
+  const paginatedLeads = filteredLeads.slice(0, page * PAGE_SIZE);
+
 
 
   return (
-    <View className="flex-1 bg-background pt-2 px-4 pb-0">
-      <HStack className="justify-between items-center mb-4 mt-2">
-        <Text className="text-xl font-bold text-slate-900 tracking-tight">My Leads</Text>
-      </HStack>
+    <View className="flex-1 bg-white pt-2 px-4 pb-0">
+      <Text className="text-xl font-bold text-gray-900 tracking-tight mb-4">My Leads</Text>
 
-      <Box className="bg-slate-100 rounded-xl px-4 py-3 mb-4 flex-row items-center border border-slate-200">
-        <Search color="#94A3B8" size={20} />
+      <Box className="bg-gray-50 rounded-xl px-4 py-3 mb-6 flex-row items-center border border-gray-100">
+        <Search color="#9CA3AF" size={20} />
         <TextInput
-          className="flex-1 ml-3 text-base text-slate-900"
+          className="flex-1 ml-3 text-base text-gray-900"
           placeholder="Search leads..."
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor="#9CA3AF"
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <X color="#94A3B8" size={20} />
+            <X color="#9CA3AF" size={20} />
           </TouchableOpacity>
         )}
       </Box>
@@ -76,10 +82,16 @@ export default function LeadsScreen() {
         </View>
       ) : (
         <FlatList
-          data={filteredLeads}
+          data={paginatedLeads}
           keyExtractor={(item) => item.ProspectID}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 100 }}
+          onEndReached={() => {
+            if (page * PAGE_SIZE < filteredLeads.length) {
+              setPage(prev => prev + 1);
+            }
+          }}
+          onEndReachedThreshold={0.5}
           ListEmptyComponent={
             <View className="flex-1 justify-center items-center mt-20">
               <Text className="text-4xl mb-3">🏫</Text>
@@ -93,23 +105,23 @@ export default function LeadsScreen() {
             return (
               <TouchableOpacity
                 activeOpacity={0.7}
-                onPress={() => navigation.navigate('ActivityForm', { leadId: item.ProspectID, leadName: name })}
-                className="bg-white p-4 rounded-2xl mb-3 border border-slate-100 shadow-sm"
+                onPress={() => {
+                  navigation.navigate('LeadDetail', { leadId: item.ProspectID, leadName: name });
+                }}
+                className="bg-white p-4 rounded-xl mb-3 border border-gray-200 flex-row justify-between items-center"
               >
-                <HStack className="items-center justify-between">
-                  <VStack className="flex-1 mr-4">
-                    <Text className="text-lg font-bold text-slate-900 mb-1">{name || 'Unknown School'}</Text>
-                    {item.mx_City ? (
-                      <HStack className="items-center mt-1">
-                        <MapPin size={14} color="#64748B" />
-                        <Text className="text-slate-500 ml-1 text-sm">{item.mx_City}</Text>
-                      </HStack>
-                    ) : null}
-                  </VStack>
-                  <Box className="w-10 h-10 rounded-full bg-rose-50 items-center justify-center">
-                    <Building2 size={20} color="#E11D48" />
-                  </Box>
-                </HStack>
+                <View className="flex-1 mr-4">
+                  <Text className="text-base font-semibold text-gray-900 mb-1">{name || 'Unknown School'}</Text>
+                  {item.mx_City ? (
+                    <View className="flex-row items-center mt-1">
+                      <MapPin size={12} color="#6B7280" />
+                      <Text className="text-gray-500 ml-1 text-xs">{item.mx_City}</Text>
+                    </View>
+                  ) : null}
+                </View>
+                <View className="rounded-md bg-red-50 p-2 items-center justify-center">
+                  <Building2 size={20} color="#DC2626" />
+                </View>
               </TouchableOpacity>
             );
           }}

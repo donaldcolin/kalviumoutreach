@@ -38,8 +38,8 @@ function trackDocId(executiveId: string, date: string): string {
 }
 
 /**
- * Append a GPS ping to the day's track using arrayUnion.
- * Creates the document if it doesn't exist.
+ * Append a GPS ping to the day's track as a doc in the `locations` subcollection.
+ * This matches the format used by firestoreSync.ts so the website can read it.
  */
 export async function appendPing(
   executiveId: string,
@@ -48,14 +48,25 @@ export async function appendPing(
 ): Promise<void> {
   const docId = trackDocId(executiveId, date);
   const ref = dailyTracksRef().doc(docId);
+
+  // Ensure the parent dailyTrack doc exists
   await ref.set(
     {
       executiveId,
       date,
-      pings: firestore.FieldValue.arrayUnion(ping),
+      lastPing: firestore.FieldValue.serverTimestamp(),
     },
     { merge: true }
   );
+
+  // Write the ping as a subcollection doc (keyed by timestamp) so the website can read it
+  await ref.collection('locations').doc(ping.timestamp.toString()).set({
+    lat: ping.lat,
+    lng: ping.lng,
+    ts: ping.timestamp,
+    speed: null,
+    accuracy: ping.accuracy,
+  });
 }
 
 

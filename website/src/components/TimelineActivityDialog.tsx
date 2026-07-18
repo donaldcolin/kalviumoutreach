@@ -63,22 +63,24 @@ export function TimelineActivityDialog({ open, onOpenChange, stop }: TimelineAct
           {stop.type === 'crm' && stop.data && (
             <div className="bg-white rounded-2xl p-5 border border-zinc-200 shadow-sm space-y-6">
               {/* Stage Progress Bar */}
-              <div>
-                <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold mb-3">Visit Progress</p>
-                <div className="flex items-center gap-1">
-                  {STAGE_SHORT.map((label, i) => (
-                    <div key={label} className="flex items-center gap-1 flex-1">
-                      <div className={`flex-1 h-2 rounded-full ${i <= getStageIndex(stop.data.walkInStatus) ? STAGE_COLORS[i] : 'bg-zinc-200'}`} />
-                      {i < STAGE_SHORT.length - 1 && <ArrowRight size={10} className="text-zinc-300 shrink-0" />}
-                    </div>
-                  ))}
+              {stop.data.walkInStatus && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold mb-3">Visit Progress</p>
+                  <div className="flex items-center gap-1">
+                    {STAGE_SHORT.map((label, i) => (
+                      <div key={label} className="flex items-center gap-1 flex-1">
+                        <div className={`flex-1 h-2 rounded-full ${i <= getStageIndex(stop.data.walkInStatus) ? STAGE_COLORS[i] : 'bg-zinc-200'}`} />
+                        {i < STAGE_SHORT.length - 1 && <ArrowRight size={10} className="text-zinc-300 shrink-0" />}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-between mt-2">
+                    {STAGE_SHORT.map((label, i) => (
+                      <span key={label} className={`text-[9px] font-bold tracking-wider ${i <= getStageIndex(stop.data.walkInStatus) ? 'text-zinc-700' : 'text-zinc-400'}`}>{label}</span>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex justify-between mt-2">
-                  {STAGE_SHORT.map((label, i) => (
-                    <span key={label} className={`text-[9px] font-bold tracking-wider ${i <= getStageIndex(stop.data.walkInStatus) ? 'text-zinc-700' : 'text-zinc-400'}`}>{label}</span>
-                  ))}
-                </div>
-              </div>
+              )}
 
               {/* Outcome */}
               {(stop.data.refusedEntryReason || stop.data.statusFrontDesk || stop.data.statusPIC || stop.data.statusPrincipal) && (
@@ -158,6 +160,11 @@ export function TimelineActivityDialog({ open, onOpenChange, stop }: TimelineAct
                 {stop.data.followUpDate && (
                   <span className="px-3 py-1.5 bg-blue-50 text-blue-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-blue-100 flex items-center gap-1.5">
                     <CalendarIcon size={12} /> Follow-up: {new Date(stop.data.followUpDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                  </span>
+                )}
+                {stop.data.isValidWalkIn !== undefined && (
+                  <span className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg border flex items-center gap-1.5 ${stop.data.isValidWalkIn ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
+                    <MapPin size={12} /> {stop.data.isValidWalkIn ? 'Valid Location' : 'Fake Location'} {stop.data.distanceMeters != null ? `(${stop.data.distanceMeters}m gap)` : ''}
                   </span>
                 )}
               </div>

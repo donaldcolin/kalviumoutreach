@@ -92,7 +92,8 @@ export type ExecutiveTabParamList = {
 export type ExecutiveStackParamList = {
   ExecutiveTabs: undefined;
   Profile: undefined;
-  ActivityForm: { leadId: string; leadName: string };
+  LeadDetail: { leadId: string; leadName: string };
+  ActivityForm: { leadId: string; leadName: string; resumeWalkIn?: boolean; startLocation?: { lat: number; lng: number } | null; startTime?: string };
 };
 
 // Removed VisitStackParamList as visits are handled via CRM now

@@ -76,5 +76,12 @@ service cloud.firestore {
       allow write: if request.auth != null && resource.data.executiveId == request.auth.uid;
       allow create: if request.auth != null && request.resource.data.executiveId == request.auth.uid;
     }
+
+    // Ongoing walk-in sessions (one per user, keyed by userId)
+    match /ongoingWalkIns/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
   }
 }

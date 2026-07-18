@@ -1,6 +1,6 @@
 import React from 'react';
+import { View, Image } from 'react-native';
 import { HStack } from '@/components/ui/hstack';
-import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
 
 export interface DashboardHeaderProps {
@@ -9,11 +9,11 @@ export interface DashboardHeaderProps {
 
 export function DashboardHeader({ userName }: DashboardHeaderProps) {
   return (
-    <HStack className="w-full justify-between items-center mb-6">
-      <HStack className="items-baseline" space="sm">
-        <Text className="text-muted-foreground text-2xl font-normal">Hello,</Text>
-        <Heading size="2xl" className="text-foreground font-bold tracking-tight">{userName}</Heading>
-      </HStack>
-    </HStack>
+    <View className="mb-6">
+      <View>
+        <Text className="text-gray-500 text-2xl font-normal">Hello,</Text>
+        <Text className="text-gray-900 text-3xl font-bold tracking-tight">{userName}</Text>
+      </View>
+    </View>
   );
 }

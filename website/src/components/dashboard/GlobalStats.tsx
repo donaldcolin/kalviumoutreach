@@ -1,17 +1,17 @@
-import { Users, MapPin, Briefcase } from 'lucide-react';
+import { Users, Activity, Briefcase } from 'lucide-react';
 
 interface GlobalStatsProps {
   totalAssociates: number;
-  globalVisitsToday: number;
+  activeWalkIns: number;
   totalLeads: number;
 }
 
-export function GlobalStats({ totalAssociates, globalVisitsToday, totalLeads }: GlobalStatsProps) {
+export function GlobalStats({ totalAssociates, activeWalkIns, totalLeads }: GlobalStatsProps) {
   return (
     <div className="grid grid-cols-3 gap-6 shrink-0">
       {[
         { label: "Total Associates", value: totalAssociates, icon: Users },
-        { label: "Global Visits Today", value: globalVisitsToday, icon: MapPin },
+        { label: "Active Walk-Ins", value: activeWalkIns, icon: Activity },
         { label: "Team Leads", value: totalLeads, icon: Briefcase }
       ].map((stat, i) => (
         <div key={i} className="bg-white p-6 border border-zinc-200 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] flex flex-col justify-between min-h-[140px] relative overflow-hidden group rounded-xl">

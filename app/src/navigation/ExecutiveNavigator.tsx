@@ -10,10 +10,11 @@ import { Image, TouchableOpacity, Modal, View, StyleSheet, TouchableWithoutFeedb
 import { User, Menu, MapPin, FileText, List, Briefcase } from 'lucide-react-native';
 
 import DashboardScreen from '../screens/executive/DashboardScreen';
-import MeetingNotesScreen from './../screens/executive/MeetingNotesScreen';
+import MeetingNotesScreen from '../screens/executive/MeetingNotesScreen';
 import TasksScreen from '../screens/executive/TasksScreen';
 import LeadsScreen from '../screens/executive/LeadsScreen';
-import Activity232FormScreen from '../screens/executive/Activity232FormScreen';
+import LeadDetailScreen from '../screens/executive/LeadDetailScreen';
+import WalkInSessionScreen from '../screens/executive/WalkInSessionScreen';
 
 import { Box } from '@/components/ui/box';
 import { VStack } from '@/components/ui/vstack';
@@ -122,7 +123,7 @@ function ExecutiveTabs() {
           headerShown: true,
           headerTitle: '',
           headerStyle: {
-            backgroundColor: '#F8FAFC',
+            backgroundColor: '#FFFFFF',
             elevation: 0,
             shadowOpacity: 0,
             borderBottomWidth: 0,
@@ -130,7 +131,7 @@ function ExecutiveTabs() {
           headerLeft: () => (
             <Image
               source={require('../../assets/LOGO.png')}
-              style={{ width: 140, height: 40, marginLeft: 16, marginTop: 8 }}
+              style={{ width: 120, height: 32, marginLeft: 16 }}
               resizeMode="contain"
             />
           ),
@@ -138,12 +139,12 @@ function ExecutiveTabs() {
           tabBarStyle: {
             backgroundColor: '#FFFFFF',
             borderTopWidth: 1,
-            borderTopColor: '#F1F5F9',
+            borderTopColor: '#F3F4F6',
             elevation: 0,
             shadowOpacity: 0,
           },
-          tabBarActiveTintColor: '#E11D48',
-          tabBarInactiveTintColor: '#94A3B8',
+          tabBarActiveTintColor: '#DC2626',
+          tabBarInactiveTintColor: '#9CA3AF',
           tabBarLabelStyle: {
             fontSize: 12,
             fontWeight: '600',
@@ -158,17 +159,6 @@ function ExecutiveTabs() {
             tabBarLabel: 'Tracking',
             tabBarIcon: ({ color, size }) => (
               <MapPin size={size} color={color} strokeWidth={2} />
-            ),
-          }}
-        />
-
-        <Tab.Screen
-          name="Notes"
-          component={MeetingNotesScreen}
-          options={{
-            tabBarLabel: 'Notes',
-            tabBarIcon: ({ color, size }) => (
-              <FileText size={size} color={color} strokeWidth={2} />
             ),
           }}
         />
@@ -217,14 +207,17 @@ export default function ExecutiveNavigator() {
         }}
       />
       <ExecutiveStack.Screen
-        name="ActivityForm"
-        component={Activity232FormScreen}
+        name="LeadDetail"
+        component={LeadDetailScreen}
         options={{
-          headerShown: true,
-          title: 'Mark Activity',
-          headerStyle: { backgroundColor: '#F8FAFC' },
-          headerShadowVisible: false,
-          presentation: 'modal'
+          headerShown: false,
+        }}
+      />
+      <ExecutiveStack.Screen
+        name="ActivityForm"
+        component={WalkInSessionScreen}
+        options={{
+          headerShown: false,
         }}
       />
     </ExecutiveStack.Navigator>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuthStore } from '../stores/authStore';
 import { AnalyticsTab } from '../components/AnalyticsTab';
@@ -7,18 +7,27 @@ import { BarChart3 } from 'lucide-react';
 
 export default function Analytics() {
   const { users } = useAuthStore();
-  const [globalVisits7Days, setGlobalVisits7Days] = useState<any[]>([]);
+  const [globalActivities7Days, setGlobalActivities7Days] = useState<any[]>([]);
 
   useEffect(() => {
-    // Fetch last 7 days of visits for Analytics tab
+    // Fetch last 7 days of CRM activities for Analytics tab
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const sevenDaysAgoTs = sevenDaysAgo.getTime();
     
-    const q7 = query(collection(db, 'visits'), where('timestamp', '>=', sevenDaysAgo.getTime()));
+    // CRM Activities don't have a standardized numeric timestamp index like visits did, 
+    // but they do have lsqCreatedOn and walkInDateTime. 
+    // We'll fetch all and filter in memory since we don't have a composite index.
+    const q7 = collection(db, 'crmActivities');
     
     const unsub7 = onSnapshot(q7, (snapshot) => {
-      const visits = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
-      setGlobalVisits7Days(visits);
+      const activities = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+      const filtered = activities.filter(a => {
+        const dt = a.walkInDateTime || a.lsqCreatedOn;
+        if (!dt) return false;
+        return new Date(dt).getTime() >= sevenDaysAgoTs;
+      });
+      setGlobalActivities7Days(filtered);
     });
     
     return () => unsub7();
@@ -36,7 +45,7 @@ export default function Analytics() {
       </div>
       
       <div className="flex-1 overflow-hidden flex flex-col">
-        <AnalyticsTab users={users} globalVisits={globalVisits7Days} />
+        <AnalyticsTab users={users} globalActivities={globalActivities7Days} />
       </div>
     </div>
   );

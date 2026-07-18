@@ -1,4 +1,4 @@
-import { Calendar as CalendarIcon, MapPin, Plus } from 'lucide-react';
+import { Calendar as CalendarIcon, ClipboardList, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
@@ -20,6 +20,7 @@ interface AssociateHeaderProps {
   dailyTrackStatus: 'active' | 'ended' | null;
   toggleTrackingStatus: () => void;
   timelineVisitsCount: number;
+  ongoingWalkIn?: any;
 }
 
 export function AssociateHeader({
@@ -28,7 +29,8 @@ export function AssociateHeader({
   setSelectedDate,
   dailyTrackStatus,
   toggleTrackingStatus,
-  timelineVisitsCount
+  timelineVisitsCount,
+  ongoingWalkIn
 }: AssociateHeaderProps) {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
 
@@ -71,18 +73,32 @@ export function AssociateHeader({
             </Popover>
           </div>
         </div>
-        <div className="mt-4 flex items-center justify-between">
-          <span className="inline-block px-3 py-1 bg-zinc-800 text-zinc-300 text-[11px] font-semibold uppercase tracking-widest border border-zinc-700 rounded-lg">
-            {selectedAssociate.regionId}
-          </span>
-          <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">{format(selectedDate, "MMM d")}</span>
+        <div className="mt-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <span className="inline-block px-3 py-1 bg-zinc-800 text-zinc-300 text-[11px] font-semibold uppercase tracking-widest border border-zinc-700 rounded-lg">
+              {selectedAssociate.regionId}
+            </span>
+            <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">{format(selectedDate, "MMM d")}</span>
+          </div>
+          
+          {ongoingWalkIn && (
+            <div className="flex items-center gap-2 bg-green-500/20 border border-green-500/30 rounded-lg p-2 mt-1">
+              <div className="flex h-2 w-2 relative ml-1 mr-1">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </div>
+              <p className="text-xs font-medium text-green-400 truncate">
+                Currently at <span className="font-bold text-white">{ongoingWalkIn.schoolName || 'In Walk-in'}</span>
+              </p>
+            </div>
+          )}
         </div>
       </div>
       
       <div className="bg-white p-6 border border-zinc-200 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] flex flex-col justify-between min-h-[140px] group rounded-xl">
         <div className="flex items-start justify-between">
-          <span className="text-xs font-bold text-zinc-400 tracking-wider uppercase">Visits (Selected Date)</span>
-          <MapPin className="h-5 w-5 text-zinc-300 group-hover:text-zinc-900 transition-colors" />
+          <span className="text-xs font-bold text-zinc-400 tracking-wider uppercase">Activities (Selected Date)</span>
+          <ClipboardList className="h-5 w-5 text-zinc-300 group-hover:text-zinc-900 transition-colors" />
         </div>
         <div className="flex items-end justify-between mt-auto pt-4">
           <div className="text-5xl font-light text-zinc-900 tracking-tighter">{timelineVisitsCount}</div>

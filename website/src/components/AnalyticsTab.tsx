@@ -3,33 +3,35 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 
 interface AnalyticsTabProps {
   users: Record<string, any>;
-  globalVisits: any[];
+  globalActivities: any[];
 }
 
-export function AnalyticsTab({ users, globalVisits }: AnalyticsTabProps) {
-  // Aggregate visits by Associate
+export function AnalyticsTab({ users, globalActivities }: AnalyticsTabProps) {
+  // Aggregate activities by Associate
   const data = useMemo(() => {
     const counts: Record<string, number> = {};
     
-    globalVisits.forEach(v => {
-      // Filter out auto-pings if we only want actual visits/stops
-      if (v.type === 'location_ping') return;
-      
-      const execId = v.executiveId;
-      counts[execId] = (counts[execId] || 0) + 1;
+    globalActivities.forEach(a => {
+      // Find the associate based on email
+      const execEmail = a.executiveEmail?.toLowerCase();
+      if (!execEmail) return;
+      const execId = Object.keys(users).find(id => users[id].email?.toLowerCase() === execEmail);
+      if (execId) {
+        counts[execId] = (counts[execId] || 0) + 1;
+      }
     });
 
     const chartData = Object.entries(counts).map(([execId, count]) => {
       const u = users[execId];
       return {
         name: u ? u.name : 'Unknown',
-        visits: count
+        activities: count
       };
     });
 
-    // Sort by most visits
-    return chartData.sort((a, b) => b.visits - a.visits);
-  }, [globalVisits, users]);
+    // Sort by most activities
+    return chartData.sort((a, b) => b.activities - a.activities);
+  }, [globalActivities, users]);
 
   return (
     <div className="flex-1 overflow-y-auto animate-in fade-in duration-500 pb-12">
@@ -39,7 +41,7 @@ export function AnalyticsTab({ users, globalVisits }: AnalyticsTabProps) {
         <div className="bg-white p-6 border border-zinc-200 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] rounded-xl">
           <div className="mb-6">
             <h3 className="text-lg font-bold text-zinc-900 tracking-tight">Team Performance (Last 7 Days)</h3>
-            <p className="text-zinc-500 text-sm">Number of completed visits and stops per associate.</p>
+            <p className="text-zinc-500 text-sm">Number of CRM activities completed per associate.</p>
           </div>
           <div className="h-[300px] w-full">
             {data.length > 0 ? (
@@ -52,7 +54,7 @@ export function AnalyticsTab({ users, globalVisits }: AnalyticsTabProps) {
                     cursor={{ fill: '#f4f4f5' }}
                     contentStyle={{ borderRadius: '12px', border: '1px solid #e4e4e7', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
                   />
-                  <Bar dataKey="visits" fill="#18181b" radius={[4, 4, 0, 0]} maxBarSize={60} />
+                  <Bar dataKey="activities" fill="#18181b" radius={[4, 4, 0, 0]} maxBarSize={60} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -85,7 +87,7 @@ export function AnalyticsTab({ users, globalVisits }: AnalyticsTabProps) {
                       </div>
                       {row.name}
                     </td>
-                    <td className="py-4 font-bold text-zinc-900 text-right">{row.visits}</td>
+                    <td className="py-4 font-bold text-zinc-900 text-right">{row.activities}</td>
                   </tr>
                 ))}
                 {data.length === 0 && (
