@@ -12,8 +12,9 @@ import { GlobalStats } from '../components/dashboard/GlobalStats';
 import { AssociateHeader } from '../components/dashboard/AssociateHeader';
 import { AssociateMap } from '../components/dashboard/AssociateMap';
 import { AssociateTimeline } from '../components/dashboard/AssociateTimeline';
-import { Map as MapIcon } from 'lucide-react';
+import { Map as MapIcon, } from 'lucide-react';
 import { format } from "date-fns";
+import { cleanGpsRoute, buildRouteCacheKey, type RawPing } from '../lib/gpsUtils';
 
 export default function Dashboard() {
   const { user, users, addAssociate } = useAuthStore();
@@ -29,6 +30,7 @@ export default function Dashboard() {
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
   const [route, setRoute] = useState<[number, number][]>([]);
   const [rawPings, setRawPings] = useState<any[]>([]);
+  const [routeCacheKey, setRouteCacheKey] = useState<string>('');
   const [selectedDateLocReqs, setSelectedDateLocReqs] = useState<any[]>([]);
 
   // Dynamic Map Zoom/Center State
@@ -52,9 +54,21 @@ export default function Dashboard() {
   // Team Tracking Status
   const [teamTrackingStatus, setTeamTrackingStatus] = useState<Record<string, 'active' | 'ended'>>({});
 
-  // Time boundaries
-  const todayStart = useMemo(() => new Date().setHours(0, 0, 0, 0), []);
-  const todayEnd = useMemo(() => new Date().setHours(23, 59, 59, 999), []);
+  // Time boundaries — recompute periodically so the dashboard stays
+  // correct if the tab is left open past midnight (fixes BUG-08).
+  const [todayStart, setTodayStart] = useState(() => new Date().setHours(0, 0, 0, 0));
+  const [todayEnd, setTodayEnd] = useState(() => new Date().setHours(23, 59, 59, 999));
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const newStart = new Date().setHours(0, 0, 0, 0);
+      if (newStart !== todayStart) {
+        setTodayStart(newStart);
+        setTodayEnd(new Date().setHours(23, 59, 59, 999));
+      }
+    }, 60_000); // check every minute
+    return () => clearInterval(interval);
+  }, [todayStart]);
 
   const selectedDateStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 0, 0, 0, 0).getTime();
   const selectedDateEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 23, 59, 59, 999).getTime();
@@ -167,10 +181,20 @@ export default function Dashboard() {
     const unsubLocations = onSnapshot(
       query(collection(db, 'dailyTracks', trackDocId, 'locations'), orderBy('ts', 'asc')),
       (snapshot) => {
-        const pings = snapshot.docs.map(d => d.data());
-        const validPings = pings.filter((p: any) => p && typeof p.lat === 'number' && typeof p.lng === 'number');
-        setRoute(validPings.map((p: any) => [p.lat, p.lng]));
-        setRawPings(validPings);
+        const pings = snapshot.docs.map(d => d.data() as RawPing);
+        const validPings = pings.filter((p) => p && typeof p.lat === 'number' && typeof p.lng === 'number');
+        
+        // Apply client-side GPS cleaning pipeline
+        const cleanedPings = cleanGpsRoute(validPings);
+        
+        setRoute(cleanedPings.map((p) => [p.lat, p.lng]));
+        setRawPings(cleanedPings);
+        
+        // Build cache key — changes when new pings arrive, busting the OSRM cache
+        if (selectedAssociate) {
+          const dateStr = format(selectedDate, 'yyyyMMdd');
+          setRouteCacheKey(buildRouteCacheKey(selectedAssociate.id, dateStr, cleanedPings));
+        }
       }
     );
 
@@ -462,7 +486,7 @@ export default function Dashboard() {
             totalLeads={totalLeads}
           />
         ) : (
-          <AssociateHeader
+          <AssociateHeader 
             selectedAssociate={selectedAssociate}
             selectedDate={selectedDate}
             setSelectedDate={setSelectedDate}
@@ -470,6 +494,8 @@ export default function Dashboard() {
             toggleTrackingStatus={toggleTrackingStatus}
             timelineVisitsCount={timeline.filter(t => t.type === 'crm').length}
             ongoingWalkIn={selectedAssociate ? ongoingWalkIns[selectedAssociate.id] : null}
+            isFetchingLocation={isFetchingLocation}
+            handleFetchLocation={handleFetchLocation}
           />
         )}
 
@@ -488,13 +514,12 @@ export default function Dashboard() {
         ) : (
           <div className="flex-1 flex gap-6 overflow-hidden animate-in fade-in duration-700">
             <AssociateMap
-              isFetchingLocation={isFetchingLocation}
-              handleFetchLocation={handleFetchLocation}
               mapCenter={mapCenter}
               mapZoom={mapZoom}
               route={route}
               timeline={timeline}
               ongoingWalkIn={selectedAssociate ? ongoingWalkIns[selectedAssociate.id] : null}
+              routeCacheKey={routeCacheKey}
             />
             <AssociateTimeline
               timeline={timeline}

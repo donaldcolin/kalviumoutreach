@@ -5,19 +5,20 @@ import firestore from '@react-native-firebase/firestore';
 import * as Location from 'expo-location';
 import { appendPing } from './firestore';
 import { format } from 'date-fns';
+import { logger } from '../utils/logger';
 import type { LocationPing } from '../types';
 
 const BACKGROUND_FETCH_TASK = 'background-location-fetch';
 
 TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
   try {
-    console.log('[HeadlessTask] Background fetch woke up');
+    logger.info('Background fetch woke up');
     
     // In a Headless JS context, React state and Zustand memory are often uninitialized.
     // Read directly from the disk-persisted tracking session.
     const sessionStr = await AsyncStorage.getItem('tracking_session');
     if (!sessionStr) {
-      console.log('[HeadlessTask] No active tracking session found in AsyncStorage, aborting.');
+      logger.info('No active tracking session found in AsyncStorage, aborting.');
       return BackgroundFetch.BackgroundFetchResult.NoData;
     }
 
@@ -35,9 +36,9 @@ TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
         accuracy: loc.coords.accuracy ?? 0,
       };
       await appendPing(userId, dateStr, ping);
-      console.log('[HeadlessTask] Backup location ping saved');
+      logger.info('Backup location ping saved');
     } catch (e) {
-      console.warn('[HeadlessTask] Failed to get backup location', e);
+      logger.warn('Failed to get backup location', e instanceof Error ? e.message : String(e));
     }
 
     // Check if there are any specific on-demand location requests from TLs
@@ -62,14 +63,14 @@ TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
 
       await appendPing(userId, dateStr, ping);
       await docSnap.ref.update({ status: 'fulfilled' });
-      console.log('[HeadlessTask] Successfully processed on-demand background location request!');
+      logger.info('Successfully processed on-demand background location request!');
       
       return BackgroundFetch.BackgroundFetchResult.NewData;
     }
 
     return BackgroundFetch.BackgroundFetchResult.NewData;
   } catch (error) {
-    console.error('[HeadlessTask] Failed:', error);
+    logger.error('Background fetch failed', error instanceof Error ? error.message : String(error));
     return BackgroundFetch.BackgroundFetchResult.Failed;
   }
 });

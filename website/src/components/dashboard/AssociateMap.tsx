@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { MapContainer, TileLayer, Polyline, Marker, Popup, Tooltip, useMap, CircleMarker } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -11,13 +11,12 @@ L.Icon.Default.mergeOptions({
 });
 
 interface AssociateMapProps {
-  isFetchingLocation: boolean;
-  handleFetchLocation: () => void;
   mapCenter: [number, number];
   mapZoom: number;
   route: [number, number][];
   timeline: any[];
   ongoingWalkIn?: any;
+  routeCacheKey?: string;
 }
 
 // Map Auto-Updater Component
@@ -95,70 +94,158 @@ const ongoingWalkInIcon = L.divIcon({
   iconAnchor: [20, 20],
 });
 
-// ─── Map Legend ──────────────────────────────────────────────────────────────
 
-function MapLegend() {
-  return (
-    <div className="absolute bottom-4 left-4 z-[400] bg-white/95 backdrop-blur-sm border border-zinc-200 rounded-xl shadow-lg p-3 text-[11px] space-y-2 min-w-[160px]">
-      <p className="font-bold text-zinc-700 uppercase tracking-wider text-[10px] mb-2">Legend</p>
-      <div className="flex items-center gap-2">
-        <span className="w-3 h-3 rounded-full bg-red-600 ring-2 ring-red-200 shrink-0" />
-        <span className="text-zinc-700 font-medium">Current Location</span>
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="w-3 h-3 rounded-full bg-green-500 ring-2 ring-green-200 shrink-0" />
-        <span className="text-zinc-700 font-medium">Route Start</span>
-      </div>
 
-      <div className="flex items-center gap-2">
-        <span className="w-3 h-3 rounded bg-emerald-500 shrink-0" />
-        <span className="text-zinc-700 font-medium">CRM Activity</span>
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="w-3 h-3 rounded-full bg-orange-500 ring-2 ring-orange-200 shrink-0" />
-        <span className="text-zinc-700 font-medium">Location Request</span>
-      </div>
-      <hr className="border-zinc-100" />
-      <div className="flex items-center gap-2">
-        <span className="w-5 h-0 border-t-2 border-dashed border-red-500 shrink-0" />
-        <span className="text-zinc-500">GPS Route</span>
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="w-5 h-0 border-t-2 border-dashed border-blue-500 shrink-0" />
-        <span className="text-zinc-500">Activity Trail</span>
-      </div>
-    </div>
-  );
+// ─── OSRM Cache Helpers ───────────────────────────────────────────────────────
+const CACHE_PREFIX = 'osrm_';
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours max, even if key matches
+
+function readCache(key: string): [number, number][] | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const { route, savedAt } = JSON.parse(raw);
+    if (Date.now() - savedAt > CACHE_TTL_MS) {
+      localStorage.removeItem(key);
+      return null;
+    }
+    return route;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(key: string, route: [number, number][]) {
+  try {
+    // Clean up any old osrm_ entries to avoid storage bloat
+    Object.keys(localStorage)
+      .filter(k => k.startsWith(CACHE_PREFIX) && k !== key)
+      .forEach(k => localStorage.removeItem(k));
+    localStorage.setItem(key, JSON.stringify({ route, savedAt: Date.now() }));
+  } catch {
+    // Storage might be full — silently ignore
+  }
+}
+
+// ─── OSRM Road Snapping ───────────────────────────────────────────────────────
+async function snapToRoads(rawRoute: [number, number][]): Promise<[number, number][] | null> {
+  if (rawRoute.length < 2) return null;
+
+  // OSRM can handle max ~100 coordinates per match request. Chunk if needed.
+  const MAX_COORDS = 90;
+  let snappedCoords: [number, number][] = [];
+
+  for (let i = 0; i < rawRoute.length; i += MAX_COORDS) {
+    const chunk = rawRoute.slice(i, i + MAX_COORDS);
+    const coordStr = chunk.map(([lat, lng]) => `${lng},${lat}`).join(';');
+    const radiuses = chunk.map(() => 50).join(';'); // 50m snap radius per point
+
+    const url =
+      `https://router.project-osrm.org/match/v1/foot/${coordStr}` +
+      `?radiuses=${radiuses}&overview=full&geometries=geojson&annotations=false`;
+
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) return null;
+      const json = await res.json();
+
+      if (json.code !== 'Ok' || !json.matchings?.length) return null;
+
+      // Collect coordinates from all matched segments in this chunk
+      for (const matching of json.matchings) {
+        const coords: [number, number][] = matching.geometry.coordinates.map(
+          ([lng, lat]: [number, number]) => [lat, lng]
+        );
+        snappedCoords = [...snappedCoords, ...coords];
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  return snappedCoords.length > 0 ? snappedCoords : null;
 }
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export function AssociateMap({
-  isFetchingLocation,
-  handleFetchLocation,
   mapCenter,
   mapZoom,
   route,
   timeline,
-  ongoingWalkIn
+  ongoingWalkIn,
+  routeCacheKey = '',
 }: AssociateMapProps) {
   const geoTimeline = timeline.filter(t => t.lat != null && t.lng != null);
 
+  // Road-snapped route state
+  const [snappedRoute, setSnappedRoute] = useState<[number, number][] | null>(null);
+  const [snapStatus, setSnapStatus] = useState<'idle' | 'loading' | 'done' | 'failed'>('idle');
+
+  const runSnapping = useCallback(async () => {
+    if (route.length < 2 || !routeCacheKey) return;
+
+    // Check localStorage cache first
+    const cached = readCache(routeCacheKey);
+    if (cached) {
+      setSnappedRoute(cached);
+      setSnapStatus('done');
+      return;
+    }
+
+    setSnapStatus('loading');
+    const result = await snapToRoads(route);
+
+    if (result) {
+      writeCache(routeCacheKey, result);
+      setSnappedRoute(result);
+      setSnapStatus('done');
+    } else {
+      // OSRM failed — fall back to cleaned raw route
+      setSnappedRoute(null);
+      setSnapStatus('failed');
+    }
+  }, [route, routeCacheKey]);
+
+  useEffect(() => {
+    // Reset snapped route whenever the route data changes
+    setSnappedRoute(null);
+    setSnapStatus('idle');
+    if (route.length >= 2) {
+      runSnapping();
+    }
+  }, [routeCacheKey, runSnapping]); // runSnapping depends on route + routeCacheKey
+
   return (
     <div className="flex-1 bg-zinc-100 border border-zinc-200 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] relative overflow-hidden group rounded-xl">
-      <div className="absolute top-4 right-4 z-[400]">
-        <button
-          onClick={handleFetchLocation}
-          disabled={isFetchingLocation}
-          className="bg-white/90 backdrop-blur text-zinc-900 border border-zinc-200 px-4 py-2 text-xs font-bold tracking-wider uppercase hover:bg-zinc-900 hover:text-white transition-all disabled:opacity-50 disabled:hover:bg-white disabled:hover:text-zinc-900 shadow-sm rounded-xl"
-        >
-          {isFetchingLocation ? 'Fetching...' : 'Request Location'}
-        </button>
-      </div>
-      <MapLegend />
+
+      {/* Road Snap Status Badge */}
+      {route.length > 0 && (
+        <div className="absolute top-4 left-4 z-[400]">
+          {snapStatus === 'loading' && (
+            <div className="flex items-center gap-2 bg-white/90 backdrop-blur border border-zinc-200 text-zinc-700 px-3 py-1.5 rounded-xl text-[11px] font-semibold shadow-sm animate-pulse">
+              <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />
+              Snapping to roads...
+            </div>
+          )}
+          {snapStatus === 'done' && (
+            <div className="flex items-center gap-2 bg-white/90 backdrop-blur border border-green-200 text-green-700 px-3 py-1.5 rounded-xl text-[11px] font-semibold shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+              Road-snapped route
+            </div>
+          )}
+          {snapStatus === 'failed' && (
+            <div className="flex items-center gap-2 bg-white/90 backdrop-blur border border-amber-200 text-amber-700 px-3 py-1.5 rounded-xl text-[11px] font-semibold shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
+              GPS route (no snap)
+            </div>
+          )}
+        </div>
+      )}
       <MapContainer
         center={mapCenter}
         zoom={mapZoom}
+        zoomControl={false}
         style={{ width: '100%', height: '100%', zIndex: 10 }}
       >
         <MapUpdater center={mapCenter} zoom={mapZoom} />
@@ -167,9 +254,25 @@ export function AssociateMap({
           attribution='&copy; OpenStreetMap &copy; CARTO'
         />
 
-        {/* GPS Route polyline (red dashed) */}
+        {/* Road-snapped route (solid green) — shown when OSRM succeeds */}
+        {snappedRoute && snappedRoute.length > 0 && (
+          <Polyline
+            positions={snappedRoute}
+            color="#16a34a"
+            weight={5}
+            opacity={0.85}
+          />
+        )}
+
+        {/* Raw GPS route — shown as ghost while snapping, or as fallback */}
         {route.length > 0 && (
-          <Polyline positions={route} color="#ef4444" weight={4} opacity={0.7} dashArray="8, 10" />
+          <Polyline
+            positions={route}
+            color="#ef4444"
+            weight={snappedRoute ? 2 : 4}
+            opacity={snappedRoute ? 0.25 : 0.7}
+            dashArray="8, 10"
+          />
         )}
 
         {/* Activity trail polyline (blue dashed) — connects timeline events with geo */}

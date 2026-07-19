@@ -21,7 +21,7 @@ const corsOptions = {
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(null, true); // Allow all for now since it's an internal tool
+      callback(new Error('Not allowed by CORS'));
     }
   },
   optionsSuccessStatus: 200

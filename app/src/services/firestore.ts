@@ -4,6 +4,7 @@
  */
 import firestore, { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 import { School, DailyTrack, LocationPing, } from '../types';
+import { isValidPoint } from '../utils/gpsValidation';
 
 // ─── Schools ─────────────────────────────────────────────────────────────────
 
@@ -46,13 +47,20 @@ export async function appendPing(
   date: string,
   ping: LocationPing,
 ): Promise<void> {
+  // Validate the ping before writing to Firestore
+  const asPoint = { lat: ping.lat, lng: ping.lng, ts: ping.timestamp, speed: null, accuracy: ping.accuracy };
+  if (!isValidPoint(asPoint)) {
+    console.warn(`[appendPing] Rejected invalid ping: lat=${ping.lat}, lng=${ping.lng}, ts=${ping.timestamp}`);
+    return;
+  }
+
   const docId = trackDocId(executiveId, date);
   const ref = dailyTracksRef().doc(docId);
 
   // Ensure the parent dailyTrack doc exists
   await ref.set(
     {
-      executiveId,
+      userId: executiveId,
       date,
       lastPing: firestore.FieldValue.serverTimestamp(),
     },

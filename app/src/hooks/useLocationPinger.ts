@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/authStore';
 import * as Location from 'expo-location';
 import { appendPing } from '../services/firestore';
 import { format } from 'date-fns';
+import { logger } from '../utils/logger';
 import type { LocationPing } from '../types';
 
 export function useLocationPinger() {
@@ -21,7 +22,7 @@ export function useLocationPinger() {
         if (!snapshot || snapshot.empty) return;
 
         for (const docSnap of snapshot.docs) {
-          console.log(`[LocationPinger] Processing request: ${docSnap.id}`);
+          logger.info(`Processing background location request`, { requestId: docSnap.id });
 
           try {
             // Update to processing to prevent double fetch
@@ -42,13 +43,13 @@ export function useLocationPinger() {
             
             // Append to daily tracks
             await appendPing(user.id, today, ping);
-            console.log(`[LocationPinger] Successfully appended ping for request: ${docSnap.id}`);
+            logger.info(`Successfully appended ping for request`, { requestId: docSnap.id, location: { lat: ping.lat, lng: ping.lng } });
 
             // Mark as fulfilled
             await docSnap.ref.update({ status: 'fulfilled' });
 
           } catch (err) {
-            console.error(`[LocationPinger] Failed request ${docSnap.id}:`, err);
+            logger.error(`Failed to process location request`, { requestId: docSnap.id, error: err instanceof Error ? err.message : String(err) });
             // Even on error, mark it so it doesn't get stuck forever
             await docSnap.ref.update({ status: 'error' });
           }

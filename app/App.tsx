@@ -33,7 +33,14 @@ import { VStack } from '@/components/ui/vstack';
 import { Spinner } from '@/components/ui/spinner';
 import '@/global.css';
 
-export default function App() {
+import * as Sentry from '@sentry/react-native';
+
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN || "",
+  tracesSampleRate: 1.0,
+});
+
+function App() {
   const initialize = useAuthStore(s => s.initialize);
   const [appReady, setAppReady] = useState(false);
   const [fontsLoaded] = useFonts({
@@ -129,3 +136,5 @@ export default function App() {
     </GluestackUIProvider>
   );
 }
+
+export default Sentry.wrap(App);

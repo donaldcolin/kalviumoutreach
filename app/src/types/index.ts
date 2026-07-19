@@ -61,14 +61,17 @@ export interface DetectedStop {
   matchedSchoolName?: string;
 }
 
-/** dailyTracks/{executiveId}_{yyyyMMdd} */
+/** dailyTracks/{userId}_{yyyyMMdd}
+ *  Pings are stored in a subcollection: dailyTracks/{docId}/locations/{timestamp}
+ *  NOT as a top-level array on this document. */
 export interface DailyTrack {
   id: string;
-  executiveId: string;
-  date: string; // yyyyMMdd
+  userId: string;           // written by firestoreSync.startSession()
+  date: string;             // yyyyMMdd
   status?: 'active' | 'ended';
-  pings: LocationPing[];
-  stops: DetectedStop[];
+  startTime?: number;       // Date.now() epoch ms
+  endTime?: number;         // Date.now() epoch ms
+  lastPing?: any;           // Firestore ServerTimestamp
 }
 
 // ─── Sync Queue Types Removed ────────────────────────────────────────────────

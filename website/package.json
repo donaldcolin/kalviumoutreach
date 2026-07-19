@@ -13,6 +13,7 @@
     "@base-ui/react": "^1.6.0",
     "@fontsource-variable/geist": "^5.2.9",
     "@radix-ui/react-toast": "^1.2.18",
+    "@sentry/react": "^10.66.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",

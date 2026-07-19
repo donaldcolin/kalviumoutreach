@@ -1,6 +1,21 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { motionDetector, MotionState } from './motionDetector';
+import { logger } from '../utils/logger';
+
+// ─── Haversine distance helper ────────────────────────────────────────────────
+function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000; // Earth radius in meters
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 export const LOCATION_TASK_NAME = 'BACKGROUND_LOCATION_TASK';
 
@@ -39,7 +54,7 @@ class LocationTracker {
     const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
 
     if (fgStatus !== 'granted' || bgStatus !== 'granted') {
-      console.warn('Location permissions not granted');
+      logger.warn('Location permissions not granted');
       return;
     }
 
@@ -51,7 +66,7 @@ class LocationTracker {
       this.addPoints([initialLoc]);
       this.flushBuffer();
     } catch (e) {
-      console.warn('Failed to get initial location', e);
+      logger.warn('Failed to get initial location', e instanceof Error ? e.message : String(e));
     }
     
     this.unsubscribeMotion = motionDetector.subscribe((state) => {
@@ -135,22 +150,28 @@ class LocationTracker {
         },
       });
     } catch (e) {
-      console.warn('Failed to update location task config', e);
+      logger.warn('Failed to update location task config', e instanceof Error ? e.message : String(e));
     }
   }
+
+  // ─── GPS Quality Filters ────────────────────────────────────────────────────
+  // Max acceptable accuracy radius in meters. Pings worse than this are noise.
+  static readonly MAX_ACCURACY_METERS = 50;
+  // Max realistic speed in m/s (200 km/h). Higher = GPS glitch.
+  static readonly MAX_SPEED_MS = 55;
+  // Min distance in meters from last saved point. Less than this = GPS jitter.
+  static readonly MIN_DISTANCE_METERS = 5;
+  
+  private lastSavedPoint: LocationPoint | null = null;
 
   // Called by TaskManager
   public addPoints(locations: Location.LocationObject[]) {
     if (!this.isTracking) return;
     
-    for (const loc of locations) {
-      this.buffer.push({
-        lat: loc.coords.latitude,
-        lng: loc.coords.longitude,
-        ts: loc.timestamp,
-        speed: loc.coords.speed,
-        accuracy: loc.coords.accuracy,
-      });
+    const filtered = filterLocationPoints(locations, this.lastSavedPoint);
+    if (filtered.length > 0) {
+      this.lastSavedPoint = filtered[filtered.length - 1];
+      this.buffer.push(...filtered);
     }
   }
 
@@ -163,6 +184,54 @@ class LocationTracker {
   }
 }
 
+// ─── Standalone GPS Quality Filter ──────────────────────────────────────────
+// Shared between the foreground tracker and the headless background task so
+// that ALL Firestore writes go through the same accuracy / speed / distance gates.
+export function filterLocationPoints(
+  locations: Location.LocationObject[],
+  lastKnown: LocationPoint | null = null,
+): LocationPoint[] {
+  const result: LocationPoint[] = [];
+  let prev = lastKnown;
+
+  for (const loc of locations) {
+    const accuracy = loc.coords.accuracy ?? 999;
+    const speed = loc.coords.speed ?? 0;
+
+    // Gate 0: Coordinate validity — reject NaN, null-island, out-of-range
+    const lat = loc.coords.latitude;
+    const lng = loc.coords.longitude;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) continue;
+    if (lat === 0 && lng === 0) continue; // null island
+
+    // Gate 1: Accuracy — reject noisy pings
+    if (accuracy > LocationTracker.MAX_ACCURACY_METERS) continue;
+
+    // Gate 2: Speed — reject GPS glitches
+    if (speed > LocationTracker.MAX_SPEED_MS) continue;
+
+    const candidate: LocationPoint = {
+      lat,
+      lng,
+      ts: loc.timestamp,
+      speed: loc.coords.speed,
+      accuracy: loc.coords.accuracy,
+    };
+
+    // Gate 3: Distance — reject stationary drift
+    if (prev) {
+      const dist = haversineMeters(prev.lat, prev.lng, candidate.lat, candidate.lng);
+      if (dist < LocationTracker.MIN_DISTANCE_METERS) continue;
+    }
+
+    prev = candidate;
+    result.push(candidate);
+  }
+
+  return result;
+}
+
 export const locationTracker = new LocationTracker();
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -171,7 +240,7 @@ import { firestoreSync } from './firestoreSync';
 // Register the task globally
 TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   if (error) {
-    console.warn('Background Location Task Error', error);
+    logger.warn('Background Location Task Error', error.message);
     return;
   }
   if (data) {
@@ -181,20 +250,22 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
       const sessionStr = await AsyncStorage.getItem('tracking_session');
       if (sessionStr) {
         const session = JSON.parse(sessionStr);
-        const points = locations.map(loc => ({
-          lat: loc.coords.latitude,
-          lng: loc.coords.longitude,
-          ts: loc.timestamp,
-          speed: loc.coords.speed,
-          accuracy: loc.coords.accuracy,
-        }));
-        await firestoreSync.appendHeadlessLocations(session.userId, session.dateStr, points);
+
+        // Apply the SAME quality gates used by the foreground tracker
+        // so that junk pings never reach Firestore (fixes BUG-03).
+        const filteredPoints = filterLocationPoints(locations);
+
+        if (filteredPoints.length > 0) {
+          await firestoreSync.appendHeadlessLocations(session.userId, session.dateStr, filteredPoints);
+        }
       }
     } catch (e) {
-      console.warn('Failed to process headless location', e);
+      logger.warn('Failed to process headless location', e instanceof Error ? e.message : String(e));
     }
 
-    // Still add to foreground buffer for UI updates if active
-    locationTracker.addPoints(locations);
+    // NOTE: We intentionally do NOT call locationTracker.addPoints() here.
+    // The filtered data is already written to Firestore above. Calling addPoints()
+    // would cause the foreground firestoreSync listener to write the same data
+    // a second time (duplicate Firestore writes — fixes BUG-02).
   }
 });

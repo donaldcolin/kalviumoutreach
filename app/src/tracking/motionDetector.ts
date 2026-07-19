@@ -7,7 +7,7 @@ export type MotionStateListener = (state: MotionState) => void;
 
 const MOVING_THRESHOLD = 1.3; // g-force
 const STATIONARY_THRESHOLD = 1.1; // g-force
-const POSSIBLY_STOPPED_DEBOUNCE_MS = 60000; // 60 seconds
+const POSSIBLY_STOPPED_DEBOUNCE_MS = 30000; // 30 seconds (reduced from 60s)
 
 class MotionDetector {
   private currentState: MotionState = 'STATIONARY';

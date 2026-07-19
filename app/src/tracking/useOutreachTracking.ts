@@ -26,7 +26,12 @@ export function useOutreachTracking(userId: string | undefined) {
         setIsTrackingInitialized(true);
         if (track?.status === 'active') {
           setIsTracking(true);
-          locationTracker.startTracking();
+          // Resume the firestoreSync session so the headless background task
+          // has a valid AsyncStorage session and the location listener is
+          // re-registered (fixes BUG-04: startTracking without startSession).
+          firestoreSync.startSession(userId).then(() => {
+            locationTracker.startTracking();
+          });
         } else if (track?.status === 'ended') {
           if (isTrackingRef.current) {
             Alert.alert(

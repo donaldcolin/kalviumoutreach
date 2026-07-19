@@ -9,6 +9,7 @@ import { lsqFetch, parseActivityData, buildFirestoreDoc } from './lsq.js';
 
 export let lastSyncResult = { timestamp: null, activitiesFetched: 0, activitiesWritten: 0, error: null };
 let isSyncing = false;
+const globalLeadNameCache = new Map();
 
 // ─── Main Sync Function ─────────────────────────────────────────────────────
 
@@ -57,36 +58,58 @@ export async function syncActivities(hours = SYNC_LOOKBACK_MINUTES / 60) {
       let batch = Array.isArray(data) ? data : (data.List || data.ProspectActivities || []);
       console.log(`   📦 Fetched ${batch.length} activities from bulk API.`);
 
-      // For each activity found, we must fetch the FULL payload via the 1-on-1 Retrieve API 
-      // because the bulk API strips out Latitude, Longitude, and Address fields.
-      for (const slimAct of batch) {
-        if (!slimAct.RelatedProspectId) continue;
-        try {
-          const fullRes = await fetch(`${LSQ_HOST}/v2/ProspectActivity.svc/Retrieve?accessKey=${ACCESS_KEY}&secretKey=${SECRET_KEY}&leadId=${slimAct.RelatedProspectId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              Parameter: { ActivityEvent: 232 },
-              Paging: { Offset: 0, RowCount: 10 } // recent ones for this lead
-            })
-          });
-          const fullData = await fullRes.json();
-          const fullList = fullData.ProspectActivities || [];
-          const fullAct = fullList.find(a => a.Id === slimAct.ProspectActivityId || a.ActivityId === slimAct.ProspectActivityId);
+      // ── Deduplicated per-lead fetch (fixes N+1 anti-pattern) ──────────
+      // The bulk API strips Latitude, Longitude, and Address fields.
+      // Instead of fetching once PER ACTIVITY, group by lead and fetch once PER LEAD.
+      const leadIdSet = [...new Set(batch.map(a => a.RelatedProspectId).filter(Boolean))];
+      console.log(`   🔗 Fetching full details for ${leadIdSet.length} unique leads (from ${batch.length} activities)...`);
 
-          if (fullAct) {
-            // Merge the full activity data (Lat, Lng, Address) into the slim activity
-            slimAct.Latitude = fullAct.Latitude;
-            slimAct.Longitude = fullAct.Longitude;
-            slimAct.Address = fullAct.Address;
+      // Cache: leadId → Map<activityId, fullActivity>
+      const leadActivityCache = {};
 
-            // ActivityFields (mx_Custom_34) is inside ActivityFields if we need it
-            if (fullAct.ActivityFields) {
-              slimAct.mx_Custom_34 = fullAct.ActivityFields.mx_Custom_34;
+      // Fetch with limited concurrency (3 at a time) to avoid rate limiting
+      const CONCURRENCY = 3;
+      for (let c = 0; c < leadIdSet.length; c += CONCURRENCY) {
+        const chunk = leadIdSet.slice(c, c + CONCURRENCY);
+        await Promise.allSettled(chunk.map(async (leadId) => {
+          try {
+            const fullRes = await fetch(`${LSQ_HOST}/v2/ProspectActivity.svc/Retrieve?accessKey=${ACCESS_KEY}&secretKey=${SECRET_KEY}&leadId=${leadId}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                Parameter: { ActivityEvent: 232 },
+                Paging: { Offset: 0, RowCount: 50 }
+              })
+            });
+            const fullData = await fullRes.json();
+            const fullList = fullData.ProspectActivities || [];
+            const map = {};
+            for (const act of fullList) {
+              const id = act.Id || act.ActivityId;
+              if (id) map[id] = act;
             }
+            leadActivityCache[leadId] = map;
+          } catch (e) {
+            console.warn(`   ⚠️ Failed to fetch full activities for lead ${leadId}`, e.message);
+            leadActivityCache[leadId] = {};
           }
-        } catch (e) {
-          console.warn(`   ⚠️ Failed to fetch full activity for lead ${slimAct.RelatedProspectId}`, e.message);
+        }));
+      }
+
+      // Match full details back to each slim activity
+      for (const slimAct of batch) {
+        const leadId = slimAct.RelatedProspectId;
+        const actId = slimAct.ProspectActivityId;
+        const cache = leadActivityCache[leadId] || {};
+        const fullAct = cache[actId];
+
+        if (fullAct) {
+          slimAct.Latitude = fullAct.Latitude;
+          slimAct.Longitude = fullAct.Longitude;
+          slimAct.Address = fullAct.Address;
+          if (fullAct.ActivityFields) {
+            slimAct.mx_Custom_34 = fullAct.ActivityFields.mx_Custom_34;
+          }
         }
         allActivities.push(slimAct);
       }
@@ -123,23 +146,38 @@ export async function syncActivities(hours = SYNC_LOOKBACK_MINUTES / 60) {
       }
     });
 
-    // 4. Fetch missing Lead Names from LeadSquared
+    // 4. Fetch missing Lead Names from LeadSquared (Optimized with caching and concurrency)
+    // Filter out leads we already have in our global cache
     const uniqueLeadIds = [...new Set(allActivities.map(a => a.RelatedProspectId).filter(Boolean))];
-    const leadIdToName = {};
+    const missingLeadIds = uniqueLeadIds.filter(id => !globalLeadNameCache.has(id));
 
-    if (uniqueLeadIds.length > 0) {
-      console.log(`   📡 Fetching names for ${uniqueLeadIds.length} leads...`);
-      for (const leadId of uniqueLeadIds) {
-        try {
-          const resp = await lsqFetch(`/v2/LeadManagement.svc/Leads.GetById?id=${leadId}`, 'GET');
-          if (Array.isArray(resp) && resp.length > 0) {
-            const lead = resp[0];
-            // LSQ stores the school name in FirstName + LastName
-            leadIdToName[leadId] = `${lead.FirstName || ''} ${lead.LastName || ''}`.trim();
+    if (missingLeadIds.length > 0) {
+      console.log(`   📡 Fetching names for ${missingLeadIds.length} missing leads (concurrently)...`);
+      
+      const CONCURRENCY = 5;
+      for (let i = 0; i < missingLeadIds.length; i += CONCURRENCY) {
+        const chunk = missingLeadIds.slice(i, i + CONCURRENCY);
+        
+        await Promise.allSettled(chunk.map(async (leadId) => {
+          try {
+            const resp = await lsqFetch(`/v2/LeadManagement.svc/Leads.GetById?id=${leadId}`, 'GET');
+            if (Array.isArray(resp) && resp.length > 0) {
+              const lead = resp[0];
+              const name = `${lead.FirstName || ''} ${lead.LastName || ''}`.trim();
+              globalLeadNameCache.set(leadId, name);
+            }
+          } catch (e) {
+            console.error(`   ⚠️ Failed to fetch lead ${leadId}:`, e.message);
           }
-        } catch (e) {
-          console.error(`   ⚠️ Failed to fetch lead ${leadId}:`, e.message);
-        }
+        }));
+      }
+    }
+
+    // Populate the local map from the global cache for this sync run
+    const leadIdToName = {};
+    for (const id of uniqueLeadIds) {
+      if (globalLeadNameCache.has(id)) {
+        leadIdToName[id] = globalLeadNameCache.get(id);
       }
     }
 

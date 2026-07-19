@@ -67,7 +67,8 @@
           "backgroundRecording": true
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "@sentry/react-native"
     ],
     "extra": {
       "eas": {

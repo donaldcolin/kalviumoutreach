@@ -3,12 +3,12 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyADMJ5b1P0x3XnocjcstqiPGlZI0ydtXCc",
-  authDomain: "kalvium-outreach-53f54.firebaseapp.com",
-  projectId: "kalvium-outreach-53f54",
-  storageBucket: "kalvium-outreach-53f54.firebasestorage.app",
-  messagingSenderId: "656712790429",
-  appId: "1:656712790429:web:9c06fb7586242a34413f74" // derived from android id format
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID // derived from android id format
 };
 
 // Initialize the primary Firebase app

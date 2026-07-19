@@ -1,4 +1,4 @@
-import { Calendar as CalendarIcon, ClipboardList, Plus } from 'lucide-react';
+import { Calendar as CalendarIcon, ClipboardList, Plus, Map as MapIcon } from 'lucide-react';
 import { useState } from 'react';
 import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
@@ -21,6 +21,8 @@ interface AssociateHeaderProps {
   toggleTrackingStatus: () => void;
   timelineVisitsCount: number;
   ongoingWalkIn?: any;
+  isFetchingLocation: boolean;
+  handleFetchLocation: () => void;
 }
 
 export function AssociateHeader({
@@ -30,7 +32,9 @@ export function AssociateHeader({
   dailyTrackStatus,
   toggleTrackingStatus,
   timelineVisitsCount,
-  ongoingWalkIn
+  ongoingWalkIn,
+  isFetchingLocation,
+  handleFetchLocation
 }: AssociateHeaderProps) {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
 
@@ -102,13 +106,23 @@ export function AssociateHeader({
         </div>
         <div className="flex items-end justify-between mt-auto pt-4">
           <div className="text-5xl font-light text-zinc-900 tracking-tighter">{timelineVisitsCount}</div>
-          <button 
-            onClick={() => setIsAssignModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
-          >
-            <Plus className="h-4 w-4" />
-            Assign Task
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleFetchLocation}
+              disabled={isFetchingLocation}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-900 rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50"
+            >
+              <MapIcon className="h-4 w-4" />
+              {isFetchingLocation ? 'Fetching...' : 'Request Location'}
+            </button>
+            <button 
+              onClick={() => setIsAssignModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+            >
+              <Plus className="h-4 w-4" />
+              Assign Task
+            </button>
+          </div>
         </div>
       </div>
     </div>
