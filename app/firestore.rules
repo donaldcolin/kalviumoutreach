@@ -5,14 +5,27 @@ service cloud.firestore {
     // Users can read their own profile, admins can read all
     match /users/{userId} {
       allow read: if request.auth != null;
-      allow write: if false; // Only manageable from server/admin SDK
+      // Only allow users to update their own lastKnownLocation (prevent role escalation)
+      // We include the nested paths because the deployed APK uses {merge: true} which generates deep field updates
+      allow update: if request.auth != null 
+                    && request.auth.uid == userId 
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                      'lastKnownLocation',
+                      'lastKnownLocation.lat',
+                      'lastKnownLocation.lng',
+                      'lastKnownLocation.ts',
+                      'lastKnownLocation.updatedAt'
+                    ]);
+      allow create: if request.auth != null 
+                    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'teamLead', 'regionalManager'];
+      allow delete: if false; // Only manageable from server/admin SDK
     }
 
     // Daily tracks, visits, stops, and pings are scoped to the executive
     match /dailyTracks/{trackId} {
       allow read: if request.auth != null;
-      // An associate can only write to a track document if its ID starts with their own user ID
-      allow write: if request.auth != null && trackId.matches(request.auth.uid + '_.*');
+      // An associate can only write to a track document if its ID starts with their own user ID. Admins/TLs can manage any track.
+      allow write: if request.auth != null && (trackId.matches(request.auth.uid + '_.*') || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != 'executive');
       
       match /locations/{locationId} {
         allow read: if request.auth != null;

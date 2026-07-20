@@ -7,7 +7,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { ExecutiveTabParamList } from '../types';
 import { useLocationPinger } from '../hooks/useLocationPinger';
 import { Image, TouchableOpacity, Modal, View, StyleSheet, TouchableWithoutFeedback } from 'react-native';
-import { User, Menu, MapPin, FileText, List, Briefcase } from 'lucide-react-native';
+import { User, Menu, MapPin, FileText, List, Briefcase, Bug } from 'lucide-react-native';
 
 import DashboardScreen from '../screens/executive/DashboardScreen';
 import MeetingNotesScreen from '../screens/executive/MeetingNotesScreen';
@@ -15,6 +15,7 @@ import TasksScreen from '../screens/executive/TasksScreen';
 import LeadsScreen from '../screens/executive/LeadsScreen';
 import LeadDetailScreen from '../screens/executive/LeadDetailScreen';
 import WalkInSessionScreen from '../screens/executive/WalkInSessionScreen';
+import BugReportScreen from '../screens/executive/BugReportScreen';
 
 import { Box } from '@/components/ui/box';
 import { VStack } from '@/components/ui/vstack';
@@ -98,6 +99,17 @@ function HeaderRightMenu() {
                 >
                   <User color="#0F172A" size={20} strokeWidth={1.5} style={{ marginRight: 12 }} />
                   <Text style={{ fontSize: 16, color: '#0F172A', fontWeight: '500' }}>Profile</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{ padding: 12, flexDirection: 'row', alignItems: 'center', borderRadius: 10, marginTop: 4 }}
+                  onPress={() => {
+                    setVisible(false);
+                    navigation.navigate('BugReport');
+                  }}
+                >
+                  <Bug color="#DC2626" size={20} strokeWidth={1.5} style={{ marginRight: 12 }} />
+                  <Text style={{ fontSize: 16, color: '#DC2626', fontWeight: '500' }}>Report Bug</Text>
                 </TouchableOpacity>
               </View>
             </TouchableWithoutFeedback>
@@ -218,6 +230,17 @@ export default function ExecutiveNavigator() {
         component={WalkInSessionScreen}
         options={{
           headerShown: false,
+        }}
+      />
+      <ExecutiveStack.Screen
+        name="BugReport"
+        component={BugReportScreen}
+        options={{
+          headerShown: true,
+          title: '',
+          headerStyle: { backgroundColor: '#F8FAFC' },
+          headerShadowVisible: false,
+          headerTintColor: '#64748B'
         }}
       />
     </ExecutiveStack.Navigator>

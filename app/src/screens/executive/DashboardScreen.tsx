@@ -17,7 +17,8 @@ import {
   TrackingStatusIndicator,
   OngoingWalkInCard,
   UpcomingTasksList,
-  StartDayModal
+  StartDayModal,
+  ActivityList,
 } from '../../components/dashboard';
 
 export default function DashboardScreen() {
@@ -147,6 +148,8 @@ export default function DashboardScreen() {
 
         <TrackingStatusIndicator isTracking={isTracking} />
 
+  
+
         {ongoingWalkIn && (
           <OngoingWalkInCard
             walkIn={ongoingWalkIn}
@@ -164,6 +167,7 @@ export default function DashboardScreen() {
           tasks={appointments}
           onCompleteTask={completeTask}
         />
+        <ActivityList activities={filteredActivities} />
       </ScrollView>
 
       <StartDayModal

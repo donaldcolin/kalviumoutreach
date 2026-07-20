@@ -1,15 +1,15 @@
 import firestore from '@react-native-firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import auth from '@react-native-firebase/auth';
 
 export type LogLevel = 'info' | 'warn' | 'error';
 
 class RemoteLogger {
   private async getUserId(): Promise<string> {
     try {
-      const authStr = await AsyncStorage.getItem('auth-storage');
-      if (authStr) {
-        const authData = JSON.parse(authStr);
-        return authData?.state?.user?.id || 'unknown_user';
+      const currentUser = auth().currentUser;
+      if (currentUser) {
+        return currentUser.uid;
       }
     } catch {
       // Ignore

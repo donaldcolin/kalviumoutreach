@@ -38,7 +38,7 @@ class LocationTracker {
   private listeners: Set<LocationBatchListener> = new Set();
   
   private batchFlushInterval: ReturnType<typeof setTimeout> | null = null;
-  private static readonly BATCH_INTERVAL_MS = 60000; // Flush every 60 seconds
+  private static readonly BATCH_INTERVAL_MS = 30000; // Flush every 30 seconds for faster dashboard updates
 
   public subscribe(listener: LocationBatchListener): () => void {
     this.listeners.add(listener);
@@ -47,11 +47,21 @@ class LocationTracker {
     };
   }
 
-  public async startTracking() {
+  public async startTracking(requestPermissions: boolean = true) {
     if (this.isTracking) return;
 
-    const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
-    const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
+    let fgStatus, bgStatus;
+    if (requestPermissions) {
+      const fgResult = await Location.requestForegroundPermissionsAsync();
+      fgStatus = fgResult.status;
+      const bgResult = await Location.requestBackgroundPermissionsAsync();
+      bgStatus = bgResult.status;
+    } else {
+      const fgResult = await Location.getForegroundPermissionsAsync();
+      fgStatus = fgResult.status;
+      const bgResult = await Location.getBackgroundPermissionsAsync();
+      bgStatus = bgResult.status;
+    }
 
     if (fgStatus !== 'granted' || bgStatus !== 'granted') {
       logger.warn('Location permissions not granted');
@@ -129,11 +139,12 @@ class LocationTracker {
       deferredUpdatesInterval = 30000;
       deferredUpdatesDistance = 20;
     } else if (this.currentMotionState === 'STATIONARY') {
-      // Heartbeat mode: Lowest power, purely to keep foreground service alive for the accelerometer
-      accuracy = Location.Accuracy.Lowest;
-      distanceInterval = 1000; // 1km
-      deferredUpdatesInterval = 300000; // 5 mins
-      deferredUpdatesDistance = 1000;
+      // Low-power heartbeat mode, but still responsive enough to catch
+      // movement within ~2 minutes so we don't miss places.
+      accuracy = Location.Accuracy.Balanced;
+      distanceInterval = 100; // 100m
+      deferredUpdatesInterval = 120000; // 2 mins
+      deferredUpdatesDistance = 100;
     }
 
     try {
@@ -142,6 +153,7 @@ class LocationTracker {
         distanceInterval,
         deferredUpdatesInterval,
         deferredUpdatesDistance,
+        activityType: Location.ActivityType.Fitness, // Tells OS this is walking — improves accuracy for free
         showsBackgroundLocationIndicator: true,
         foregroundService: {
           notificationTitle: 'Kalvium Outreach',
@@ -155,8 +167,9 @@ class LocationTracker {
   }
 
   // ─── GPS Quality Filters ────────────────────────────────────────────────────
-  // Max acceptable accuracy radius in meters. Pings worse than this are noise.
-  static readonly MAX_ACCURACY_METERS = 50;
+  // Max acceptable accuracy radius in meters. Android in Indian cities
+  // routinely reports 50-100m accuracy. 50m was too strict and dropped most pings.
+  static readonly MAX_ACCURACY_METERS = 100;
   // Max realistic speed in m/s (200 km/h). Higher = GPS glitch.
   static readonly MAX_SPEED_MS = 55;
   // Min distance in meters from last saved point. Less than this = GPS jitter.

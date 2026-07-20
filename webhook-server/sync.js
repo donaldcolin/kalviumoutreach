@@ -219,8 +219,45 @@ export async function syncActivities(hours = SYNC_LOOKBACK_MINUTES / 60) {
         }
         const doc = buildFirestoreDoc(raw, fields, emailToFirestoreId);
         
-        // If we found a mapped local doc, update it. Otherwise, use the LSQ ID as the doc ID.
-        const docRef = mappedDocs[activityId] || db.collection('crmActivities').doc(activityId);
+        // ── Dedup logic ─────────────────────────────────────────────────
+        // Priority 1: If we already have a doc with this lsqActivityId, update it.
+        let docRef = mappedDocs[activityId];
+
+        // Priority 2: If the app created a doc (source='app-push') for the same
+        // lead around the same time, link it instead of creating a duplicate.
+        if (!docRef && raw.RelatedProspectId) {
+          try {
+            const appCreatedSnap = await db.collection('crmActivities')
+              .where('lsqLeadId', '==', raw.RelatedProspectId)
+              .where('source', '==', 'app-push')
+              .where('lsqActivityId', '==', null)
+              .limit(5)
+              .get();
+            
+            if (!appCreatedSnap.empty) {
+              // Check if any of these are within 12 hours of the LSQ activity
+              // (Expanded from 5 mins to handle offline queuing delays)
+              const lsqTime = new Date(raw.ModifiedOn || raw.CreatedOn || raw.ActivityDateTime || 0).getTime();
+              for (const appDoc of appCreatedSnap.docs) {
+                const appData = appDoc.data();
+                const appTime = new Date(appData.walkInDateTime || 0).getTime();
+                if (Math.abs(lsqTime - appTime) < 12 * 60 * 60 * 1000) {
+                  docRef = appDoc.ref;
+                  // Link the app doc to the LSQ activity ID for future syncs
+                  doc.lsqActivityId = activityId;
+                  break;
+                }
+              }
+            }
+          } catch (e) {
+            // If the dedup query fails, fall through to normal write
+          }
+        }
+
+        // Fallback: use the LSQ activity ID as the doc ID
+        if (!docRef) {
+          docRef = db.collection('crmActivities').doc(activityId);
+        }
         
         batch.set(docRef, doc, { merge: true });
         written++;

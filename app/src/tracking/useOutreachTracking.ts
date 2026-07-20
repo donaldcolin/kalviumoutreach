@@ -17,7 +17,11 @@ export function useOutreachTracking(userId: string | undefined) {
 
   const [activeSchoolMatch, setActiveSchoolMatch] = useState<School | null>(null);
 
+  const hasResumedRef = useRef(false);
+
   useEffect(() => {
+    // Reset on userId change
+    hasResumedRef.current = false;
 
     let unsubTrack = () => {};
     if (userId) {
@@ -26,13 +30,17 @@ export function useOutreachTracking(userId: string | undefined) {
         setIsTrackingInitialized(true);
         if (track?.status === 'active') {
           setIsTracking(true);
-          // Resume the firestoreSync session so the headless background task
-          // has a valid AsyncStorage session and the location listener is
-          // re-registered (fixes BUG-04: startTracking without startSession).
-          firestoreSync.startSession(userId).then(() => {
-            locationTracker.startTracking();
-          });
+          // Only resume once per mount — don't re-call on every snapshot update
+          // (startSession updates lastPing on the same doc, which would retrigger
+          // this listener in an infinite loop)
+          if (!hasResumedRef.current) {
+            hasResumedRef.current = true;
+            firestoreSync.startSession(userId).then(() => {
+              locationTracker.startTracking(false);
+            });
+          }
         } else if (track?.status === 'ended') {
+          hasResumedRef.current = false;
           if (isTrackingRef.current) {
             Alert.alert(
               "Tracking Stopped Remotely",

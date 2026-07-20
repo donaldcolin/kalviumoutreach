@@ -1,52 +1,64 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { useLocationPinger } from '../hooks/useLocationPinger';
 import * as Location from 'expo-location';
+import { useAuthStore } from '../stores/authStore';
+import { appendPing } from '../services/firestore';
+import firestore from '@react-native-firebase/firestore';
 
 jest.mock('expo-location', () => ({
   requestForegroundPermissionsAsync: jest.fn(),
   getCurrentPositionAsync: jest.fn(),
+  Accuracy: { High: 6 },
 }));
 
 jest.mock('../services/firestore', () => ({
   appendPing: jest.fn(),
 }));
 
-import { appendPing } from '../services/firestore';
+jest.mock('../stores/authStore', () => ({
+  useAuthStore: jest.fn(),
+}));
+
+jest.mock('@react-native-firebase/firestore', () => {
+  const onSnapshotMock = jest.fn();
+  const whereMock = jest.fn().mockReturnThis();
+  const collectionMock = jest.fn().mockReturnThis();
+  
+  const mockFirestore = () => ({
+    collection: collectionMock,
+    where: whereMock,
+    onSnapshot: onSnapshotMock,
+  });
+  
+  mockFirestore.collection = collectionMock;
+  mockFirestore.where = whereMock;
+  mockFirestore.onSnapshot = onSnapshotMock;
+  
+  return mockFirestore;
+});
 
 describe('useLocationPinger', () => {
+  const mockOnSnapshot = (firestore() as any).onSnapshot;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    (useAuthStore as unknown as jest.Mock).mockReturnValue({ user: null });
   });
 
   test('does nothing if no user is logged in', async () => {
-    const { result } = renderHook(() => useLocationPinger(undefined));
+    const { result } = await renderHook(() => useLocationPinger());
     
-    // Fast-forward or wait to see if it pings
-    // Without user, it shouldn't request permissions
-    expect(Location.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
+    expect(firestore().collection).not.toHaveBeenCalled();
   });
 
-  test('requests permission and sends ping if logged in', async () => {
-    (Location.requestForegroundPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' });
-    (Location.getCurrentPositionAsync as jest.Mock).mockResolvedValue({
-      coords: { latitude: 12.0, longitude: 77.0, accuracy: 10, speed: 1 },
-      timestamp: 1600000000000
-    });
+  test('listens to locationRequests if logged in', async () => {
+    (useAuthStore as unknown as jest.Mock).mockReturnValue({ user: { id: 'user123' } });
 
-    const { result } = renderHook(() => useLocationPinger('user123')) as any;
-
-    // Use fake timers to advance the interval
-    jest.useFakeTimers();
+    const { result } = await renderHook(() => useLocationPinger());
     
-    // The hook has a useEffect that runs on mount
-    await act(async () => {
-      jest.advanceTimersByTime(100);
-    });
-
-    expect(Location.requestForegroundPermissionsAsync).toHaveBeenCalled();
-    expect(Location.getCurrentPositionAsync).toHaveBeenCalled();
-    expect(appendPing).toHaveBeenCalledWith('user123', expect.any(Object));
-
-    jest.useRealTimers();
+    expect(firestore().collection).toHaveBeenCalledWith('locationRequests');
+    expect((firestore() as any).where).toHaveBeenCalledWith('executiveId', '==', 'user123');
+    expect((firestore() as any).where).toHaveBeenCalledWith('status', '==', 'pending');
+    expect(mockOnSnapshot).toHaveBeenCalled();
   });
 });

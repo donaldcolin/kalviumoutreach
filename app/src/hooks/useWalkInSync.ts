@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import firestore from '@react-native-firebase/firestore';
 import * as Crypto from 'expo-crypto';
+import { logger } from '../utils/logger';
 
 export function useWalkInSync(userId?: string, executiveEmail?: string) {
   const [isSyncing, setIsSyncing] = useState(false);
@@ -36,6 +37,7 @@ export function useWalkInSync(userId?: string, executiveEmail?: string) {
         walkInDateTime: now,
         notes: notesWithUrl,
         source: 'app-push',
+        lsqActivityId: null, // Will be set by pushQueue after LSQ confirms creation
         // Top-level lat/lng for map markers on the website dashboard
         lat: locationPayload?.startLocation?.lat ?? null,
         lng: locationPayload?.startLocation?.lng ?? null,
@@ -59,7 +61,7 @@ export function useWalkInSync(userId?: string, executiveEmail?: string) {
 
       return activityId;
     } catch (err) {
-      console.error('Failed to start walk-in:', err);
+      logger.error('Failed to start walk-in:', err instanceof Error ? err.message : String(err));
       return null;
     } finally {
       setIsSyncing(false);
@@ -104,7 +106,7 @@ export function useWalkInSync(userId?: string, executiveEmail?: string) {
 
       return true;
     } catch (err) {
-      console.error('Failed to end walk-in:', err);
+      logger.error('Failed to end walk-in:', err instanceof Error ? err.message : String(err));
       return false;
     } finally {
       setIsSyncing(false);

@@ -92,7 +92,7 @@ export function TeamSidebar({
           />
         </div>
       </div>
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-y-auto min-h-0">
         <div className="p-3">
           {filteredUsers.filter(u => u.role === 'executive').map(u => {
             const hasWalkIn = ongoingWalkIns[u.id];
@@ -145,7 +145,7 @@ export function TeamSidebar({
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }

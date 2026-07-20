@@ -6,3 +6,4 @@ export * from './GeofenceAlert';
 export * from './OngoingWalkInCard';
 export * from './UpcomingTasksList';
 export * from './StartDayModal';
+export * from './ActivityList';

@@ -97,7 +97,7 @@ const ongoingWalkInIcon = L.divIcon({
 
 
 // ─── OSRM Cache Helpers ───────────────────────────────────────────────────────
-const CACHE_PREFIX = 'osrm_';
+const CACHE_PREFIX = 'osrm_v2_';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours max, even if key matches
 
 function readCache(key: string): [number, number][] | null {
@@ -131,14 +131,14 @@ function writeCache(key: string, route: [number, number][]) {
 async function snapToRoads(rawRoute: [number, number][]): Promise<[number, number][] | null> {
   if (rawRoute.length < 2) return null;
 
-  // OSRM can handle max ~100 coordinates per match request. Chunk if needed.
-  const MAX_COORDS = 90;
+  // OSRM demo server has very strict limits: max 10 coordinates per match request, and max 40m radius.
+  const MAX_COORDS = 10;
   let snappedCoords: [number, number][] = [];
 
   for (let i = 0; i < rawRoute.length; i += MAX_COORDS) {
     const chunk = rawRoute.slice(i, i + MAX_COORDS);
     const coordStr = chunk.map(([lat, lng]) => `${lng},${lat}`).join(';');
-    const radiuses = chunk.map(() => 50).join(';'); // 50m snap radius per point
+    const radiuses = chunk.map(() => 40).join(';'); // 40m is the max allowed radius on OSRM public server
 
     const url =
       `https://router.project-osrm.org/match/v1/foot/${coordStr}` +
@@ -264,13 +264,13 @@ export function AssociateMap({
           />
         )}
 
-        {/* Raw GPS route — shown as ghost while snapping, or as fallback */}
-        {route.length > 0 && (
+        {/* Raw GPS route — shown as fallback if snapping fails or is loading */}
+        {route.length > 0 && !snappedRoute && (
           <Polyline
             positions={route}
             color="#ef4444"
-            weight={snappedRoute ? 2 : 4}
-            opacity={snappedRoute ? 0.25 : 0.7}
+            weight={4}
+            opacity={0.7}
             dashArray="8, 10"
           />
         )}

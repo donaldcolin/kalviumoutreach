@@ -28,28 +28,20 @@ class FirestoreSync {
       const docId = `${this.userId}_${this.dateStr}`;
       const docRef = firestore().collection('dailyTracks').doc(docId);
       
+      // Save session locally FIRST so background task can resume even if
+      // the Firestore write is slow or fails on a flaky network.
       await AsyncStorage.setItem('tracking_session', JSON.stringify({ userId: this.userId, dateStr: this.dateStr }));
 
-      // Use a transaction to prevent race conditions when two
-      // callers (manual start + auto-resume) fire simultaneously
-      await firestore().runTransaction(async (tx) => {
-        const doc = await tx.get(docRef);
-        if (doc.exists && doc.data()?.status === 'active') {
-          // Session already active — just update lastPing, don't overwrite startTime
-          tx.update(docRef, {
-            lastPing: firestore.FieldValue.serverTimestamp(),
-          });
-        } else {
-          // New session or re-activating an ended one
-          tx.set(docRef, {
-            userId: this.userId,
-            date: this.dateStr,
-            startTime: Date.now(),
-            status: 'active',
-            lastPing: firestore.FieldValue.serverTimestamp(),
-          }, { merge: true });
-        }
-      });
+      // Use set+merge instead of a transaction. Transactions require 2 round-trips
+      // (read + write) which causes deadline-exceeded on slow mobile networks.
+      // set+merge is a single write that creates-or-updates atomically.
+      await docRef.set({
+        userId: this.userId,
+        date: this.dateStr,
+        startTime: Date.now(),
+        status: 'active',
+        lastPing: firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
 
       // Only subscribe if not already subscribed
       if (!this.unsubscribeLocation) {
@@ -71,17 +63,13 @@ class FirestoreSync {
     try {
       await AsyncStorage.removeItem('tracking_session');
 
-      // Use a transaction to ensure we only end an active session
-      await firestore().runTransaction(async (tx) => {
-        const doc = await tx.get(docRef);
-        if (doc.exists && doc.data()?.status === 'active') {
-          tx.update(docRef, {
-            endTime: Date.now(),
-            status: 'ended',
-            lastPing: firestore.FieldValue.serverTimestamp(),
-          });
-        }
-        // If already ended or doesn't exist, no-op
+      // Simple update instead of transaction — avoids deadline-exceeded.
+      // If the doc doesn't exist (edge case), the update will fail silently
+      // which is fine — there's nothing to end.
+      await docRef.update({
+        endTime: Date.now(),
+        status: 'ended',
+        lastPing: firestore.FieldValue.serverTimestamp(),
       });
     } catch (e) {
       logger.error('Failed to end tracking session', e instanceof Error ? e.message : String(e));
@@ -124,14 +112,14 @@ class FirestoreSync {
 
       // Also update the user's lastKnownLocation for quick dashboard loading
       const lastPoint = valid[valid.length - 1];
-      batch.set(firestore().collection('users').doc(userId), {
+      batch.update(firestore().collection('users').doc(userId), {
         lastKnownLocation: {
           lat: lastPoint.lat,
           lng: lastPoint.lng,
           ts: lastPoint.ts,
           updatedAt: firestore.FieldValue.serverTimestamp(),
         },
-      }, { merge: true });
+      });
 
       await batch.commit();
     } catch (e) {

@@ -80,13 +80,13 @@ describe('filterLocationPoints', () => {
       expect(result).toHaveLength(1);
     });
 
-    test('accepts ping with accuracy exactly 50m (threshold)', () => {
-      const result = filterLocationPoints([mockLocation(12.97, 77.59, baseTs, 50)]);
+    test('accepts ping with accuracy exactly 100m (threshold)', () => {
+      const result = filterLocationPoints([mockLocation(12.97, 77.59, baseTs, 100)]);
       expect(result).toHaveLength(1);
     });
 
-    test('rejects ping with accuracy 51m (over threshold)', () => {
-      const result = filterLocationPoints([mockLocation(12.97, 77.59, baseTs, 51)]);
+    test('rejects ping with accuracy 101m (over threshold)', () => {
+      const result = filterLocationPoints([mockLocation(12.97, 77.59, baseTs, 101)]);
       expect(result).toHaveLength(0);
     });
 

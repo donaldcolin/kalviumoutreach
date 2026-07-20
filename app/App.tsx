@@ -4,6 +4,17 @@
  * Initializes Firebase, navigation, auth state, sync manager,
  * and orphaned recording detection.
  */
+// Suppress RNFB v22 deprecation spam from Metro terminal output.
+// MUST be before any imports so it catches warnings during module init.
+const _origWarn = console.warn;
+console.warn = (...args: any[]) => {
+  if (typeof args[0] === 'string' && (
+    args[0].includes('React Native Firebase namespaced API') ||
+    args[0].includes('expo-background-fetch')
+  )) return;
+  _origWarn(...args);
+};
+
 import React, { useEffect, useState } from 'react';
 import { StatusBar, LogBox, View } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring } from 'react-native-reanimated';
@@ -11,6 +22,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring } fr
 LogBox.ignoreLogs([
   'This method is deprecated (as well as all React Native Firebase namespaced API)',
   'expo-background-fetch: This library is deprecated',
+  'Require cycle',
 ]);
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
