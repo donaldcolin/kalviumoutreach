@@ -17,7 +17,7 @@ export interface RawPing {
 }
 
 // ─── Haversine ────────────────────────────────────────────────────────────────
-export function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371000;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLng = ((lng2 - lng1) * Math.PI) / 180;
@@ -29,7 +29,7 @@ export function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: 
 
 // ─── Step 1: Accuracy filter ──────────────────────────────────────────────────
 // Drop pings where the GPS chip reported a large uncertainty radius.
-export function filterByAccuracy(pings: RawPing[], maxAccuracyMeters = 50): RawPing[] {
+function filterByAccuracy(pings: RawPing[], maxAccuracyMeters = 50): RawPing[] {
   return pings.filter((p) => {
     // If no accuracy field, trust the ping (older data without the field)
     if (p.accuracy == null) return true;
@@ -40,7 +40,7 @@ export function filterByAccuracy(pings: RawPing[], maxAccuracyMeters = 50): RawP
 // ─── Step 2: Outlier rejection ────────────────────────────────────────────────
 // Drop pings that jump further than `maxJumpMeters` from their neighbors.
 // A single bad ping surrounded by good ones gets removed.
-export function filterOutliers(pings: RawPing[], maxJumpMeters = 150): RawPing[] {
+function filterOutliers(pings: RawPing[], maxJumpMeters = 150): RawPing[] {
   if (pings.length <= 2) return pings;
 
   const result: RawPing[] = [pings[0]];
@@ -68,7 +68,7 @@ export function filterOutliers(pings: RawPing[], maxJumpMeters = 150): RawPing[]
 // ─── Step 3: Route smoothing ──────────────────────────────────────────────────
 // Apply a sliding window average to reduce micro-jitter.
 // windowSize = 3 is a good balance: removes noise without losing real turns.
-export function smoothRoute(pings: RawPing[], windowSize = 3): RawPing[] {
+function smoothRoute(pings: RawPing[], windowSize = 3): RawPing[] {
   if (pings.length <= windowSize) return pings;
 
   const half = Math.floor(windowSize / 2);

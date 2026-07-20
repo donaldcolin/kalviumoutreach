@@ -56,7 +56,7 @@ export async function signOut(): Promise<void> {
 /**
  * Get the current Firebase user (synchronous check).
  */
-export function getCurrentAuthUser(): FirebaseAuthTypes.User | null {
+function getCurrentAuthUser(): FirebaseAuthTypes.User | null {
   return auth().currentUser;
 }
 

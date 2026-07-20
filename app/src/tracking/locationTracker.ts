@@ -17,7 +17,7 @@ function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number)
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-export const LOCATION_TASK_NAME = 'BACKGROUND_LOCATION_TASK';
+const LOCATION_TASK_NAME = 'BACKGROUND_LOCATION_TASK';
 
 export interface LocationPoint {
   lat: number;
