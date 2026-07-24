@@ -25,7 +25,19 @@ export function useWalkInSync(userId?: string, executiveEmail?: string) {
     try {
       const activityId = Crypto.randomUUID();
       const now = new Date().toISOString();
-      const notesWithUrl = storageUrl ? `Walk-in Started\n\nRecording: ${storageUrl}` : 'Walk-in Started';
+
+      // Build a rich notes field from the user's actual input
+      const userNotes = extraData?.notes?.trim() || '';
+      const parts: string[] = [];
+      if (userNotes) {
+        parts.push(userNotes);
+      }
+      if (storageUrl) {
+        parts.push(`Recording: ${storageUrl}`);
+      }
+      // Always include attribution at the end
+      parts.push(`Walk-in by ${executiveEmail}`);
+      const compositeNotes = parts.join('\n\n');
 
       // 1. Create local crmActivity with all form data for timeline display
       await firestore().collection('crmActivities').doc(activityId).set({
@@ -35,7 +47,8 @@ export function useWalkInSync(userId?: string, executiveEmail?: string) {
         lsqLeadId: schoolId,
         schoolName: schoolName,
         walkInDateTime: now,
-        notes: notesWithUrl,
+        notes: compositeNotes,
+        recordingUrl: storageUrl || null,
         source: 'app-push',
         lsqActivityId: null, // Will be set by pushQueue after LSQ confirms creation
         // Top-level lat/lng for map markers on the website dashboard
@@ -52,7 +65,7 @@ export function useWalkInSync(userId?: string, executiveEmail?: string) {
         activityId: activityId,
         leadId: schoolId,
         executiveId: userId,
-        notes: notesWithUrl,
+        notes: compositeNotes,
         activityData: activityData || [],
         ...(locationPayload || {}),
         status: 'pending',

@@ -34,12 +34,12 @@ export default function Analytics() {
   }, []);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-48px)] gap-6 p-6 bg-[#fafafa] text-zinc-900 animate-in fade-in duration-700">
+    <div className="flex flex-col h-[calc(100vh-48px)] gap-6 bg-transparent text-gray-900 animate-in fade-in duration-700">
       <div className="flex items-center gap-3 shrink-0 mb-2">
-        <div className="p-2 bg-white border border-zinc-200 rounded-xl shadow-sm">
-          <BarChart3 className="w-5 h-5 text-zinc-900" />
+        <div className="p-2 bg-white border border-gray-200 rounded-xl shadow-sm">
+          <BarChart3 className="w-5 h-5 text-gray-900" />
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900">
           Analytics & Reports
         </h1>
       </div>

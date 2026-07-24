@@ -1,4 +1,5 @@
 import firestore from '@react-native-firebase/firestore';
+import auth from '@react-native-firebase/auth';
 import { format } from 'date-fns';
 import { locationTracker, LocationPoint } from './locationTracker';
 import * as Crypto from 'expo-crypto';
@@ -87,6 +88,13 @@ class FirestoreSync {
   public async appendHeadlessLocations(userId: string, dateStr: string, points: LocationPoint[]) {
     if (!userId || !dateStr || points.length === 0) return;
 
+    if (!auth().currentUser) {
+      logger.info('User is unauthenticated, skipping headless location push');
+      // If the user logged out, clear the tracking session so we don't keep trying
+      await AsyncStorage.removeItem('tracking_session');
+      return;
+    }
+
     // Validate all points before writing to Firestore
     const { valid, rejected } = validatePoints(points);
     if (rejected > 0) {
@@ -123,7 +131,7 @@ class FirestoreSync {
 
       await batch.commit();
     } catch (e) {
-      logger.error('Failed to write headless location batch to Firestore', e instanceof Error ? e.message : String(e));
+      logger.warn('Failed to write headless location batch to Firestore', e instanceof Error ? e.message : String(e));
     }
   }
 

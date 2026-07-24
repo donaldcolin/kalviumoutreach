@@ -13,6 +13,8 @@ import {
   getCachedUserProfile,
 } from '../services/auth';
 import type { FirebaseAuthTypes } from '@react-native-firebase/auth';
+import { firestoreSync } from '../tracking/firestoreSync';
+import { locationTracker } from '../tracking/locationTracker';
 
 interface AuthState {
   user: User | null;
@@ -122,6 +124,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     set({ isLoading: true });
     try {
+      // Stop tracking and clear session BEFORE signing out
+      await locationTracker.stopTracking();
+      await firestoreSync.endSession();
+      
       await firebaseSignOut();
     } catch (err) {
       set({

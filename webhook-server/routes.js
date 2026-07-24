@@ -130,4 +130,41 @@ app.post('/api/push-recording', async (req, res) => {
   }
 });
 
+// ─── Global Lead Search (for Lead Sharing) ──────────────────────────────────
+
+app.get('/api/leads/search', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q || String(q).trim().length < 2) {
+      return res.status(400).json({ error: 'Search query "q" must be at least 2 characters' });
+    }
+
+    const searchBody = {
+      "Parameter": {
+        "LookupName": "FirstName",
+        "LookupValue": String(q).trim(),
+        "SqlOperator": "like"
+      },
+      "Columns": {
+        "Include_CSV": "ProspectID,FirstName,LastName,EmailAddress,Phone,Company,OwnerIdEmailAddress,mx_Street1,mx_City,mx_State"
+      },
+      "Paging": {
+        "PageIndex": 1,
+        "PageSize": 50
+      }
+    };
+
+    const lsqResp = await lsqFetch('/v2/LeadManagement.svc/Leads.Get', 'POST', searchBody);
+
+    res.json({
+      success: true,
+      leads: Array.isArray(lsqResp) ? lsqResp : []
+    });
+
+  } catch (err) {
+    console.error('Global lead search failed:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default app;

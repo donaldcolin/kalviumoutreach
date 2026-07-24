@@ -85,27 +85,27 @@ export default function DevLogs() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-48px)] bg-zinc-950 text-zinc-300 rounded-xl overflow-hidden font-mono text-sm border border-zinc-800 shadow-2xl relative animate-in fade-in duration-500">
+    <div className="flex flex-col h-[calc(100vh-48px)] bg-slate-950 text-slate-300 rounded-xl overflow-hidden font-mono text-sm border border-slate-800  relative animate-in fade-in duration-500">
       
       {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-zinc-900 border-b border-zinc-800 shrink-0">
+      <div className="flex items-center justify-between p-4 bg-slate-900 border-b border-slate-800 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-zinc-800 rounded-lg">
+          <div className="p-2 bg-slate-800 rounded-lg">
             <Terminal className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
-            <h1 className="text-zinc-100 font-bold tracking-tight font-sans">Remote Dev Logs</h1>
-            <p className="text-zinc-500 text-xs mt-0.5">Live monitoring from production mobile clients</p>
+            <h1 className="text-slate-100 font-bold tracking-tight font-sans">Remote Dev Logs</h1>
+            <p className="text-slate-500 text-xs mt-0.5">Live monitoring from production mobile clients</p>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-zinc-950 px-3 py-1.5 rounded-lg border border-zinc-800">
-            <Filter className="w-4 h-4 text-zinc-500" />
+          <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
+            <Filter className="w-4 h-4 text-slate-500" />
             <select 
               value={filterLevel}
               onChange={(e) => setFilterLevel(e.target.value)}
-              className="bg-transparent text-zinc-300 border-none outline-none text-xs cursor-pointer"
+              className="bg-transparent text-slate-300 border-none outline-none text-xs cursor-pointer"
             >
               <option value="all">All Levels</option>
               <option value="info">Info</option>
@@ -114,12 +114,12 @@ export default function DevLogs() {
             </select>
           </div>
           
-          <div className="flex items-center gap-2 bg-zinc-950 px-3 py-1.5 rounded-lg border border-zinc-800">
-            <Filter className="w-4 h-4 text-zinc-500" />
+          <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
+            <Filter className="w-4 h-4 text-slate-500" />
             <select 
               value={filterUser}
               onChange={(e) => setFilterUser(e.target.value)}
-              className="bg-transparent text-zinc-300 border-none outline-none text-xs cursor-pointer max-w-[150px] truncate"
+              className="bg-transparent text-slate-300 border-none outline-none text-xs cursor-pointer max-w-[150px] truncate"
             >
               <option value="all">All Associates</option>
               {Object.values(users).map(u => (
@@ -131,7 +131,7 @@ export default function DevLogs() {
           <button 
             onClick={handleClearLogs}
             disabled={isClearing}
-            className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-colors border border-red-500/20 disabled:opacity-50"
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white rounded-md px-4 py-2 shadow-sm font-medium transition-colors disabled:opacity-50"
           >
             <Trash2 className="w-4 h-4" />
             {isClearing ? 'Clearing...' : 'Clear Logs'}
@@ -145,7 +145,7 @@ export default function DevLogs() {
           <div className="flex justify-center mb-4">
             <button 
               onClick={() => setLogLimit(l => l + 50)}
-              className="px-4 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-full text-xs font-medium transition-colors"
+              className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full text-xs font-medium transition-colors"
             >
               Load Older Logs
             </button>
@@ -153,7 +153,7 @@ export default function DevLogs() {
         )}
         
         {filteredLogs.length === 0 ? (
-          <div className="absolute inset-0 flex items-center justify-center text-zinc-600 italic">
+          <div className="absolute inset-0 flex items-center justify-center text-slate-600 italic">
             Waiting for logs...
           </div>
         ) : (
@@ -163,18 +163,18 @@ export default function DevLogs() {
             const userName = users[log.associateId]?.name || log.associateId.substring(0, 8);
             
             return (
-              <div key={log.id} className="flex gap-4 hover:bg-zinc-900/50 p-1.5 rounded px-2 transition-colors">
-                <span className="text-zinc-600 shrink-0 w-[100px]">{timeStr}</span>
+              <div key={log.id} className="flex gap-4 hover:bg-slate-900/50 p-1.5 rounded px-2 transition-colors">
+                <span className="text-slate-600 shrink-0 w-[100px]">{timeStr}</span>
                 <span className={`shrink-0 w-[50px] font-bold uppercase ${getLevelColor(log.level)}`}>
                   {log.level}
                 </span>
-                <span className="text-zinc-400 shrink-0 w-[120px] truncate" title={userName}>
+                <span className="text-slate-400 shrink-0 w-[120px] truncate" title={userName}>
                   [{userName}]
                 </span>
-                <span className="text-zinc-200">
+                <span className="text-slate-200">
                   {log.message}
                   {log.metadata && (
-                    <span className="ml-2 text-zinc-500 truncate block sm:inline-block max-w-xl">
+                    <span className="ml-2 text-slate-500 truncate block sm:inline-block max-w-xl">
                       {log.metadata}
                     </span>
                   )}

@@ -14,7 +14,7 @@ import { calculateDistanceMeters } from '../../utils/distance';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ChevronDownIcon, CalendarIcon, ClockIcon, MapPinIcon, RefreshCwIcon, ChevronLeftIcon, Building2Icon, Mic, Square } from 'lucide-react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+
 import {
   Select,
   SelectTrigger,
@@ -665,7 +665,7 @@ export default function WalkInSessionScreen() {
                   {walkInStatus === 'Refused Entry - RE' && (
                     <CustomSelect 
                       label="Reason for Refusal" 
-                      options={['Did not get permission to enter', 'Security/Front Desk denied entry', 'Other']} 
+                      options={['Didnot get permission to enter', 'Security /Front Desk denied entry', 'Others']} 
                       value={reasonForRefusal} onChange={setReasonForRefusal} 
                     />
                   )}

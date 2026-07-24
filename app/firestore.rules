@@ -107,5 +107,16 @@ service cloud.firestore {
       allow create: if request.auth != null && request.resource.data.associateId == request.auth.uid;
       allow update, delete: if false; // Logs are immutable
     }
+
+    // Lead Access Requests — associates request access, managers approve
+    match /leadAccessRequests/{reqId} {
+      // Anyone authenticated can read (to check their own requests)
+      allow read: if request.auth != null;
+      // Any authenticated user can create a request (requestedBy must be their own UID)
+      allow create: if request.auth != null && request.resource.data.requestedBy == request.auth.uid;
+      // Only TLs/Admins can approve (update status)
+      allow update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != 'executive';
+      allow delete: if false;
+    }
   }
 }

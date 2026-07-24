@@ -27,6 +27,11 @@ class RemoteLogger {
     // 2. Push to Firestore
     try {
       const associateId = await this.getUserId();
+      
+      if (associateId === 'unknown_user') {
+        return;
+      }
+
       await firestore().collection('system_logs').add({
         associateId,
         level,
@@ -37,7 +42,7 @@ class RemoteLogger {
       });
     } catch (e) {
       // Do not use logger here to avoid infinite loops if Firestore fails
-      console.error('[LOGGER] Failed to push remote log', e);
+      console.warn('[LOGGER] Failed to push remote log', e);
     }
   }
 

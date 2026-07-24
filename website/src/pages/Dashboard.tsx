@@ -5,13 +5,14 @@ import { db } from '../firebase';
 import 'leaflet/dist/leaflet.css';
 import { useToast } from '../hooks/use-toast';
 import { TimelineActivityDialog } from "../components/TimelineActivityDialog";
-import { calculateDistanceMeters } from '../lib/distance';
+import { buildTimeline } from '../lib/timelineBuilder';
 
 import { TeamSidebar } from '../components/dashboard/TeamSidebar';
 import { GlobalStats } from '../components/dashboard/GlobalStats';
 import { AssociateHeader } from '../components/dashboard/AssociateHeader';
 import { AssociateMap } from '../components/dashboard/AssociateMap';
 import { AssociateTimeline } from '../components/dashboard/AssociateTimeline';
+import { LeadAccessRequests } from '../components/dashboard/LeadAccessRequests';
 import { Map as MapIcon, } from 'lucide-react';
 import { format } from "date-fns";
 import { cleanGpsRoute, buildRouteCacheKey, type RawPing } from '../lib/gpsUtils';
@@ -161,6 +162,7 @@ export default function Dashboard() {
     setSelectedDateLocReqs([]);
     setSelectedDateCrmActivities([]);
     setSelectedAssociateTasks([]);
+    setRouteCacheKey('');
     setDailyTrackStatus(null);
     setDailyTrackId(null);
 
@@ -258,109 +260,7 @@ export default function Dashboard() {
   }, [selectedAssociate, selectedDateStart, selectedDateEnd]);
 
   const timeline = useMemo(() => {
-    const merged: any[] = [];
-
-    selectedDateLocReqs.forEach(r => {
-      const ts = r.requestedAt?.toMillis ? r.requestedAt.toMillis() : (r.requestedAt || Date.now());
-      const date = new Date(ts);
-      const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      merged.push({ time: timeStr, event: `Location Request (${r.status})`, type: 'request', status: r.status, timestamp: ts, data: r });
-    });
-
-    selectedDateCrmActivities.forEach(a => {
-      const dt = a.walkInDateTime || a.lsqCreatedOn;
-      const ts = dt ? new Date(dt).getTime() : Date.now();
-      const date = new Date(ts);
-      const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-      const stageLabel = a.walkInStatus || 'Visit';
-      let eventText = `📋 ${a.schoolName || 'School'} — ${stageLabel}`;
-      if (a.typeOfWalkIn) eventText = `📋 ${a.typeOfWalkIn}: ${a.schoolName || 'School'} (${stageLabel})`;
-
-      merged.push({
-        time: timeStr, event: eventText, type: 'crm',
-        lat: a.lat ?? a.startLocation?.lat ?? null,
-        lng: a.lng ?? a.startLocation?.lng ?? null,
-        timestamp: ts, status: a.walkInStatus, data: a,
-      });
-    });
-
-    // 3. GPS Signal Lost Gaps
-    for (let i = 1; i < rawPings.length; i++) {
-      const prev = rawPings[i - 1];
-      const curr = rawPings[i];
-      const prevTs = prev.ts?.toMillis ? prev.ts.toMillis() : (prev.ts || 0);
-      const currTs = curr.ts?.toMillis ? curr.ts.toMillis() : (curr.ts || 0);
-
-      const gapMs = currTs - prevTs;
-      if (gapMs > 3600000) { // > 1 hour gap
-        const date = new Date(currTs);
-        const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const gapMins = Math.round(gapMs / 60000);
-        merged.push({
-          time: timeStr,
-          event: 'GPS Signal Lost',
-          details: `No background location data received for ${gapMins > 120 ? Math.round(gapMins / 60) + ' hours' : gapMins + ' minutes'}`,
-          type: 'warning',
-          timestamp: currTs - 1000,
-          isWarning: true
-        });
-      }
-    }
-
-    merged.sort((a, b) => a.timestamp - b.timestamp);
-
-    // Anti-Cheat: Impossible Travel & Short Duration
-    const finalTimeline: any[] = [];
-    let lastLoc: { lat: number, lng: number, timestamp: number } | null = null;
-
-    merged.forEach(item => {
-      // 1. Short Duration Warning for CRM activities
-      if (item.type === 'crm' && item.data) {
-        const a = item.data;
-        const walkInTs = a.walkInDateTime ? new Date(a.walkInDateTime).getTime() : 0;
-        const createdTs = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
-        if (walkInTs > 0 && createdTs > 0) {
-          const durationMs = createdTs - walkInTs;
-          if (durationMs > 0 && durationMs < 180000 && (a.walkInStatus?.includes('PI') || a.walkInStatus?.includes('Principal') || a.walkInStatus?.includes('Seminar'))) {
-            finalTimeline.push({
-              time: item.time,
-              event: 'Suspiciously Short Duration',
-              details: `Principal Interaction lasted only ${Math.round(durationMs / 1000)}s`,
-              type: 'warning',
-              timestamp: item.timestamp - 1,
-              isWarning: true
-            });
-          }
-        }
-      }
-
-      // 2. Impossible Travel
-      if (item.lat && item.lng && item.timestamp) {
-        if (lastLoc) {
-          const distMeters = calculateDistanceMeters(lastLoc.lat, lastLoc.lng, item.lat, item.lng);
-          const timeHours = (item.timestamp - lastLoc.timestamp) / 3600000;
-          if (timeHours > 0) {
-            const speedKmh = (distMeters / 1000) / timeHours;
-            if (speedKmh > 100) {
-              finalTimeline.push({
-                time: item.time,
-                event: 'Impossible Travel Detected',
-                details: `Speed ~${Math.round(speedKmh)} km/h between check-ins (${(distMeters / 1000).toFixed(1)}km in ${Math.round(timeHours * 60)}m)`,
-                type: 'warning',
-                timestamp: item.timestamp - 1,
-                isWarning: true
-              });
-            }
-          }
-        }
-        lastLoc = { lat: item.lat, lng: item.lng, timestamp: item.timestamp };
-      }
-
-      finalTimeline.push(item);
-    });
-
-    return finalTimeline;
+    return buildTimeline(selectedDateLocReqs, selectedDateCrmActivities, rawPings);
   }, [selectedDateLocReqs, selectedDateCrmActivities, rawPings]);
 
   const visibleUsers = useMemo(() => {
@@ -408,12 +308,15 @@ export default function Dashboard() {
     }, { merge: true });
   };
 
+  const routeStartLat = route.length > 0 ? route[0][0] : null;
+  const routeStartLng = route.length > 0 ? route[0][1] : null;
+
   useEffect(() => {
-    if (route.length > 0) {
-      setMapCenter(route[0]);
+    if (routeStartLat !== null && routeStartLng !== null) {
+      setMapCenter([routeStartLat, routeStartLng]);
       setMapZoom(14);
     }
-  }, [route.length > 0 ? route[0] : null]);
+  }, [routeStartLat, routeStartLng]);
 
   useEffect(() => {
     if (selectedActivity && selectedActivity.lat !== undefined && selectedActivity.lng !== undefined) {
@@ -461,7 +364,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-48px)] gap-6 p-6 bg-[#fafafa] text-zinc-900 animate-in fade-in duration-700">
+    <div className="flex h-[calc(100vh-48px)] gap-6 bg-transparent text-gray-900 animate-in fade-in duration-700">
       <TeamSidebar
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
@@ -500,13 +403,13 @@ export default function Dashboard() {
         )}
 
         {!selectedAssociate ? (
-          <div className="flex-1 flex items-center justify-center bg-white border border-zinc-200 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] rounded-xl">
+        <div className="flex-1 flex items-center justify-center bg-white border border-gray-100 shadow-sm rounded-xl">
             <div className="text-center flex flex-col items-center max-w-sm">
-              <div className="w-20 h-20 bg-zinc-50 border border-zinc-100 flex items-center justify-center mb-6 shadow-inner rounded-xl">
-                <MapIcon className="h-8 w-8 text-zinc-300" />
+              <div className="w-20 h-20 bg-gray-50 border border-gray-100 flex items-center justify-center mb-6 shadow-sm rounded-xl">
+                <MapIcon className="h-8 w-8 text-gray-300" />
               </div>
-              <h3 className="text-xl font-medium text-zinc-900 tracking-tight">Select an associate</h3>
-              <p className="text-zinc-500 text-sm mt-3 leading-relaxed">
+              <h3 className="text-xl font-semibold text-gray-900 tracking-tight">Select an associate</h3>
+              <p className="text-gray-500 text-sm mt-3 font-medium leading-relaxed">
                 Choose a team member from the sidebar to view their real-time location and activity timeline.
               </p>
             </div>

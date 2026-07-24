@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Calendar, User, Clock } from 'lucide-react';
+import {  User, Clock } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import { type SchoolPipelineEntry } from './types';
 import { useAuthStore } from '../../stores/authStore';
@@ -16,20 +16,24 @@ interface PipelineSeminarsProps {
   dateFilter: string;
   associateFilter: string;
   taskTypeFilter: string;
+  setAssociateFilter: (val: string) => void;
+  setTaskTypeFilter: (val: string) => void;
 }
 
-export function PipelineSeminars({ 
-  pipelineData, 
+export function PipelineSeminars({
+  pipelineData,
   setSelectedSchool,
   searchQuery,
   dateFilter,
   associateFilter,
-  taskTypeFilter
+  taskTypeFilter,
+  setAssociateFilter,
+  setTaskTypeFilter
 }: PipelineSeminarsProps) {
   const { users } = useAuthStore();
   const { toast } = useToast();
-  
-  const [assigningTask, setAssigningTask] = useState<{school: SchoolPipelineEntry, type: 'seminar'|'follow_up'} | null>(null);
+
+  const [assigningTask, setAssigningTask] = useState<{ school: SchoolPipelineEntry, type: 'seminar' | 'follow_up' } | null>(null);
   const [selectedExecutiveId, setSelectedExecutiveId] = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
 
@@ -105,77 +109,118 @@ export function PipelineSeminars({
   };
 
   return (
-    <div className="w-full shrink-0 snap-center flex flex-col h-full p-6">
-      <div className="flex items-center justify-between mb-6 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-white border border-zinc-200 rounded-xl shadow-sm">
-            <Calendar className="w-5 h-5 text-zinc-900" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Upcoming Tasks</h1>
-            <p className="text-sm text-zinc-500 mt-0.5">{filteredTasks.length} tasks scheduled</p>
-          </div>
-        </div>
-      </div>
+    <div className="w-full shrink-0 flex flex-col h-full p-8 md:p-10 max-w-7xl mx-auto">
 
-      <ScrollArea className="flex-1">
-        <div className="pb-12 space-y-8">
-          
-          {/* Associate Counter Section */}
-          {associateStats.length > 0 && (
+      <ScrollArea className="flex-1 min-h-0 -mx-4 px-4">
+        <div className="pb-12 space-y-10">
+
+          {/* Quick Filters */}
+          <div className="flex flex-col gap-6">
+            {/* Task Type Filters */}
             <div>
-              <h2 className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-3">Tasks by Associate</h2>
-              <div className="flex flex-wrap gap-2">
-                {associateStats.map(stat => (
-                  <div key={stat.name} className="flex items-center gap-2 bg-white border border-zinc-200 rounded-lg px-3 py-2 shadow-sm">
-                    <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                      <User size={12} />
-                    </div>
-                    <span className="text-sm font-medium text-zinc-700">{stat.name}</span>
-                    <span className="bg-zinc-100 text-zinc-600 text-xs font-bold px-2 py-0.5 rounded-full ml-1">{stat.count}</span>
-                  </div>
-                ))}
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4">Task Type</h2>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={() => setTaskTypeFilter('all')}
+                  className={`flex items-center gap-2 transition-colors rounded-full px-4 py-1.5 font-medium text-sm ${taskTypeFilter === 'all' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+                >
+                  All Tasks
+                </button>
+                <button
+                  onClick={() => setTaskTypeFilter('seminar')}
+                  className={`flex items-center gap-2 transition-colors rounded-full px-4 py-1.5 font-medium text-sm ${taskTypeFilter === 'seminar' ? 'bg-purple-500 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+                >
+                  <div className={`w-1.5 h-1.5 rounded-full ${taskTypeFilter === 'seminar' ? 'bg-white' : 'bg-purple-500'}`} />
+                  Seminars
+                </button>
+                <button
+                  onClick={() => setTaskTypeFilter('follow_up')}
+                  className={`flex items-center gap-2 transition-colors rounded-full px-4 py-1.5 font-medium text-sm ${taskTypeFilter === 'follow_up' ? 'bg-blue-500 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+                >
+                  <div className={`w-1.5 h-1.5 rounded-full ${taskTypeFilter === 'follow_up' ? 'bg-white' : 'bg-blue-500'}`} />
+                  Follow-ups
+                </button>
               </div>
             </div>
-          )}
+
+            {/* Associate Counter Section */}
+            {associateStats.length > 0 && (
+              <div>
+                <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4">Tasks by Associate</h2>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={() => setAssociateFilter('all')}
+                    className={`flex items-center gap-2 transition-colors rounded-full px-4 py-1.5 font-medium text-sm ${associateFilter === 'all' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+                  >
+                    All Associates
+                  </button>
+                  {associateStats.map(stat => {
+                    // Check if this stat matches the currently filtered associate email
+                    const isSelected = associateFilter !== 'all' && associateFilter === (tasks.find(t => t.executiveName === stat.name)?.executiveEmail || '');
+                    return (
+                      <button
+                        key={stat.name}
+                        onClick={() => {
+                          const email = tasks.find(t => t.executiveName === stat.name)?.executiveEmail || '';
+                          setAssociateFilter(email);
+                        }}
+                        className={`flex items-center gap-2 transition-colors rounded-full px-4 py-1.5 ${isSelected ? 'bg-gray-900 text-white' : 'bg-gray-50 hover:bg-gray-100 text-gray-600'}`}
+                      >
+                        <span className={`text-sm font-medium ${isSelected ? 'text-white' : 'text-gray-600'}`}>{stat.name}</span>
+                        <span className={`text-xs font-semibold ml-1 ${isSelected ? 'text-gray-300' : 'text-gray-400'}`}>{stat.count}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Tasks Grid */}
           <div>
-            <h2 className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-3">Schedule</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4">Schedule</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {filteredTasks.map((task, i) => (
-                <div key={task.schoolName + i} className="bg-white p-5 rounded-xl border border-zinc-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-3 group relative cursor-pointer" onClick={() => setSelectedSchool(task)}>
-                  <div className="flex justify-between items-start w-full gap-3">
-                    <h3 className="font-semibold text-zinc-900 line-clamp-2">{task.schoolName}</h3>
-                    <span className={`px-2 py-1 border rounded-md text-[10px] font-bold whitespace-nowrap ${task.taskType === 'seminar' ? 'bg-purple-50 text-purple-700 border-purple-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
-                      {task.taskType === 'seminar' ? 'Seminar' : 'Follow-up'}
-                    </span>
+                <div
+                  key={task.schoolName + i}
+                  className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all flex flex-col gap-5 group relative cursor-pointer"
+                  onClick={() => setSelectedSchool(task)}
+                >
+                  <div className="flex justify-between items-start w-full gap-4">
+                    <h3 className="font-semibold text-lg text-gray-900 leading-snug line-clamp-2">{task.schoolName}</h3>
+
+                    {/* Dot Badge */}
+                    <div className="flex items-center gap-1.5 mt-1 shrink-0">
+                      <div className={`w-1.5 h-1.5 rounded-full ${task.taskType === 'seminar' ? 'bg-purple-500' : 'bg-blue-500'}`} />
+                      <span className="text-xs font-medium text-gray-500">
+                        {task.taskType === 'seminar' ? 'Seminar' : 'Follow-up'}
+                      </span>
+                    </div>
                   </div>
-                  
-                  <div className="flex items-center text-xs text-zinc-500 font-medium">
-                    <Clock size={12} className="mr-1.5" />
+
+                  <div className="flex items-center text-sm text-gray-500 font-medium">
+                    <Clock size={14} className="mr-2" />
                     {new Date(task.taskDate).toLocaleString('en-US', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}
                   </div>
 
-                  <div className="flex items-center justify-between w-full mt-2 pt-3 border-t border-zinc-100">
+                  <div className="flex items-center justify-between w-full mt-auto pt-2">
                     <div className="flex items-center gap-2">
-                      <User size={14} className="text-zinc-400" />
-                      <span className="text-xs text-zinc-600 font-medium">{task.executiveName}</span>
+                      <User size={14} className="text-gray-400" />
+                      <span className="text-sm text-gray-600 font-medium">{task.executiveName}</span>
                     </div>
-                    
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setAssigningTask({school: task, type: task.taskType}); }}
-                      className="text-[10px] font-bold uppercase tracking-wide text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded transition-colors"
+
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setAssigningTask({ school: task, type: task.taskType }); }}
+                      className="text-sm font-semibold text-gray-400 hover:text-gray-900 transition-colors flex items-center gap-1 opacity-0 group-hover:opacity-100 focus:opacity-100"
                     >
-                      Assign
+                      Assign <span className="text-lg leading-none">&rarr;</span>
                     </button>
                   </div>
                 </div>
               ))}
               {filteredTasks.length === 0 && (
-                <div className="col-span-full py-12 text-center">
-                  <Calendar className="w-12 h-12 text-zinc-200 mx-auto mb-3" />
-                  <p className="text-zinc-500 font-medium">No upcoming tasks match your filters</p>
+                <div className="col-span-full py-16 text-center">
+                  <p className="text-gray-400 font-medium text-lg">No upcoming tasks match your filters</p>
                 </div>
               )}
             </div>
@@ -184,18 +229,18 @@ export function PipelineSeminars({
       </ScrollArea>
 
       <Dialog open={!!assigningTask} onOpenChange={(open) => !open && setAssigningTask(null)}>
-        <DialogContent>
+        <DialogContent className="border-gray-100 shadow-xl rounded-2xl sm:rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Assign Task to Associate</DialogTitle>
+            <DialogTitle className="text-xl tracking-tight text-gray-900">Assign Task</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-zinc-500 mb-4">
-              Assigning {assigningTask?.type === 'seminar' ? 'Seminar' : 'Follow-up'} at <strong>{assigningTask?.school.schoolName}</strong>
+          <div className="py-6">
+            <p className="text-gray-500 mb-6 font-medium">
+              Assigning {assigningTask?.type === 'seminar' ? 'Seminar' : 'Follow-up'} at <span className="text-gray-900 font-semibold">{assigningTask?.school.schoolName}</span>
             </p>
-            <select 
+            <select
               value={selectedExecutiveId}
               onChange={(e) => setSelectedExecutiveId(e.target.value)}
-              className="w-full p-2 border border-zinc-200 rounded-md bg-white text-sm"
+              className="w-full p-3 border border-gray-200 hover:border-gray-300 rounded-xl bg-white text-gray-900 text-sm font-medium transition-colors outline-none focus:ring-2 focus:ring-gray-100"
             >
               <option value="">Select Associate...</option>
               {executives.map(ex => (
@@ -203,10 +248,10 @@ export function PipelineSeminars({
               ))}
             </select>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAssigningTask(null)}>Cancel</Button>
-            <Button onClick={handleAssignTask} disabled={!selectedExecutiveId || isAssigning}>
-              {isAssigning ? 'Assigning...' : 'Confirm Assignment'}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="ghost" onClick={() => setAssigningTask(null)} className="rounded-xl font-semibold hover:bg-gray-100">Cancel</Button>
+            <Button onClick={handleAssignTask} disabled={!selectedExecutiveId || isAssigning} className="rounded-xl font-semibold bg-gray-900 hover:bg-gray-800 text-white">
+              {isAssigning ? 'Assigning...' : 'Confirm'}
             </Button>
           </DialogFooter>
         </DialogContent>

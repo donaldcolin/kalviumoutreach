@@ -1,4 +1,4 @@
-import { Users, Activity, Briefcase } from 'lucide-react';
+import { Users, Activity } from 'lucide-react';
 
 interface GlobalStatsProps {
   totalAssociates: number;
@@ -6,20 +6,19 @@ interface GlobalStatsProps {
   totalLeads: number;
 }
 
-export function GlobalStats({ totalAssociates, activeWalkIns, totalLeads }: GlobalStatsProps) {
+export function GlobalStats({ totalAssociates, activeWalkIns }: GlobalStatsProps) {
   return (
-    <div className="grid grid-cols-3 gap-6 shrink-0">
+    <div className="grid grid-cols-2 gap-6 shrink-0">
       {[
         { label: "Total Associates", value: totalAssociates, icon: Users },
-        { label: "Active Walk-Ins", value: activeWalkIns, icon: Activity },
-        { label: "Team Leads", value: totalLeads, icon: Briefcase }
+        { label: "Active Walk-Ins", value: activeWalkIns, icon: Activity }
       ].map((stat, i) => (
-        <div key={i} className="bg-white p-6 border border-zinc-200 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] flex flex-col justify-between min-h-[140px] relative overflow-hidden group rounded-xl">
+        <div key={i} className="bg-white p-6 border border-gray-100 shadow-sm flex flex-col justify-between min-h-[140px] relative overflow-hidden group rounded-xl">
           <div className="flex items-start justify-between">
-            <span className="text-xs font-bold text-zinc-400 tracking-wider uppercase">{stat.label}</span>
-            <stat.icon className="h-5 w-5 text-zinc-300 group-hover:text-zinc-900 transition-colors" />
+            <span className="text-sm font-medium text-gray-500 tracking-wider uppercase">{stat.label}</span>
+            <stat.icon className="h-5 w-5 text-gray-400 group-hover:text-gray-900 transition-colors" />
           </div>
-          <div className="text-5xl font-light text-zinc-900 tracking-tighter">{stat.value}</div>
+          <div className="text-5xl font-semibold text-gray-900 tracking-tighter">{stat.value}</div>
         </div>
       ))}
     </div>

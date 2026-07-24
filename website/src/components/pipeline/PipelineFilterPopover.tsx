@@ -38,7 +38,7 @@ export function PipelineFilterPopover({
 
   return (
     <Popover>
-      <PopoverTrigger className="flex items-center gap-2 h-10 px-4 rounded-xl shadow-sm text-sm font-medium text-zinc-700 bg-white border border-zinc-200 hover:bg-zinc-50 outline-none">
+      <PopoverTrigger className="flex items-center gap-2 h-10 px-4 rounded-xl shadow-sm text-sm font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 outline-none">
         <Filter className="w-4 h-4" />
         Filters
         {activeFilters > 0 && (
@@ -50,9 +50,9 @@ export function PipelineFilterPopover({
       <PopoverContent className="w-80 p-4" align="end" sideOffset={8}>
         <div className="space-y-4">
           <div>
-            <h4 className="font-medium text-sm mb-2 text-zinc-900">Search Schools</h4>
+            <h4 className="font-medium text-sm mb-2 text-gray-900">Search Schools</h4>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input 
                 placeholder="Search by school name..." 
                 className="pl-9 h-9 text-sm"
@@ -63,11 +63,11 @@ export function PipelineFilterPopover({
           </div>
 
           <div className="flex flex-col gap-2">
-            <h4 className="font-medium text-sm text-zinc-900">Filter by Date</h4>
+            <h4 className="font-medium text-sm text-gray-900">Filter by Date</h4>
             <Popover>
               <PopoverTrigger
                 className={cn(
-                  "flex items-center w-full justify-start text-left font-normal h-9 px-3 rounded-md border border-zinc-200 bg-white text-sm hover:bg-zinc-50 outline-none",
+                  "flex items-center w-full justify-start text-left font-normal h-9 px-3 rounded-md border border-gray-200 bg-white text-sm hover:bg-gray-50 outline-none",
                   !dateFilter && "text-muted-foreground"
                 )}
               >
@@ -92,11 +92,11 @@ export function PipelineFilterPopover({
           </div>
 
           <div>
-            <h4 className="font-medium text-sm mb-2 text-zinc-900">Associate</h4>
+            <h4 className="font-medium text-sm mb-2 text-gray-900">Associate</h4>
             <select
               value={associateFilter}
               onChange={(e) => setAssociateFilter(e.target.value)}
-              className="w-full rounded-md border border-zinc-200 bg-white h-9 text-sm px-3 outline-none focus:border-zinc-400"
+              className="w-full rounded-md border border-gray-200 bg-white h-9 text-sm px-3 outline-none focus:border-gray-400"
             >
               <option value="all">All Associates</option>
               {executives.map(ex => (
@@ -106,11 +106,11 @@ export function PipelineFilterPopover({
           </div>
 
           <div>
-            <h4 className="font-medium text-sm mb-2 text-zinc-900">Task Type (Seminars View)</h4>
+            <h4 className="font-medium text-sm mb-2 text-gray-900">Task Type (Seminars View)</h4>
             <select 
               value={taskTypeFilter}
               onChange={(e) => setTaskTypeFilter(e.target.value)}
-              className="w-full rounded-md border border-zinc-200 bg-white h-9 text-sm px-3 outline-none focus:border-zinc-400"
+              className="w-full rounded-md border border-gray-200 bg-white h-9 text-sm px-3 outline-none focus:border-gray-400"
             >
               <option value="all">All Task Types</option>
               <option value="seminar">Seminars Only</option>

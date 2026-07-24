@@ -4,12 +4,11 @@ import { db } from '../firebase';
 import { useAuthStore } from '../stores/authStore';
 
 import { type SchoolPipelineEntry, getStageIndex } from '../components/pipeline/types';
-import { PipelineBoard } from '../components/pipeline/PipelineBoard';
-
+import { PipelineSeminars } from '../components/pipeline/PipelineSeminars';
 import { SchoolDetailSheet } from '../components/pipeline/SchoolDetailSheet';
 import { PipelineFilterPopover } from '../components/pipeline/PipelineFilterPopover';
 
-export default function Pipeline() {
+export default function UpcomingTasks() {
   const { user, users } = useAuthStore();
   const [crmActivities, setCrmActivities] = useState<any[]>([]);
 
@@ -99,34 +98,6 @@ export default function Pipeline() {
     return Object.values(schoolMap);
   }, [crmActivities, users]);
 
-  // Group by stage (filtered)
-  const stageGroups = useMemo(() => {
-    const groups: Record<number, SchoolPipelineEntry[]> = { [-1]: [], 0: [], 1: [], 2: [], 3: [] };
-
-    pipelineData
-      .filter(s => {
-        if (searchQuery) {
-          const q = searchQuery.toLowerCase();
-          if (!s.schoolName.toLowerCase().includes(q) && !s.executiveName.toLowerCase().includes(q)) return false;
-        }
-        if (associateFilter !== 'all' && s.executiveEmail !== associateFilter) return false;
-        if (dateFilter) {
-          const vDate = s.lastVisitDate ? new Date(s.lastVisitDate).toISOString().split('T')[0] : '';
-          const sDate = s.seminarDate ? new Date(s.seminarDate).toISOString().split('T')[0] : '';
-          const fDate = s.followUpDate ? new Date(s.followUpDate).toISOString().split('T')[0] : '';
-          if (vDate !== dateFilter && sDate !== dateFilter && fDate !== dateFilter) return false;
-        }
-        return true;
-      })
-      .forEach(s => {
-        const idx = s.stageIndex >= 0 ? s.stageIndex : -1;
-        if (!groups[idx]) groups[idx] = [];
-        groups[idx].push(s);
-      });
-
-    return groups;
-  }, [pipelineData, searchQuery, associateFilter, dateFilter]);
-
   // Load all activities for a selected school
   useEffect(() => {
     if (!selectedSchool) {
@@ -147,7 +118,7 @@ export default function Pipeline() {
     <div className="flex flex-col h-[calc(100vh-48px)] bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden text-gray-900 animate-in fade-in duration-700">
       {/* Top Bar */}
       <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100 shrink-0">
-        <h1 className="text-xl font-bold tracking-tight text-gray-900">Pipeline Overview</h1>
+        <h1 className="text-xl font-bold tracking-tight text-gray-900">Upcoming Tasks</h1>
         <PipelineFilterPopover
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
@@ -162,14 +133,17 @@ export default function Pipeline() {
       </div>
 
       {/* Main horizontally scrolling content */}
-      <div className="flex flex-1 overflow-x-auto snap-x snap-mandatory custom-scrollbar relative min-h-0">
-        <PipelineBoard
+      <div className="flex flex-1 overflow-x-auto custom-scrollbar relative min-h-0">
+        <PipelineSeminars
           pipelineData={pipelineData}
-          stageGroups={stageGroups}
-          selectedSchool={selectedSchool}
           setSelectedSchool={setSelectedSchool}
+          searchQuery={searchQuery}
+          dateFilter={dateFilter}
+          associateFilter={associateFilter}
+          taskTypeFilter={taskTypeFilter}
+          setAssociateFilter={setAssociateFilter}
+          setTaskTypeFilter={setTaskTypeFilter as any}
         />
-
         <SchoolDetailSheet
           selectedSchool={selectedSchool}
           setSelectedSchool={setSelectedSchool}
