@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuthStore } from '../stores/authStore';
-import { CheckCircle, XCircle, Clock, Users, Search, Filter } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Users, Search } from 'lucide-react';
 
 interface LeadAccessRequest {
   id: string;

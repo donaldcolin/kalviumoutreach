@@ -12,7 +12,6 @@ import { GlobalStats } from '../components/dashboard/GlobalStats';
 import { AssociateHeader } from '../components/dashboard/AssociateHeader';
 import { AssociateMap } from '../components/dashboard/AssociateMap';
 import { AssociateTimeline } from '../components/dashboard/AssociateTimeline';
-import { LeadAccessRequests } from '../components/dashboard/LeadAccessRequests';
 import { Map as MapIcon, } from 'lucide-react';
 import { format } from "date-fns";
 import { cleanGpsRoute, buildRouteCacheKey, type RawPing } from '../lib/gpsUtils';

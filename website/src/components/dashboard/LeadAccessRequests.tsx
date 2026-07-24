@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuthStore } from '../../stores/authStore';
-import { CheckCircle, XCircle, Clock, Users, ChevronDown, ChevronUp } from 'lucide-react';
+import { CheckCircle, XCircle, Users, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface LeadAccessRequest {
   id: string;
@@ -19,7 +19,7 @@ interface LeadAccessRequest {
 }
 
 export function LeadAccessRequests() {
-  const { user, users } = useAuthStore();
+  const { user } = useAuthStore();
   const [requests, setRequests] = useState<LeadAccessRequest[]>([]);
   const [expanded, setExpanded] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);

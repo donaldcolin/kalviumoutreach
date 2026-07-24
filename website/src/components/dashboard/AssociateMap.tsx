@@ -1,6 +1,6 @@
 import { useEffect, useState,  useRef } from 'react';
 import { MapContainer, TileLayer, Polyline, Marker, Popup, Tooltip, useMap, CircleMarker } from 'react-leaflet';
-import L from 'leaflet';
+
 import { School, Clipboard, Radio, MapPin, Flag } from 'lucide-react';
 
 import { currentLocationIcon, requestIcon, crmIcon, schoolIcon, startIcon, ongoingWalkInIcon } from './map/mapIcons';
