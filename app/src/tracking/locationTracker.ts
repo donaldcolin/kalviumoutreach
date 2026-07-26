@@ -16,8 +16,7 @@ function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number)
       Math.sin(dLng / 2);
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
-
-const LOCATION_TASK_NAME = 'BACKGROUND_LOCATION_TASK';
+export const LOCATION_TASK_NAME = 'BACKGROUND_LOCATION_TASK';
 
 export interface LocationPoint {
   lat: number;
@@ -38,7 +37,8 @@ class LocationTracker {
   private listeners: Set<LocationBatchListener> = new Set();
   
   private batchFlushInterval: ReturnType<typeof setTimeout> | null = null;
-  private static readonly BATCH_INTERVAL_MS = 30000; // Flush every 30 seconds for faster dashboard updates
+  private static readonly MOVING_BATCH_INTERVAL_MS = 120000; // 2 minutes
+  private static readonly STATIONARY_BATCH_INTERVAL_MS = 900000; // 15 minutes
 
   public subscribe(listener: LocationBatchListener): () => void {
     this.listeners.add(listener);
@@ -82,14 +82,11 @@ class LocationTracker {
     this.unsubscribeMotion = motionDetector.subscribe((state) => {
       this.currentMotionState = state;
       this.updateLocationTaskConfig();
+      this.setFlushTimer(); // Adjust timer dynamically when motion state changes
     });
 
     motionDetector.start();
-
-    // Start batch flush timer
-    this.batchFlushInterval = setInterval(() => {
-      this.flushBuffer();
-    }, LocationTracker.BATCH_INTERVAL_MS);
+    this.setFlushTimer();
   }
 
   public async stopTracking() {
@@ -105,7 +102,7 @@ class LocationTracker {
     motionDetector.stop();
 
     if (this.batchFlushInterval) {
-      clearInterval(this.batchFlushInterval);
+      clearTimeout(this.batchFlushInterval);
       this.batchFlushInterval = null;
     }
 
@@ -115,6 +112,23 @@ class LocationTracker {
     if (isRegistered) {
       await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
     }
+  }
+
+  private setFlushTimer() {
+    if (this.batchFlushInterval) {
+      clearTimeout(this.batchFlushInterval);
+    }
+    
+    if (!this.isTracking) return;
+
+    const interval = this.currentMotionState === 'STATIONARY' 
+      ? LocationTracker.STATIONARY_BATCH_INTERVAL_MS 
+      : LocationTracker.MOVING_BATCH_INTERVAL_MS;
+
+    this.batchFlushInterval = setTimeout(() => {
+      this.flushBuffer();
+      this.setFlushTimer();
+    }, interval);
   }
 
   private async updateLocationTaskConfig() {
@@ -139,12 +153,13 @@ class LocationTracker {
       deferredUpdatesInterval = 30000;
       deferredUpdatesDistance = 20;
     } else if (this.currentMotionState === 'STATIONARY') {
-      // Low-power heartbeat mode, but still responsive enough to catch
-      // movement within ~2 minutes so we don't miss places.
-      accuracy = Location.Accuracy.Balanced;
-      distanceInterval = 100; // 100m
-      deferredUpdatesInterval = 120000; // 2 mins
-      deferredUpdatesDistance = 100;
+      // Power down the GPS chip completely when stationary.
+      // We rely on cell-tower triangulation just to know if they teleported,
+      // but otherwise wait for the accelerometer to detect motion.
+      accuracy = Location.Accuracy.Lowest;
+      distanceInterval = 500; // 500m
+      deferredUpdatesInterval = 300000; // 5 mins
+      deferredUpdatesDistance = 500;
     }
 
     try {
@@ -247,38 +262,4 @@ export function filterLocationPoints(
 
 export const locationTracker = new LocationTracker();
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { firestoreSync } from './firestoreSync';
 
-// Register the task globally
-TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
-  if (error) {
-    logger.warn('Background Location Task Error', error.message);
-    return;
-  }
-  if (data) {
-    const { locations } = data as { locations: Location.LocationObject[] };
-
-    try {
-      const sessionStr = await AsyncStorage.getItem('tracking_session');
-      if (sessionStr) {
-        const session = JSON.parse(sessionStr);
-
-        // Apply the SAME quality gates used by the foreground tracker
-        // so that junk pings never reach Firestore (fixes BUG-03).
-        const filteredPoints = filterLocationPoints(locations);
-
-        if (filteredPoints.length > 0) {
-          await firestoreSync.appendHeadlessLocations(session.userId, session.dateStr, filteredPoints);
-        }
-      }
-    } catch (e) {
-      logger.warn('Failed to process headless location', e instanceof Error ? e.message : String(e));
-    }
-
-    // NOTE: We intentionally do NOT call locationTracker.addPoints() here.
-    // The filtered data is already written to Firestore above. Calling addPoints()
-    // would cause the foreground firestoreSync listener to write the same data
-    // a second time (duplicate Firestore writes — fixes BUG-02).
-  }
-});

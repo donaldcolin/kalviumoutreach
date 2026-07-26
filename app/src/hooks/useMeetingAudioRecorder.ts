@@ -9,7 +9,9 @@ import {
   setAudioModeAsync,
 } from 'expo-audio';
 import firestore from '@react-native-firebase/firestore';
+import * as Network from 'expo-network';
 import { uploadRecording as uploadToCloudinary } from '../services/storage';
+import { enqueueMeetingAudio } from '../services/audioUploadQueue';
 
 export function useMeetingAudioRecorder(userId: string | undefined) {
   const [isUploading, setIsUploading] = useState(false);
@@ -30,14 +32,20 @@ export function useMeetingAudioRecorder(userId: string | undefined) {
     if (!userId) return;
     setIsUploading(true);
     try {
-      const url = await uploadToCloudinary(uri, `note_${Date.now()}`);
+      const net = await Network.getNetworkStateAsync();
+      if (net.type === Network.NetworkStateType.WIFI) {
+        const url = await uploadToCloudinary(uri, `note_${Date.now()}`);
 
-      await firestore().collection('meetingRecordings').add({
-        executiveId: userId,
-        timestamp: firestore.FieldValue.serverTimestamp(),
-        storageUrl: url,
-        duration: durationMillis,
-      });
+        await firestore().collection('meetingRecordings').add({
+          executiveId: userId,
+          timestamp: firestore.FieldValue.serverTimestamp(),
+          storageUrl: url,
+          duration: durationMillis,
+        });
+      } else {
+        await enqueueMeetingAudio(uri, durationMillis, userId);
+        Alert.alert('Saved Locally', 'Audio note will upload automatically when connected to Wi-Fi.');
+      }
     } catch (err) {
       console.error('Upload failed:', err);
       Alert.alert('Upload Failed', 'Could not save the note to the cloud.');

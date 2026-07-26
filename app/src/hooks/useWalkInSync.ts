@@ -2,6 +2,7 @@ import { useState } from 'react';
 import firestore from '@react-native-firebase/firestore';
 import * as Crypto from 'expo-crypto';
 import { logger } from '../utils/logger';
+import { enqueueWalkInAudio } from '../services/audioUploadQueue';
 
 export function useWalkInSync(userId?: string, executiveEmail?: string) {
   const [isSyncing, setIsSyncing] = useState(false);
@@ -26,14 +27,18 @@ export function useWalkInSync(userId?: string, executiveEmail?: string) {
       const activityId = Crypto.randomUUID();
       const now = new Date().toISOString();
 
+      const isLocalUri = storageUrl?.startsWith('file://');
+
       // Build a rich notes field from the user's actual input
       const userNotes = extraData?.notes?.trim() || '';
       const parts: string[] = [];
       if (userNotes) {
         parts.push(userNotes);
       }
-      if (storageUrl) {
+      if (storageUrl && !isLocalUri) {
         parts.push(`Recording: ${storageUrl}`);
+      } else if (isLocalUri) {
+        parts.push(`Recording: [Pending Wi-Fi Upload]`);
       }
       // Always include attribution at the end
       parts.push(`Walk-in by ${executiveEmail}`);
@@ -71,6 +76,11 @@ export function useWalkInSync(userId?: string, executiveEmail?: string) {
         status: 'pending',
         createdAt: firestore.FieldValue.serverTimestamp(),
       });
+
+      // 3. Enqueue audio if it's a local URI
+      if (isLocalUri && storageUrl) {
+        await enqueueWalkInAudio(storageUrl, activityId, userId);
+      }
 
       return activityId;
     } catch (err) {

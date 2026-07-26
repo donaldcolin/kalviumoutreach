@@ -33,6 +33,9 @@ interface AuthState {
   clearError: () => void;
 }
 
+import messaging from '@react-native-firebase/messaging';
+import firestore from '@react-native-firebase/firestore';
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   firebaseUser: null,
@@ -49,6 +52,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           if (!profile) {
             profile = await getCachedUserProfile();
           }
+
+          // Fetch FCM Token and update user profile
+          try {
+            const authStatus = await messaging().requestPermission();
+            const enabled =
+              authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+              authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+            if (enabled) {
+              const fcmToken = await messaging().getToken();
+              await firestore().collection('users').doc(firebaseUser.uid).update({
+                fcmToken,
+              });
+            }
+          } catch (e) {
+            console.warn('Failed to get FCM token:', e);
+          }
+
           set({
             firebaseUser,
             user: profile,
@@ -127,6 +148,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Stop tracking and clear session BEFORE signing out
       await locationTracker.stopTracking();
       await firestoreSync.endSession();
+      
+      const { useTasksStore } = require('./tasksStore');
+      const { useCrmActivitiesStore } = require('./crmActivitiesStore');
+      useTasksStore.getState().cleanup();
+      useCrmActivitiesStore.getState().cleanup();
       
       await firebaseSignOut();
     } catch (err) {

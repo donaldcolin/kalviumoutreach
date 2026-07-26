@@ -96,5 +96,5 @@ export function cleanGpsRoute(pings: RawPing[]): RawPing[] {
 // Builds a key that changes whenever new GPS pings arrive (latest ts as buster).
 export function buildRouteCacheKey(userId: string, dateStr: string, pings: RawPing[]): string {
   const lastTs = pings.length > 0 ? pings[pings.length - 1].ts : 0;
-  return `osrm_route_${userId}_${dateStr}_${lastTs}`;
+  return `osrm_v7_${userId}_${dateStr}_${lastTs}`;
 }

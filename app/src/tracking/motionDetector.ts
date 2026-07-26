@@ -5,7 +5,7 @@ export type MotionState = 'STATIONARY' | 'POSSIBLY_STOPPED' | 'MOVING';
 
 export type MotionStateListener = (state: MotionState) => void;
 
-const MOVING_THRESHOLD = 1.3; // g-force
+const MOVING_THRESHOLD = 1.45; // g-force
 const STATIONARY_THRESHOLD = 1.1; // g-force
 const POSSIBLY_STOPPED_DEBOUNCE_MS = 30000; // 30 seconds (reduced from 60s)
 
@@ -27,8 +27,8 @@ class MotionDetector {
   public start() {
     if (this.subscription) return;
     
-    // Check every 1000ms (1 second) to save battery while still being responsive
-    Accelerometer.setUpdateInterval(1000);
+    // Check every 3000ms (3 seconds) to save battery while still being responsive
+    Accelerometer.setUpdateInterval(3000);
 
     this.subscription = Accelerometer.addListener(({ x, y, z }) => {
       // Calculate magnitude of acceleration vector (1g is resting gravity)

@@ -46,3 +46,7 @@ export const syncCron = onSchedule({ schedule: `every ${SYNC_INTERVAL_MINUTES} m
 
 // ─── Export: Push Queue Trigger ──────────────────────────────────────────────
 export const processPushQueue = onDocumentCreated({ document: "pushQueue/{docId}", secrets: ["LSQ_ACCESS_KEY", "LSQ_SECRET_KEY"] }, handlePushQueue);
+
+// ─── Export: Location Requests Trigger ───────────────────────────────────────
+import { handleLocationRequest } from './locationRequests.js';
+export const processLocationRequest = onDocumentCreated({ document: "locationRequests/{docId}" }, handleLocationRequest);

@@ -8,6 +8,7 @@ import {
   requestNotificationPermissionsAsync,
   setAudioModeAsync,
 } from 'expo-audio';
+import * as Network from 'expo-network';
 import { uploadRecording as uploadToCloudinary } from '../services/storage';
 
 export function useWalkInAudioRecorder() {
@@ -27,8 +28,14 @@ export function useWalkInAudioRecorder() {
   const uploadRecording = async (uri: string) => {
     setIsUploading(true);
     try {
-      const url = await uploadToCloudinary(uri, `walkin_note_${Date.now()}`);
-      setRecordingUrl(url);
+      const net = await Network.getNetworkStateAsync();
+      if (net.type === Network.NetworkStateType.WIFI) {
+        const url = await uploadToCloudinary(uri, `walkin_note_${Date.now()}`);
+        setRecordingUrl(url);
+      } else {
+        setRecordingUrl(uri);
+        Alert.alert('Saved Locally', 'Audio will upload automatically when connected to Wi-Fi.');
+      }
     } catch (err) {
       console.error('Upload failed:', err);
       Alert.alert('Upload Failed', 'Could not save the audio note.');

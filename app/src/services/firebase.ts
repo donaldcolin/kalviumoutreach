@@ -7,11 +7,10 @@ import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import storage from '@react-native-firebase/storage';
 
-// Configure Firestore settings — unlimited cache for offline-first
-// persistence is enabled by default on React Native Firebase
+// Configure Firestore settings — limit cache to 50MB
 try {
   firestore().settings({
-    cacheSizeBytes: firestore.CACHE_SIZE_UNLIMITED,
+    cacheSizeBytes: 52428800, // 50 MB
   });
 } catch (e) {
   // Settings may have already been applied

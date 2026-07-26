@@ -185,6 +185,7 @@ export async function syncActivities(hours = SYNC_LOOKBACK_MINUTES / 60) {
     let written = 0;
     let skipped = 0;
     const BATCH_LIMIT = 500;
+    const claimedLocalDocs = new Set();
 
     for (let i = 0; i < allActivities.length; i += BATCH_LIMIT) {
       const chunk = allActivities.slice(i, i + BATCH_LIMIT);
@@ -239,10 +240,13 @@ export async function syncActivities(hours = SYNC_LOOKBACK_MINUTES / 60) {
               // (Expanded from 5 mins to handle offline queuing delays)
               const lsqTime = new Date(raw.ModifiedOn || raw.CreatedOn || raw.ActivityDateTime || 0).getTime();
               for (const appDoc of appCreatedSnap.docs) {
+                if (claimedLocalDocs.has(appDoc.id)) continue;
+                
                 const appData = appDoc.data();
                 const appTime = new Date(appData.walkInDateTime || 0).getTime();
                 if (Math.abs(lsqTime - appTime) < 12 * 60 * 60 * 1000) {
                   docRef = appDoc.ref;
+                  claimedLocalDocs.add(appDoc.id);
                   // Link the app doc to the LSQ activity ID for future syncs
                   doc.lsqActivityId = activityId;
                   break;
@@ -257,6 +261,13 @@ export async function syncActivities(hours = SYNC_LOOKBACK_MINUTES / 60) {
         // Fallback: use the LSQ activity ID as the doc ID
         if (!docRef) {
           docRef = db.collection('crmActivities').doc(activityId);
+        } else {
+          // DO NOT overwrite the app's executiveEmail or GPS coordinates for existing docs
+          // The API user often creates these in LSQ, which overwrites the real associate email.
+          delete doc.executiveId;
+          delete doc.executiveEmail;
+          if (doc.lat === null) delete doc.lat;
+          if (doc.lng === null) delete doc.lng;
         }
         
         batch.set(docRef, doc, { merge: true });

@@ -3,7 +3,7 @@
  * Backed by Firestore so TLs can also see ongoing walk-ins.
  */
 import { create } from 'zustand';
-import firestore from '@react-native-firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface OngoingWalkIn {
   leadId: string;
@@ -17,15 +17,17 @@ interface WalkInState {
   ongoingWalkIn: OngoingWalkIn | null;
   isLoading: boolean;
 
-  /** Load any existing ongoing walk-in from Firestore on app start */
+  /** Load any existing ongoing walk-in from AsyncStorage on app start */
   loadOngoing: (userId: string) => Promise<void>;
 
-  /** Persist a new walk-in session to Firestore */
+  /** Persist a new walk-in session to AsyncStorage */
   beginWalkIn: (data: OngoingWalkIn) => Promise<void>;
 
   /** Clear the ongoing walk-in (on successful push or cancel) */
   clearWalkIn: (userId: string) => Promise<void>;
 }
+
+const STORAGE_KEY = 'ongoing_walk_in';
 
 export const useWalkInStore = create<WalkInState>((set) => ({
   ongoingWalkIn: null,
@@ -33,33 +35,33 @@ export const useWalkInStore = create<WalkInState>((set) => ({
 
   loadOngoing: async (userId: string) => {
     try {
-      const doc = await firestore().collection('ongoingWalkIns').doc(userId).get();
-      if (doc.exists()) {
-        set({ ongoingWalkIn: doc.data() as OngoingWalkIn, isLoading: false });
+      const stored = await AsyncStorage.getItem(`${STORAGE_KEY}_${userId}`);
+      if (stored) {
+        set({ ongoingWalkIn: JSON.parse(stored) as OngoingWalkIn, isLoading: false });
       } else {
         set({ ongoingWalkIn: null, isLoading: false });
       }
     } catch (err) {
-      console.error('Failed to load ongoing walk-in:', err);
+      console.error('Failed to load ongoing walk-in from AsyncStorage:', err);
       set({ isLoading: false });
     }
   },
 
   beginWalkIn: async (data: OngoingWalkIn) => {
     try {
-      await firestore().collection('ongoingWalkIns').doc(data.executiveId).set(data);
+      await AsyncStorage.setItem(`${STORAGE_KEY}_${data.executiveId}`, JSON.stringify(data));
       set({ ongoingWalkIn: data });
     } catch (err) {
-      console.error('Failed to persist ongoing walk-in:', err);
+      console.error('Failed to persist ongoing walk-in to AsyncStorage:', err);
     }
   },
 
   clearWalkIn: async (userId: string) => {
     try {
-      await firestore().collection('ongoingWalkIns').doc(userId).delete();
+      await AsyncStorage.removeItem(`${STORAGE_KEY}_${userId}`);
       set({ ongoingWalkIn: null });
     } catch (err) {
-      console.error('Failed to clear ongoing walk-in:', err);
+      console.error('Failed to clear ongoing walk-in from AsyncStorage:', err);
     }
   },
 }));

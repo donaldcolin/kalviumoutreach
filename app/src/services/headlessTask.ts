@@ -25,10 +25,10 @@ TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
     const { userId, dateStr } = JSON.parse(sessionStr);
 
     // ALWAYS act as a backup location tracker (runs ~every 15 mins)
-    // This ensures we get a trail even if the user force closes the app
-    // and the OS kills the primary foreground location service.
+    // We rely purely on FCM push notifications for live TL ping requests now.
     try {
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const accuracy = Location.Accuracy.Balanced;
+      const loc = await Location.getCurrentPositionAsync({ accuracy });
       const ping: LocationPing = {
         lat: loc.coords.latitude,
         lng: loc.coords.longitude,
@@ -36,36 +36,9 @@ TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
         accuracy: loc.coords.accuracy ?? 0,
       };
       await appendPing(userId, dateStr, ping);
-      logger.info('Backup location ping saved');
+      logger.info('Backup location ping saved (Accuracy: Balanced)');
     } catch (e) {
       logger.warn('Failed to get backup location', e instanceof Error ? e.message : String(e));
-    }
-
-    // Check if there are any specific on-demand location requests from TLs
-    const snapshot = await firestore()
-      .collection('locationRequests')
-      .where('executiveId', '==', userId)
-      .where('status', '==', 'pending')
-      .get();
-    
-    if (!snapshot.empty) {
-      const docSnap = snapshot.docs[0];
-      await docSnap.ref.update({ status: 'processing' });
-      // We already grabbed location above, but let's grab a high accuracy one for the request
-      const highAccLoc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      
-      const ping: LocationPing = {
-        lat: highAccLoc.coords.latitude,
-        lng: highAccLoc.coords.longitude,
-        timestamp: Number(highAccLoc.timestamp),
-        accuracy: highAccLoc.coords.accuracy ?? 0,
-      };
-
-      await appendPing(userId, dateStr, ping);
-      await docSnap.ref.update({ status: 'fulfilled' });
-      logger.info('Successfully processed on-demand background location request!');
-      
-      return BackgroundFetch.BackgroundFetchResult.NewData;
     }
 
     return BackgroundFetch.BackgroundFetchResult.NewData;

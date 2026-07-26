@@ -5,7 +5,6 @@ import React, { useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { ExecutiveTabParamList } from '../types';
-import { useLocationPinger } from '../hooks/useLocationPinger';
 import { Image, TouchableOpacity, Modal, View, StyleSheet, TouchableWithoutFeedback } from 'react-native';
 import { User, Menu, MapPin, FileText, List, Briefcase, Bug } from 'lucide-react-native';
 
@@ -202,9 +201,6 @@ function ExecutiveTabs() {
 }
 
 export default function ExecutiveNavigator() {
-  // Activate real-time location fetch listener for TL requests
-  useLocationPinger();
-
   return (
     <ExecutiveStack.Navigator screenOptions={{ headerShown: false }}>
       <ExecutiveStack.Screen name="ExecutiveTabs" component={ExecutiveTabs} />

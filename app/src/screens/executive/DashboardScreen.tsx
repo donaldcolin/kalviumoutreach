@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { ScrollView, View } from 'react-native';
+import React, { useEffect, useCallback } from 'react';
+import { ScrollView, View, AppState, RefreshControl } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, interpolateColor, Easing, FadeInUp } from 'react-native-reanimated';
 import * as Location from 'expo-location';
 import { useAuthStore } from '../../stores/authStore';
@@ -7,8 +7,9 @@ import { useWalkInStore } from '../../stores/walkInStore';
 import firestore from '@react-native-firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 import { useOutreachTracking } from '../../tracking/useOutreachTracking';
-import { useCrmActivities } from '../../hooks/useCrmActivities';
-import { usePendingAppointments } from '../../hooks/usePendingAppointments';
+import { useCrmActivitiesStore } from '../../stores/crmActivitiesStore';
+import { useTasksStore } from '../../stores/tasksStore';
+import { processAudioQueue } from '../../services/audioUploadQueue';
 
 import {
   DashboardHeader,
@@ -25,8 +26,13 @@ export default function DashboardScreen() {
   const { user } = useAuthStore();
   const navigation = useNavigation<any>();
   const { isTracking, isTrackingInitialized, startDay, activeSchoolMatch } = useOutreachTracking(user?.id);
-  const allActivities = useCrmActivities(user?.email);
-  const { appointments, completeTask } = usePendingAppointments(user?.id);
+  const { activities: allActivities, initialize: initCrm, refresh: refreshCrm, isRefreshing: crmRefreshing } = useCrmActivitiesStore();
+  const { pendingTasks: appointments, completeTask, initialize: initTasks, refresh: refreshTasks, isRefreshing: tasksRefreshing } = useTasksStore();
+
+  useEffect(() => {
+    if (user?.email) initCrm(user.email);
+    if (user?.id) initTasks(user.id);
+  }, [user?.email, user?.id]);
   const { ongoingWalkIn, loadOngoing } = useWalkInStore();
 
   useEffect(() => {
@@ -34,6 +40,34 @@ export default function DashboardScreen() {
       loadOngoing(user.id);
     }
   }, [user?.id]);
+
+  useEffect(() => {
+    // Process on mount
+    processAudioQueue();
+
+    // Process on app resume
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (nextAppState === 'active') {
+        processAudioQueue();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  const isRefreshing = crmRefreshing || tasksRefreshing;
+
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([
+      refreshCrm(),
+      refreshTasks(),
+      user?.id ? loadOngoing(user.id) : Promise.resolve(),
+      processAudioQueue(),
+    ]);
+  }, [user?.id]);
+
   const [selectedDate, setSelectedDate] = React.useState(new Date());
 
   const filteredActivities = React.useMemo(() => {
@@ -105,7 +139,7 @@ export default function DashboardScreen() {
         startDay(); // fallback
         return;
       }
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       setStartCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
 
       // State 3: Located
@@ -133,7 +167,12 @@ export default function DashboardScreen() {
 
   return (
     <View className="flex-1 bg-white">
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 12, paddingBottom: 18 }}>
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 12, paddingBottom: 18 }}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} colors={['#E11D48']} tintColor="#E11D48" />
+        }
+      >
         <DashboardDatePicker
           dates={dates}
           selectedDate={selectedDate}

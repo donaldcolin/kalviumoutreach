@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, TouchableOpacity, SectionList, KeyboardAvoidingView, Platform, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, TouchableOpacity, SectionList, KeyboardAvoidingView, Platform, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { Box } from '@/components/ui/box';
 import { VStack } from '@/components/ui/vstack';
 import { HStack } from '@/components/ui/hstack';
@@ -8,7 +8,8 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Mic, Square } from 'lucide-react-native';
 
 import { useAuthStore } from '../../stores/authStore';
-import { useCrmActivities } from '../../hooks/useCrmActivities';
+import { useEffect } from 'react';
+import { useCrmActivitiesStore } from '../../stores/crmActivitiesStore';
 import { useMeetingRecordings } from '../../hooks/useMeetingRecordings';
 import { usePushToLs } from '../../hooks/usePushToLs';
 import { useMeetingAudioRecorder } from '../../hooks/useMeetingAudioRecorder';
@@ -21,12 +22,16 @@ import { PushToLsModal } from '../../components/meeting-notes/PushToLsModal';
 export default function MeetingNotesScreen() {
   const { user } = useAuthStore();
 
-  const { groupedRecordings } = useMeetingRecordings(user?.id);
+  const { groupedRecordings, refresh, isRefreshing } = useMeetingRecordings(user?.id);
   const { mappingItem, setMappingItem, isPushing, handlePushToLS } = usePushToLs(user?.id);
   const { recorderState, toggleRecording, isUploading } = useMeetingAudioRecorder(user?.id);
 
   // CRM activities for Push to LS
-  const allActivities = useCrmActivities(user?.email);
+  const { activities: allActivities, initialize } = useCrmActivitiesStore();
+
+  useEffect(() => {
+    if (user?.email) initialize(user.email);
+  }, [user?.email]);
   const picPrincipalActivities = useMemo(() => {
     return [...allActivities]
       .filter((a) => {
@@ -72,6 +77,14 @@ export default function MeetingNotesScreen() {
           )}
           contentContainerStyle={{ paddingBottom: 120 }}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={refresh}
+              colors={['#6366F1']}
+              tintColor="#6366F1"
+            />
+          }
           ListEmptyComponent={
             <Box className="flex-1 justify-center items-center mt-20">
               <Text className="text-4xl mb-3">🎙️</Text>

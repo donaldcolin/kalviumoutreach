@@ -9,20 +9,35 @@ export interface GroupedRecordings {
 export function useMeetingRecordings(userId: string | undefined) {
   const [recordings, setRecordings] = useState<any[]>([]);
 
-  useEffect(() => {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchRecordings = async () => {
     if (!userId) return;
-    const unsub = firestore()
-      .collection('meetingRecordings')
-      .where('executiveId', '==', userId)
-      .orderBy('timestamp', 'desc')
-      .onSnapshot((snap) => {
-        if (!snap) return;
-        const recs: any[] = [];
-        snap.forEach((doc) => recs.push({ id: doc.id, ...doc.data() }));
-        setRecordings(recs);
-      });
-    return unsub;
+    try {
+      const snap = await firestore()
+        .collection('meetingRecordings')
+        .where('executiveId', '==', userId)
+        .orderBy('timestamp', 'desc')
+        .limit(50)
+        .get();
+      
+      const recs: any[] = [];
+      snap.forEach((doc) => recs.push({ id: doc.id, ...doc.data() }));
+      setRecordings(recs);
+    } catch (err) {
+      console.warn('Failed to fetch meeting recordings:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchRecordings();
   }, [userId]);
+
+  const refresh = async () => {
+    setIsRefreshing(true);
+    await fetchRecordings();
+    setIsRefreshing(false);
+  };
 
   const groupedRecordings = useMemo(() => {
     const groups: GroupedRecordings[] = [];
@@ -42,5 +57,5 @@ export function useMeetingRecordings(userId: string | undefined) {
     return groups;
   }, [recordings]);
 
-  return { recordings, groupedRecordings };
+  return { recordings, groupedRecordings, refresh, isRefreshing };
 }

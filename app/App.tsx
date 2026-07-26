@@ -30,6 +30,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 // Initialize Firebase (must be imported early)
 import './src/services/firebase';
+import './src/tracking/taskRegistry';
 
 import * as SplashScreen from 'expo-splash-screen';
 SplashScreen.preventAutoHideAsync();
@@ -39,6 +40,12 @@ import { useAuthStore } from './src/stores/authStore';
 import { cleanupOldRecordings } from './src/services/recording';
 import { registerBackgroundFetchAsync } from './src/services/headlessTask';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import messaging from '@react-native-firebase/messaging';
+import * as Location from 'expo-location';
+import firestore from '@react-native-firebase/firestore';
+import { format } from 'date-fns';
+import { appendPing } from './src/tracking/firestoreSync';
+import type { LocationPing } from './src/types';
 
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import { VStack } from '@/components/ui/vstack';
@@ -80,8 +87,43 @@ function App() {
 
     setAppReady(true);
 
+    // Handle FCM foreground messages
+    const unsubMessaging = messaging().onMessage(async remoteMessage => {
+      console.log('Message handled in the foreground!', remoteMessage);
+      if (remoteMessage.data?.type === 'LOCATION_PING_REQUEST') {
+        try {
+          const userId = remoteMessage.data.userId;
+          const requestId = remoteMessage.data.requestId;
+          
+          if (!userId) return;
+
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+          const ping: LocationPing = {
+            lat: loc.coords.latitude,
+            lng: loc.coords.longitude,
+            timestamp: Number(loc.timestamp),
+            accuracy: loc.coords.accuracy ?? 0,
+          };
+          
+          const dateStr = format(new Date(), 'yyyy-MM-dd');
+          await appendPing(userId, dateStr, ping);
+          
+          if (requestId) {
+            await firestore().collection('locationRequests').doc(requestId).update({ status: 'fulfilled' });
+          }
+        } catch (e) {
+          console.warn('Failed foreground location fetch from FCM:', e);
+          const requestId = remoteMessage.data?.requestId;
+          if (requestId) {
+            await firestore().collection('locationRequests').doc(requestId).update({ status: 'failed' });
+          }
+        }
+      }
+    });
+
     return () => {
       unsubAuth();
+      unsubMessaging();
     };
   }, []);
 

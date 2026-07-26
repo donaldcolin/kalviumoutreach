@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
 import { Button } from './ui/button';
-import { MapPin, Clock, Info, CheckCircle, FileAudio, Image as ImageIcon, X, ArrowRight, User, Phone, FileText, Calendar as CalendarIcon } from 'lucide-react';
+import { MapPin, Clock, Info, CheckCircle, FileAudio, Image as ImageIcon, X, ArrowRight, User, Phone, FileText, Calendar as CalendarIcon, ExternalLink } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { STAGE_SHORT, STAGE_COLORS, getStageIndex } from './CrmActivityCard';
@@ -142,6 +142,16 @@ export function TimelineActivityDialog({ open, onOpenChange, stop }: TimelineAct
 
               {/* Metadata */}
               <div className="flex items-center gap-2 flex-wrap">
+                {stop.data.lsqLeadId && (
+                  <a
+                    href={`https://run.leadsquared.com/LeadManagement/LeadDetails?LeadID=${stop.data.lsqLeadId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors shadow-sm"
+                  >
+                    <ExternalLink size={12} /> View Lead in LSQ
+                  </a>
+                )}
                 {stop.data.boardOfSchool && (
                   <span className="px-3 py-1.5 bg-zinc-100 text-zinc-700 text-[10px] font-bold uppercase tracking-wider rounded-lg">
                     {stop.data.boardOfSchool}

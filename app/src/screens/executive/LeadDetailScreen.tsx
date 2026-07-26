@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native';
+import { View, ScrollView, Pressable, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { Text } from '@/components/ui/text';
@@ -172,6 +172,7 @@ export default function LeadDetailScreen() {
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleAddWalkIn = async () => {
     setIsStarting(true);
@@ -223,28 +224,33 @@ export default function LeadDetailScreen() {
     }
   };
 
-  // Real-time listener for activities by this lead
-  useEffect(() => {
+  // One-time fetch for activities by this lead
+  const fetchActivities = React.useCallback(async () => {
     if (!leadId) return;
+    setLoading(true);
+    try {
+      const snapshot = await firestore()
+        .collection('crmActivities')
+        .where('lsqLeadId', '==', leadId)
+        .get();
 
-    const unsub = firestore()
-      .collection('crmActivities')
-      .where('lsqLeadId', '==', leadId)
-      .onSnapshot((snapshot) => {
-        if (!snapshot) return;
-        const acts = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
-        // Sort newest first
-        acts.sort((a, b) => {
-          const ta = new Date(a.walkInDateTime || a.lsqCreatedOn || 0).getTime();
-          const tb = new Date(b.walkInDateTime || b.lsqCreatedOn || 0).getTime();
-          return tb - ta;
-        });
-        setActivities(acts);
-        setLoading(false);
+      const acts = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+      acts.sort((a, b) => {
+        const ta = new Date(a.walkInDateTime || a.lsqCreatedOn || 0).getTime();
+        const tb = new Date(b.walkInDateTime || b.lsqCreatedOn || 0).getTime();
+        return tb - ta;
       });
-
-    return () => unsub();
+      setActivities(acts);
+    } catch (e) {
+      console.warn('Failed to fetch activities:', e);
+    } finally {
+      setLoading(false);
+    }
   }, [leadId]);
+
+  useEffect(() => {
+    fetchActivities();
+  }, [fetchActivities]);
 
   return (
     <View className="flex-1 bg-white" style={{ paddingTop: insets.top }}>
@@ -269,7 +275,22 @@ export default function LeadDetailScreen() {
       </View>
 
       {/* Activity Timeline */}
-      <ScrollView className="flex-1 bg-gray-50 px-4 pt-6" contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView
+        className="flex-1 bg-gray-50 px-4 pt-6"
+        contentContainerStyle={{ paddingBottom: 120 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={async () => {
+              setIsRefreshing(true);
+              await fetchActivities();
+              setIsRefreshing(false);
+            }}
+            colors={['#DC2626']}
+            tintColor="#DC2626"
+          />
+        }
+      >
         {loading ? (
           <View className="flex-1 justify-center items-center py-20">
             <ActivityIndicator size="large" color="#DC2626" />

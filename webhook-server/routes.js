@@ -134,11 +134,35 @@ app.post('/api/push-recording', async (req, res) => {
 
 app.get('/api/leads/search', async (req, res) => {
   try {
-    const { q } = req.query;
+    const { q, userEmail } = req.query;
     if (!q || String(q).trim().length < 2) {
       return res.status(400).json({ error: 'Search query "q" must be at least 2 characters' });
     }
+    if (!userEmail) {
+      return res.status(400).json({ error: 'userEmail is required for searching' });
+    }
 
+    // 1. Get the user's managerId
+    const userSnapshot = await db.collection('users').where('email', '==', userEmail).get();
+    if (userSnapshot.empty) {
+      return res.status(404).json({ error: 'User not found in system' });
+    }
+    const userData = userSnapshot.docs[0].data();
+    const managerId = userData.managerId;
+
+    let teamEmails = [userEmail.toLowerCase()]; // always include self
+    
+    // 2. Find all users under the same manager
+    if (managerId) {
+      const teamSnapshot = await db.collection('users').where('managerId', '==', managerId).get();
+      teamSnapshot.forEach(doc => {
+        if (doc.data().email) {
+          teamEmails.push(doc.data().email.toLowerCase());
+        }
+      });
+    }
+
+    // 3. Search globally using LeadSquared
     const searchBody = {
       "Parameter": {
         "LookupName": "FirstName",
@@ -146,19 +170,29 @@ app.get('/api/leads/search', async (req, res) => {
         "SqlOperator": "like"
       },
       "Columns": {
-        "Include_CSV": "ProspectID,FirstName,LastName,EmailAddress,Phone,Company,OwnerIdEmailAddress,mx_Street1,mx_City,mx_State"
+        "Include_CSV": "ProspectID,FirstName,LastName,EmailAddress,Phone,Company,OwnerIdEmailAddress,mx_Street1,mx_City,mx_State,ProspectStage"
       },
       "Paging": {
         "PageIndex": 1,
-        "PageSize": 50
+        "PageSize": 1000
       }
     };
 
     const lsqResp = await lsqFetch('/v2/LeadManagement.svc/Leads.Get', 'POST', searchBody);
 
+    let leads = Array.isArray(lsqResp) ? lsqResp : [];
+    
+    // 4. Filter locally for 'School Prospect' AND belonging to the team
+    leads = leads.filter(l => {
+      const isSchoolProspect = l.ProspectStage === 'School Prospect';
+      const ownerEmail = (l.OwnerIdEmailAddress || '').toLowerCase();
+      const isTeamLead = teamEmails.includes(ownerEmail);
+      return isSchoolProspect && isTeamLead;
+    });
+
     res.json({
       success: true,
-      leads: Array.isArray(lsqResp) ? lsqResp : []
+      leads
     });
 
   } catch (err) {

@@ -8,22 +8,55 @@ import { isValidPoint } from '../utils/gpsValidation';
 
 // ─── Schools ─────────────────────────────────────────────────────────────────
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 const schoolsRef = () => firestore().collection('schools');
 
-let schoolsCache: School[] | null = null;
-let schoolsCacheTime = 0;
-const CACHE_TTL = 1000 * 60 * 60; // 1 hour
-
-
+const SCHOOLS_CACHE_KEY = 'schools_list_cache';
+const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 hours
 
 export async function getAllSchools(): Promise<School[]> {
-  if (schoolsCache && Date.now() - schoolsCacheTime < CACHE_TTL) {
-    return schoolsCache;
+  try {
+    // 1. Check AsyncStorage cache
+    const cachedStr = await AsyncStorage.getItem(SCHOOLS_CACHE_KEY);
+    let shouldUseNetwork = true;
+    let cachedSchools: School[] | null = null;
+
+    if (cachedStr) {
+      try {
+        const cached = JSON.parse(cachedStr);
+        cachedSchools = cached.data;
+        // If cache is less than 24 hours old, don't wait for network
+        if (Date.now() - cached.timestamp < CACHE_TTL) {
+          shouldUseNetwork = false;
+        }
+      } catch (e) {}
+    }
+
+    // 2. Return cache instantly if fresh
+    if (!shouldUseNetwork && cachedSchools) {
+      return cachedSchools;
+    }
+
+    // 3. Otherwise fetch from Firestore
+    const snapshot = await schoolsRef().get();
+    const schools = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as School));
+    
+    // Save new snapshot to cache
+    await AsyncStorage.setItem(SCHOOLS_CACHE_KEY, JSON.stringify({
+      data: schools,
+      timestamp: Date.now()
+    }));
+
+    return schools;
+  } catch (error) {
+    console.warn('[getAllSchools] Failed to fetch schools, attempting to use stale cache', error);
+    const cachedStr = await AsyncStorage.getItem(SCHOOLS_CACHE_KEY);
+    if (cachedStr) {
+      return JSON.parse(cachedStr).data || [];
+    }
+    return [];
   }
-  const snapshot = await schoolsRef().get();
-  schoolsCache = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as School));
-  schoolsCacheTime = Date.now();
-  return schoolsCache;
 }
 
 

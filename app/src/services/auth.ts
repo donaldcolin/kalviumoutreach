@@ -60,33 +60,56 @@ function getCurrentAuthUser(): FirebaseAuthTypes.User | null {
   return auth().currentUser;
 }
 
+const SECURE_KEY_USER_TIME = 'kalvium_user_profile_time';
+
 /**
  * Fetch the user profile document from Firestore.
- * Reads from cache first (offline-first).
+ * Reads from cache first with a 24-hour TTL (Stale-While-Revalidate).
  */
-export async function getUserProfile(userId: string): Promise<User | null> {
+export async function getUserProfile(userId: string, forceRefresh = false): Promise<User | null> {
   try {
+    if (!forceRefresh) {
+      const cached = await getCachedUserProfile();
+      const cacheTimeStr = await SecureStore.getItemAsync(SECURE_KEY_USER_TIME);
+      
+      if (cached && cacheTimeStr) {
+        const cacheTime = parseInt(cacheTimeStr, 10);
+        // If cache is less than 24 hours old, use it instantly!
+        if (Date.now() - cacheTime < 24 * 60 * 60 * 1000) {
+          // Quietly re-fetch in the background to update cache for next time
+          firestore().collection('users').doc(userId).get().then(doc => {
+            if (doc.exists) {
+              const profile = { id: doc.id, ...doc.data() } as User;
+              SecureStore.setItemAsync(SECURE_KEY_USER, JSON.stringify(profile));
+              SecureStore.setItemAsync(SECURE_KEY_USER_TIME, Date.now().toString());
+            }
+          }).catch(() => {});
+          
+          return cached;
+        }
+      }
+    }
+
     const doc = await firestore().collection('users').doc(userId).get();
     if (!doc.exists) return null;
-    return { id: doc.id, ...doc.data() } as User;
+    const profile = { id: doc.id, ...doc.data() } as User;
+    
+    await SecureStore.setItemAsync(SECURE_KEY_USER, JSON.stringify(profile));
+    await SecureStore.setItemAsync(SECURE_KEY_USER_TIME, Date.now().toString());
+    
+    return profile;
   } catch {
-    // Try reading from secure store cache
+    // Try reading from secure store cache if offline
     return getCachedUserProfile();
   }
 }
 
 /**
  * Cache user profile to secure store for offline access.
+ * Called forcefully on initial sign-in.
  */
 async function cacheUserProfile(userId: string): Promise<void> {
-  try {
-    const profile = await getUserProfile(userId);
-    if (profile) {
-      await SecureStore.setItemAsync(SECURE_KEY_USER, JSON.stringify(profile));
-    }
-  } catch {
-    // Non-critical — profile will be fetched on next online access
-  }
+  await getUserProfile(userId, true);
 }
 
 /**
