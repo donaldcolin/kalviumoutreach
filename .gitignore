@@ -41,3 +41,4 @@ yarn-error.*
 /ios
 /android
 serviceAccountKey.json
+.agents/mcp.json
