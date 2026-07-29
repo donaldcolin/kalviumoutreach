@@ -7,7 +7,7 @@ import { type SchoolPipelineEntry, getStageIndex } from '../components/pipeline/
 import { PipelineBoard } from '../components/pipeline/PipelineBoard';
 
 import { SchoolDetailSheet } from '../components/pipeline/SchoolDetailSheet';
-import { PipelineFilterPopover } from '../components/pipeline/PipelineFilterPopover';
+import { GlobalDataFilter } from '../components/GlobalDataFilter';
 
 export default function Pipeline() {
   const { user, users } = useAuthStore();
@@ -16,23 +16,54 @@ export default function Pipeline() {
   // Shared Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState('');
+  const [managerFilter, setManagerFilter] = useState('all');
   const [associateFilter, setAssociateFilter] = useState('all');
   const [taskTypeFilter, setTaskTypeFilter] = useState<'all' | 'seminar' | 'follow_up'>('all');
 
   const [selectedSchool, setSelectedSchool] = useState<SchoolPipelineEntry | null>(null);
   const [schoolActivities, setSchoolActivities] = useState<any[]>([]);
 
+  // Compute available managers based on RBAC
+  const availableManagers = useMemo(() => {
+    if (!user) return [];
+    const allUsers = Object.values(users);
+    if (user.role === 'admin') return allUsers.filter(u => u.role === 'teamLead');
+    if (user.role === 'regionalManager') return allUsers.filter(u => u.role === 'teamLead' && u.managerId === user.id);
+    return [];
+  }, [user, users]);
+
   // Fetch all CRM activities for the team
   useEffect(() => {
     if (!user) return;
 
-    // Get team member IDs
-    const teamIds = Object.values(users)
-      .filter(u => user.role === 'admin' || u.managerId === user.id)
+    const allUsers = Object.values(users);
+    let visibleUsers: any[] = [];
+    
+    if (user.role === 'admin' || user.role === 'regionalManager') {
+      if (managerFilter !== 'all') {
+        // Filter strictly to the selected team's executives
+        visibleUsers = allUsers.filter(u => u.role === 'executive' && u.managerId === managerFilter);
+      } else {
+        // "All Teams" - get all relevant executives
+        if (user.role === 'admin') {
+          visibleUsers = allUsers.filter(u => u.role === 'executive');
+        } else {
+          const myManagerIds = new Set(availableManagers.map(m => m.id));
+          visibleUsers = allUsers.filter(u => u.role === 'executive' && u.managerId && myManagerIds.has(u.managerId));
+        }
+      }
+    } else if (user.role === 'teamLead') {
+      visibleUsers = allUsers.filter(u => u.managerId === user.id);
+    }
+
+    const teamIds = visibleUsers
       .map(u => u.email?.toLowerCase())
       .filter(Boolean);
 
-    if (teamIds.length === 0) return;
+    if (teamIds.length === 0) {
+      setCrmActivities([]);
+      return;
+    }
 
     const q = query(
       collection(db, 'crmActivities'),
@@ -50,7 +81,7 @@ export default function Pipeline() {
     });
 
     return () => unsub();
-  }, [user, users]);
+  }, [user, users, managerFilter, availableManagers]);
 
   // Aggregate activities into pipeline entries (one per school, latest activity wins)
   const pipelineData = useMemo(() => {
@@ -148,7 +179,7 @@ export default function Pipeline() {
       {/* Top Bar */}
       <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100 shrink-0">
         <h1 className="text-xl font-bold tracking-tight text-gray-900">Pipeline Overview</h1>
-        <PipelineFilterPopover
+        <GlobalDataFilter
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           dateFilter={dateFilter}
@@ -158,6 +189,10 @@ export default function Pipeline() {
           taskTypeFilter={taskTypeFilter}
           setTaskTypeFilter={setTaskTypeFilter as any}
           executives={Object.values(users).filter(u => u.role === 'executive')}
+          managerFilter={managerFilter}
+          setManagerFilter={setManagerFilter}
+          managers={availableManagers}
+          userRole={user?.role}
         />
       </div>
 

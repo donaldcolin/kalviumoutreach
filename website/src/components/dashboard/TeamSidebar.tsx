@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
-import { Search, ChevronRight, UserPlus, RefreshCw, Users, Eye, EyeOff } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Search, ChevronRight, RefreshCw, Users, Check, ChevronsUpDown } from 'lucide-react';
 import { Input } from '../ui/input';
-import { Button } from '../ui/button';
-import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } from '../ui/dialog';
 import { Avatar, AvatarFallback } from '../ui/avatar';
-import { type User } from '../../stores/authStore';
+import { useAuthStore, type User } from '../../stores/authStore';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 
 interface TeamSidebarProps {
   searchQuery: string;
@@ -13,13 +12,11 @@ interface TeamSidebarProps {
   selectedAssociate: User | null;
   setSelectedAssociate: (user: User) => void;
   handleSyncLSQ: () => void;
-  showAddModal: boolean;
-  setShowAddModal: (val: boolean) => void;
-  newAssociate: any;
-  setNewAssociate: (val: any) => void;
-  handleAddAssociate: (e: React.FormEvent) => void;
   ongoingWalkIns?: Record<string, any>;
   teamTrackingStatus?: Record<string, 'active' | 'ended'>;
+  managers: User[];
+  selectedManagerId: string;
+  setSelectedManagerId: (val: string) => void;
 }
 
 export function TeamSidebar({
@@ -29,85 +26,94 @@ export function TeamSidebar({
   selectedAssociate,
   setSelectedAssociate,
   handleSyncLSQ,
-  showAddModal,
-  setShowAddModal,
-  newAssociate,
-  setNewAssociate,
-  handleAddAssociate,
   ongoingWalkIns = {},
-  teamTrackingStatus = {}
+  teamTrackingStatus = {},
+  managers = [],
+  selectedManagerId,
+  setSelectedManagerId
 }: TeamSidebarProps) {
-  const [showPassword, setShowPassword] = useState(false);
-  
+  const { user } = useAuthStore();
+  const [isHovered, setIsHovered] = useState(false);
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMouseEnter = () => {
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    setIsHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    hoverTimeoutRef.current = setTimeout(() => {
+      setIsHovered(false);
+    }, 1000);
+  };
+
   return (
-    <div className="group w-20 hover:w-64 transition-all duration-300 ease-in-out z-50 flex flex-col h-full bg-white border border-gray-100 shadow-sm rounded-xl overflow-hidden shrink-0">
+    <div
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className={`transition-all duration-300 ease-in-out z-50 flex flex-col h-full bg-white border border-gray-100 shadow-sm rounded-xl overflow-hidden shrink-0 ${isHovered ? 'w-64' : 'w-20'}`}
+    >
       <div className="p-4 flex flex-col gap-4 border-b border-gray-100 shrink-0">
         <div className="flex flex-col relative min-h-[40px]">
           {/* CLOSED STATE */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center opacity-100 group-hover:opacity-0 group-hover:pointer-events-none transition-opacity duration-300">
-             <div className="flex flex-col items-center gap-1.5 text-gray-400 mt-2">
-               <Users className="w-6 h-6" />
-               <span className="text-[10px] font-bold uppercase tracking-widest">Team</span>
-             </div>
+          <div className={`absolute inset-0 flex flex-col items-center justify-center transition-opacity duration-300 ${isHovered ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+            <div className="flex flex-col items-center gap-1.5 text-gray-400 mt-2">
+              <Users className="w-6 h-6" />
+              <span className="text-[10px] font-bold uppercase tracking-widest">
+                {selectedManagerId === 'all' ? 'Team' : (managers.find(m => m.id === selectedManagerId)?.name?.substring(0, 3) || 'Team')}
+              </span>
+            </div>
           </div>
-          
+
           {/* EXPANDED STATE HEADER */}
-          <div className="w-full flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-             <h2 className="text-xl font-semibold tracking-tight text-gray-900 whitespace-nowrap">
-               Team
-             </h2>
-             <div className="flex items-center gap-1">
-                <button onClick={handleSyncLSQ} title="Sync LeadSquared Globally" className="h-9 w-9 flex items-center justify-center bg-transparent hover:bg-gray-50 text-gray-500 hover:text-gray-900 transition-colors rounded-xl shrink-0">
-                  <RefreshCw className="w-4 h-4" />
-                </button>
-                <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-                  <DialogTrigger className="h-9 w-9 flex items-center justify-center bg-transparent hover:bg-gray-50 text-gray-500 hover:text-gray-900 transition-colors rounded-xl shrink-0">
-                    <UserPlus className="w-4 h-4" />
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[400px] border-gray-100 p-0 overflow-hidden rounded-xl shadow-sm bg-white">
-                    <div className="p-6 border-b border-gray-100 bg-white">
-                      <DialogTitle className="text-xl font-semibold text-gray-900 tracking-tight">New Associate</DialogTitle>
-                      <DialogDescription className="text-gray-500 mt-2 text-sm font-medium">Enter the details below to provision a new account.</DialogDescription>
-                    </div>
-                    <form onSubmit={handleAddAssociate} className="p-6 space-y-4 bg-white">
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">Name</label>
-                        <Input required placeholder="John Doe" value={newAssociate.name} onChange={e => setNewAssociate({ ...newAssociate, name: e.target.value })} className="rounded-xl border-gray-100 focus-visible:ring-red-600 focus-visible:ring-1 h-11 shadow-sm" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">Email</label>
-                        <Input required type="email" placeholder="john@kalvium.com" value={newAssociate.email} onChange={e => setNewAssociate({ ...newAssociate, email: e.target.value })} className="rounded-xl border-gray-100 focus-visible:ring-red-600 focus-visible:ring-1 h-11 shadow-sm" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">Phone</label>
-                        <Input required placeholder="+91 9876543210" value={newAssociate.phone} onChange={e => setNewAssociate({ ...newAssociate, phone: e.target.value })} className="rounded-xl border-gray-100 focus-visible:ring-red-600 focus-visible:ring-1 h-11 shadow-sm" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">Assigned Area</label>
-                        <Input required placeholder="e.g. south-1, north-east" value={newAssociate.regionId} onChange={e => setNewAssociate({ ...newAssociate, regionId: e.target.value })} className="rounded-xl border-gray-100 focus-visible:ring-red-600 focus-visible:ring-1 h-11 shadow-sm" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">Temporary Password</label>
-                        <div className="relative">
-                          <Input required type={showPassword ? "text" : "password"} placeholder="Min 6 characters" value={newAssociate.password} onChange={e => setNewAssociate({ ...newAssociate, password: e.target.value })} className="rounded-xl border-gray-100 focus-visible:ring-red-600 focus-visible:ring-1 h-11 shadow-sm pr-10" />
-                          <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          >
-                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </button>
-                        </div>
-                      </div>
-                      <Button type="submit" className="w-full mt-6 rounded-xl bg-red-600 text-white hover:bg-red-700 h-11 text-sm font-medium tracking-wide shadow-sm">Create Account</Button>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-             </div>
+          <div className={`w-full flex items-center justify-between transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+            {(user?.role === 'admin' || user?.role === 'regionalManager') && managers.length > 0 ? (
+              <Popover>
+                <PopoverTrigger className="flex items-center justify-between flex-1 text-left bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-lg px-3 py-1.5 transition-all outline-none focus:ring-2 focus:ring-red-500/20 group/trigger">
+                  <div className="flex flex-col min-w-0 pr-2">
+                    <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">Viewing</span>
+                    <span className="text-sm font-semibold text-gray-900 truncate">
+                      {selectedManagerId === 'all' ? 'All Teams' : `${managers.find(m => m.id === selectedManagerId)?.name}'s Team`}
+                    </span>
+                  </div>
+                  <ChevronsUpDown className="w-4 h-4 text-gray-400 shrink-0 group-hover/trigger:text-gray-600 transition-colors" />
+                </PopoverTrigger>
+                <PopoverContent className="w-[230px] p-1.5 border border-gray-100 shadow-xl rounded-xl bg-white" align="start" sideOffset={8}>
+                  <div className="flex flex-col gap-0.5">
+                    <button
+                      onClick={() => setSelectedManagerId('all')}
+                      className={`flex items-center justify-between w-full px-2.5 py-2 text-sm rounded-lg transition-colors outline-none ${selectedManagerId === 'all' ? 'bg-red-50 text-red-900 font-semibold' : 'text-gray-700 hover:bg-gray-50 font-medium'}`}
+                    >
+                      All Teams
+                      {selectedManagerId === 'all' && <Check className="w-4 h-4 text-red-600 shrink-0 ml-2" />}
+                    </button>
+                    <div className="h-px bg-gray-100 my-0.5 mx-2" />
+                    {managers.map(m => (
+                      <button
+                        key={m.id}
+                        onClick={() => setSelectedManagerId(m.id)}
+                        className={`flex items-center justify-between w-full px-2.5 py-2 text-sm rounded-lg transition-colors outline-none ${selectedManagerId === m.id ? 'bg-red-50 text-red-900 font-semibold' : 'text-gray-700 hover:bg-gray-50 font-medium'}`}
+                      >
+                        <span className="truncate">{m.name}'s Team</span>
+                        {selectedManagerId === m.id && <Check className="w-4 h-4 text-red-600 shrink-0 ml-2" />}
+                      </button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            ) : (
+              <h2 className="text-xl font-semibold tracking-tight text-gray-900 whitespace-nowrap">
+                Team
+              </h2>
+            )}
+
+            <button onClick={handleSyncLSQ} title="Sync LeadSquared Globally" className="ml-2 h-9 w-9 flex items-center justify-center bg-transparent hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors rounded-xl shrink-0">
+              <RefreshCw className="w-4 h-4" />
+            </button>
           </div>
         </div>
-        
-        <div className="relative hidden opacity-0 group-hover:block group-hover:opacity-100 transition-opacity duration-300 mt-2">
+
+        <div className={`relative transition-opacity duration-300 mt-2 ${isHovered ? 'block opacity-100' : 'hidden opacity-0'}`}>
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             placeholder="Search team..."
@@ -117,7 +123,7 @@ export function TeamSidebar({
           />
         </div>
       </div>
-      
+
       <div className="flex-1 overflow-y-auto min-h-0 p-2">
         <div className="flex flex-col gap-1">
           {filteredUsers.filter(u => u.role === 'executive').map(u => {
@@ -129,13 +135,12 @@ export function TeamSidebar({
               <div
                 key={u.id}
                 onClick={() => setSelectedAssociate(u)}
-                className={`flex items-center gap-3 p-2 cursor-pointer transition-colors duration-200 rounded-xl border ${
-                  isSelected 
-                    ? 'bg-red-50 border-red-200 text-red-900' 
+                className={`flex items-center gap-3 p-2 cursor-pointer transition-colors duration-200 rounded-xl border ${isSelected
+                    ? 'bg-red-50 border-red-200 text-red-900'
                     : 'bg-white border-transparent hover:bg-gray-50 text-gray-900'
-                }`}
+                  }`}
               >
-                <div className="relative shrink-0 flex items-center justify-center w-10 h-10 mx-auto group-hover:mx-0">
+                <div className={`relative shrink-0 flex items-center justify-center w-10 h-10 transition-all ${isHovered ? 'mx-0' : 'mx-auto'}`}>
                   <Avatar className="w-10 h-10 border border-gray-200">
                     <AvatarFallback className={`${isSelected ? 'bg-red-100 text-red-700 font-bold' : 'bg-gray-100 text-gray-600 font-bold'}`}>
                       {u.name.substring(0, 2).toUpperCase()}
@@ -148,8 +153,8 @@ export function TeamSidebar({
                     </div>
                   )}
                 </div>
-                
-                <div className="hidden opacity-0 group-hover:block group-hover:opacity-100 flex-1 min-w-0 transition-opacity duration-300">
+
+                <div className={`flex-1 min-w-0 transition-opacity duration-300 ${isHovered ? 'block opacity-100' : 'hidden opacity-0'}`}>
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-semibold tracking-tight truncate flex items-center gap-2">
                       {u.name}
@@ -168,15 +173,15 @@ export function TeamSidebar({
                     </p>
                   )}
                 </div>
-                
-                <div className="hidden opacity-0 group-hover:block group-hover:opacity-100 shrink-0 transition-opacity duration-300">
+
+                <div className={`shrink-0 transition-opacity duration-300 ${isHovered ? 'block opacity-100' : 'hidden opacity-0'}`}>
                   {isSelected && <ChevronRight size={16} className="text-red-400 mr-1" />}
                 </div>
               </div>
             );
           })}
           {filteredUsers.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-40 text-gray-400 hidden group-hover:flex">
+            <div className={`flex-col items-center justify-center h-40 text-gray-400 ${isHovered ? 'flex' : 'hidden'}`}>
               <Search size={20} className="mb-2 opacity-20" />
               <p className="text-sm font-medium">No team members</p>
             </div>
@@ -186,4 +191,3 @@ export function TeamSidebar({
     </div>
   );
 }
-

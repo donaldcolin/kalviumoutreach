@@ -40,7 +40,7 @@ export function buildWalkInActivityData(form: WalkInFormState) {
   ];
 
   if (form.walkInStatus === 'Refused Entry - RE') {
-    activityData.push({ SchemaName: 'mx_Custom_5', Value: form.reasonForRefusal });
+    activityData.push({ SchemaName: 'mx_Custom_10', Value: form.reasonForRefusal });
   }
 
   if (form.walkInStatus === 'Front Desk Interaction - FDI') {

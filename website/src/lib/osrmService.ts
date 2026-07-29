@@ -1,6 +1,6 @@
 import { calculateDistanceMeters } from './distance';
 
-const CACHE_PREFIX = 'osrm_v7_';
+export const CACHE_PREFIX = 'osrm_v7_';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const ORS_CHUNK_SIZE = 100; // ORS allows up to 100 coords per /matching request
 const OSRM_CHUNK_SIZE = 70; // OSRM /route fallback

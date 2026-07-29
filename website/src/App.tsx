@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Outlet, Navigate } from 'react-router-dom';
-import { LayoutDashboard, LogOut, BarChart3, Building2, Terminal, UserCheck, ListTodo, Bug } from 'lucide-react';
+import { LayoutDashboard, LogOut, BarChart3, Building2, Terminal, UserCheck, ListTodo, Bug, Shield, Users } from 'lucide-react';
 import './App.css';
 import { useAuthStore } from './stores/authStore';
 import { Toaster } from '@/components/ui/toaster';
@@ -12,7 +12,7 @@ import UpcomingTasks from './pages/UpcomingTasks';
 import DevLogs from './pages/DevLogs';
 import LeadRequests from './pages/LeadRequests';
 import BugReport from './pages/BugReport';
-
+import MyTeam from './pages/manager/MyTeam';
 function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -24,13 +24,15 @@ function Sidebar() {
   };
 
   const navItems = [
-    { path: '/', icon: LayoutDashboard, label: 'Team Overview' },
-    { path: '/pipeline', icon: Building2, label: 'School Pipeline' },
-    { path: '/tasks', icon: ListTodo, label: 'Upcoming Tasks' },
-    { path: '/requests', icon: UserCheck, label: 'Lead Requests' },
-    { path: '/analytics', icon: BarChart3, label: 'Analytics' },
-    { path: '/logs', icon: Terminal, label: 'Dev Logs' },
-    { path: '/bug-report', icon: Bug, label: 'Report Bug' },
+    { path: '/', icon: LayoutDashboard, label: 'Team Overview', roles: ['admin', 'regionalManager', 'teamLead'] },
+    { path: '/pipeline', icon: Building2, label: 'School Pipeline', roles: ['admin', 'regionalManager', 'teamLead'] },
+    { path: '/team-leads', icon: Users, label: 'Associate Buckets', roles: ['admin', 'regionalManager', 'teamLead'] },
+    { path: '/tasks', icon: ListTodo, label: 'Upcoming Tasks', roles: ['admin', 'regionalManager', 'teamLead'] },
+    { path: '/requests', icon: UserCheck, label: 'Lead Requests', roles: ['admin', 'regionalManager', 'teamLead'] },
+    { path: '/analytics', icon: BarChart3, label: 'Analytics', roles: ['admin', 'regionalManager', 'teamLead'] },
+    { path: '/users', icon: Shield, label: 'User Management', roles: ['admin'] },
+    { path: '/logs', icon: Terminal, label: 'Dev Logs', roles: ['admin'] },
+    { path: '/bug-report', icon: Bug, label: 'Report Bug', roles: ['admin', 'regionalManager', 'teamLead', 'executive'] },
   ];
 
   return (
@@ -41,7 +43,7 @@ function Sidebar() {
       </div>
 
       <div className="flex flex-col gap-3 flex-1 w-full">
-        {navItems.map(item => {
+        {navItems.filter(item => item.roles.includes(user?.role || 'executive')).map(item => {
           const isActive = location.pathname === item.path;
           const Icon = item.icon;
           return (
@@ -87,10 +89,15 @@ const Layout = () => (
   </div>
 );
 
+import UserManagement from './pages/admin/UserManagement';
+
 // Protected Route Wrapper
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuthStore();
+const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) => {
+  const { isAuthenticated, user } = useAuthStore();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/" replace />;
+  }
   return <>{children}</>;
 };
 
@@ -113,10 +120,12 @@ function App() {
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Dashboard />} />
           <Route path="pipeline" element={<Pipeline />} />
+          <Route path="team-leads" element={<MyTeam />} />
           <Route path="tasks" element={<UpcomingTasks />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="requests" element={<LeadRequests />} />
-          <Route path="logs" element={<DevLogs />} />
+          <Route path="users" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
+          <Route path="logs" element={<ProtectedRoute allowedRoles={['admin']}><DevLogs /></ProtectedRoute>} />
           <Route path="bug-report" element={<BugReport />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

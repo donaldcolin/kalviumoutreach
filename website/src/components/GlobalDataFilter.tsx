@@ -1,24 +1,28 @@
 import { Filter, Search, Calendar as CalendarIcon } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { Input } from '../ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Input } from './ui/input';
 
-import { Calendar } from '../ui/calendar';
+import { Calendar } from './ui/calendar';
 import { format } from 'date-fns';
-import { cn } from '../../lib/utils';
+import { cn } from '../lib/utils';
 
-interface PipelineFilterPopoverProps {
+interface GlobalDataFilterProps {
   searchQuery: string;
   setSearchQuery: (val: string) => void;
   dateFilter: string;
   setDateFilter: (val: string) => void;
   associateFilter: string;
   setAssociateFilter: (val: string) => void;
-  taskTypeFilter: string;
-  setTaskTypeFilter: (val: string) => void;
+  taskTypeFilter?: string;
+  setTaskTypeFilter?: (val: string) => void;
   executives: { id: string; name: string; email?: string }[];
+  managerFilter?: string;
+  setManagerFilter?: (val: string) => void;
+  managers?: { id: string; name: string }[];
+  userRole?: string;
 }
 
-export function PipelineFilterPopover({
+export function GlobalDataFilter({
   searchQuery,
   setSearchQuery,
   dateFilter,
@@ -27,14 +31,19 @@ export function PipelineFilterPopover({
   setAssociateFilter,
   taskTypeFilter,
   setTaskTypeFilter,
-  executives
-}: PipelineFilterPopoverProps) {
+  executives,
+  managerFilter = 'all',
+  setManagerFilter,
+  managers = [],
+  userRole = 'executive'
+}: GlobalDataFilterProps) {
   // Count active filters
   let activeFilters = 0;
   if (searchQuery) activeFilters++;
   if (dateFilter) activeFilters++;
   if (associateFilter !== 'all') activeFilters++;
-  if (taskTypeFilter !== 'all') activeFilters++;
+  if (taskTypeFilter && taskTypeFilter !== 'all') activeFilters++;
+  if (managerFilter !== 'all') activeFilters++;
 
   return (
     <Popover>
@@ -57,7 +66,7 @@ export function PipelineFilterPopover({
                 placeholder="Search by school name..." 
                 className="pl-9 h-9 text-sm"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e: any) => setSearchQuery(e.target.value)}
               />
             </div>
           </div>
@@ -78,7 +87,7 @@ export function PipelineFilterPopover({
                 <Calendar
                   mode="single"
                   selected={dateFilter ? new Date(dateFilter) : undefined}
-                  onSelect={(date) => {
+                  onSelect={(date: any) => {
                     if (date) {
                       const tzDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0];
                       setDateFilter(tzDate);
@@ -90,6 +99,25 @@ export function PipelineFilterPopover({
               </PopoverContent>
             </Popover>
           </div>
+
+          {(userRole === 'admin' || userRole === 'regionalManager') && setManagerFilter && managers.length > 0 && (
+            <div>
+              <h4 className="font-medium text-sm mb-2 text-gray-900">Team</h4>
+              <select
+                value={managerFilter}
+                onChange={(e) => {
+                  setManagerFilter(e.target.value);
+                  setAssociateFilter('all'); // Reset associate when team changes
+                }}
+                className="w-full rounded-md border border-gray-200 bg-white h-9 text-sm px-3 outline-none focus:border-gray-400"
+              >
+                <option value="all">All Teams</option>
+                {managers.map(m => (
+                  <option key={m.id} value={m.id}>{m.name}'s Team</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <h4 className="font-medium text-sm mb-2 text-gray-900">Associate</h4>
@@ -105,18 +133,20 @@ export function PipelineFilterPopover({
             </select>
           </div>
 
-          <div>
-            <h4 className="font-medium text-sm mb-2 text-gray-900">Task Type (Seminars View)</h4>
-            <select 
-              value={taskTypeFilter}
-              onChange={(e) => setTaskTypeFilter(e.target.value)}
-              className="w-full rounded-md border border-gray-200 bg-white h-9 text-sm px-3 outline-none focus:border-gray-400"
-            >
-              <option value="all">All Task Types</option>
-              <option value="seminar">Seminars Only</option>
-              <option value="follow_up">Follow-ups Only</option>
-            </select>
-          </div>
+          {setTaskTypeFilter && (
+            <div>
+              <h4 className="font-medium text-sm mb-2 text-gray-900">Task Type</h4>
+              <select 
+                value={taskTypeFilter}
+                onChange={(e) => setTaskTypeFilter(e.target.value)}
+                className="w-full rounded-md border border-gray-200 bg-white h-9 text-sm px-3 outline-none focus:border-gray-400"
+              >
+                <option value="all">All Task Types</option>
+                <option value="seminar">Seminars Only</option>
+                <option value="follow_up">Follow-ups Only</option>
+              </select>
+            </div>
+          )}
           
           {activeFilters > 0 && (
             <button
@@ -124,7 +154,8 @@ export function PipelineFilterPopover({
                 setSearchQuery('');
                 setDateFilter('');
                 setAssociateFilter('all');
-                setTaskTypeFilter('all');
+                if (setTaskTypeFilter) setTaskTypeFilter('all');
+                if (setManagerFilter) setManagerFilter('all');
               }}
               className="w-full mt-2 text-sm text-red-600 hover:text-red-700 font-medium py-1"
             >

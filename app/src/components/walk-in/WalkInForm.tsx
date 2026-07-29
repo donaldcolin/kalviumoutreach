@@ -213,7 +213,7 @@ export function WalkInForm({
       <VStack space="md" className="px-4 mt-4">
         <CustomSelect 
           label="Type of Walk-In" 
-          options={['First Visit', 'Follow-up Visit']} 
+          options={['First Visit', 'Follow-Up Visit', 'Seminar Visit']} 
           value={form.typeOfWalkIn} 
           onChange={(v) => updateForm({ typeOfWalkIn: v })} 
         />
@@ -250,7 +250,7 @@ export function WalkInForm({
             {form.walkInStatus === 'Refused Entry - RE' && (
               <CustomSelect 
                 label="Reason for Refusal" 
-                options={['Didnot get permission to enter', 'Security /Front Desk denied entry', 'Others']} 
+                options={['School Not Interested', 'Need prior appointment', 'Only till 10th STD']} 
                 value={form.reasonForRefusal} onChange={(v) => updateForm({ reasonForRefusal: v })} 
               />
             )}

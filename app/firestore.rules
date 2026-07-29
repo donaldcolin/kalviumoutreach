@@ -25,15 +25,15 @@ service cloud.firestore {
     match /dailyTracks/{trackId} {
       allow read: if request.auth != null;
       // An associate can only write to a track document if its ID starts with their own user ID. Admins/TLs can manage any track.
-      allow write: if request.auth != null && (trackId.matches(request.auth.uid + '_.*') || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != 'executive');
+      allow write: if request.auth != null && (trackId.split('_')[0] == request.auth.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != 'executive');
       
       match /locations/{locationId} {
         allow read: if request.auth != null;
-        allow write: if request.auth != null && trackId.matches(request.auth.uid + '_.*');
+        allow write: if request.auth != null && trackId.split('_')[0] == request.auth.uid;
       }
       match /visits/{visitId} {
         allow read: if request.auth != null;
-        allow write: if request.auth != null && trackId.matches(request.auth.uid + '_.*');
+        allow write: if request.auth != null && trackId.split('_')[0] == request.auth.uid;
       }
     }
 

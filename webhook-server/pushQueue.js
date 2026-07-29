@@ -53,15 +53,20 @@ export async function handlePushQueue(event) {
     } else if (resolvedAction === 'UPDATE_ACTIVITY') {
       if (!activityId) throw new Error('activityId is required for UPDATE_ACTIVITY');
       
+      // Look up the real LSQ activity ID from our local doc
+      const localDoc = await db.collection('crmActivities').doc(activityId).get();
+      const lsqId = localDoc.exists ? localDoc.data().lsqActivityId : null;
+      if (!lsqId) throw new Error(`No lsqActivityId found for local activity ${activityId}. CREATE may still be pending.`);
+
       const updateBody = {
-        ProspectActivityId: activityId,
+        ProspectActivityId: lsqId,
         ActivityEvent: 232,
         ActivityNote: notes || '',
         Fields: activityData || []
       };
 
       const lsqResp = await lsqFetch('/v2/ProspectActivity.svc/Update', 'POST', updateBody);
-      console.log(`   ✅ LSQ updated for activity ${activityId}`, lsqResp);
+      console.log(`   ✅ LSQ updated for activity ${activityId} (lsqId: ${lsqId})`, lsqResp);
       
       await db.collection('crmActivities').doc(activityId).update({
         notes: notes,
@@ -74,22 +79,25 @@ export async function handlePushQueue(event) {
       // Fetch existing notes from our Firestore copy to append (not overwrite)
       const activityDoc = await db.collection('crmActivities').doc(activityId).get();
       let existingNote = '';
+      let lsqId = null;
       if (activityDoc.exists) {
         existingNote = activityDoc.data().notes || '';
+        lsqId = activityDoc.data().lsqActivityId;
       }
+      if (!lsqId) throw new Error(`No lsqActivityId found for local activity ${activityId}. CREATE may still be pending.`);
 
       const newNote = existingNote
         ? `${existingNote}\n\nRecording: ${storageUrl}`
         : `Recording: ${storageUrl}`;
 
       const updateBody = {
-        ProspectActivityId: activityId,
+        ProspectActivityId: lsqId,
         ActivityEvent: 232,
         ActivityNote: newNote,
       };
 
       const lsqResp = await lsqFetch('/v2/ProspectActivity.svc/Update', 'POST', updateBody);
-      console.log(`   ✅ LSQ updated for activity ${activityId}`, lsqResp);
+      console.log(`   ✅ LSQ updated for activity ${activityId} (lsqId: ${lsqId})`, lsqResp);
 
       await db.collection('crmActivities').doc(activityId).update({
         notes: newNote,

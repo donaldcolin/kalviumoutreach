@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { collection, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuthStore } from '../stores/authStore';
 import { CheckCircle, XCircle, Clock, Users, Search } from 'lucide-react';
+import { GlobalDataFilter } from '../components/GlobalDataFilter';
 
 interface LeadAccessRequest {
   id: string;
@@ -26,12 +27,55 @@ export default function LeadRequests() {
   const [processing, setProcessing] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
+  
+  // Shared Filter State
+  const [managerFilter, setManagerFilter] = useState('all');
+  const [associateFilter, setAssociateFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState(''); // Unused here but required for GlobalDataFilter
+
+  // Compute available managers based on RBAC
+  const availableManagers = useMemo(() => {
+    if (!user) return [];
+    const allUsers = Object.values(users);
+    if (user.role === 'admin') return allUsers.filter(u => u.role === 'teamLead');
+    if (user.role === 'regionalManager') return allUsers.filter(u => u.role === 'teamLead' && u.managerId === user.id);
+    return [];
+  }, [user, users]);
+
+  // Get visible users based on RBAC hierarchy and Manager Filter
+  const visibleEmails = useMemo(() => {
+    if (!user) return new Set();
+    const allUsers = Object.values(users);
+    let visibleUsers: any[] = [];
+    
+    if (user.role === 'admin' || user.role === 'regionalManager') {
+      if (managerFilter !== 'all') {
+        visibleUsers = allUsers.filter(u => u.role === 'executive' && u.managerId === managerFilter);
+      } else {
+        if (user.role === 'admin') {
+          visibleUsers = allUsers;
+        } else {
+          const myManagerIds = new Set(availableManagers.map(m => m.id));
+          const myExecutives = allUsers.filter(u => u.role === 'executive' && u.managerId && myManagerIds.has(u.managerId));
+          visibleUsers = [...availableManagers, ...myExecutives, user];
+        }
+      }
+    } else if (user.role === 'teamLead') {
+      visibleUsers = allUsers.filter(u => u.managerId === user.id || u.id === user.id);
+    }
+    return new Set(visibleUsers.map(u => u.email?.toLowerCase()).filter(Boolean));
+  }, [users, user, managerFilter, availableManagers]);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'leadAccessRequests'), (snap) => {
       const items: LeadAccessRequest[] = [];
       snap.forEach((d) => {
-        items.push({ id: d.id, ...d.data() } as LeadAccessRequest);
+        const data = d.data() as LeadAccessRequest;
+        // Apply RBAC check
+        if (user?.role !== 'admin' && (!data.requestedByEmail || !visibleEmails.has(data.requestedByEmail.toLowerCase()))) {
+          return;
+        }
+        items.push({ ...data, id: d.id });
       });
       // Sort: pending first, then by createdAt desc
       items.sort((a, b) => {
@@ -44,7 +88,7 @@ export default function LeadRequests() {
       setRequests(items);
     });
     return unsub;
-  }, []);
+  }, [user, visibleEmails]);
 
   const handleApprove = async (reqId: string) => {
     try {
@@ -86,6 +130,7 @@ export default function LeadRequests() {
   // Filter and search
   const filtered = requests.filter((r) => {
     if (filterStatus !== 'all' && r.status !== filterStatus) return false;
+    if (associateFilter !== 'all' && r.requestedByEmail?.toLowerCase() !== associateFilter) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       return (
@@ -116,6 +161,19 @@ export default function LeadRequests() {
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Lead Access Requests</h1>
           <p className="text-sm text-gray-500 mt-1">Manage lead sharing across your team</p>
         </div>
+        <GlobalDataFilter
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          dateFilter={dateFilter}
+          setDateFilter={setDateFilter}
+          associateFilter={associateFilter}
+          setAssociateFilter={setAssociateFilter}
+          executives={Object.values(users).filter(u => u.role === 'executive')}
+          managerFilter={managerFilter}
+          setManagerFilter={setManagerFilter}
+          managers={availableManagers}
+          userRole={user?.role}
+        />
       </div>
 
       {/* Stats Cards */}

@@ -45,26 +45,28 @@ export default function LeadsScreen() {
   
   const navigation = useNavigation<any>();
 
-  // One-time fetch for this user's access requests
+  // Real-time listener for this user's access requests
   useEffect(() => {
     if (!user?.id) return;
-    const fetchAccessRequests = async () => {
-      try {
-        const snap = await firestore()
-          .collection('leadAccessRequests')
-          .where('requestedBy', '==', user.id)
-          .get();
-        const map: Record<string, AccessRequest> = {};
-        snap.forEach((doc) => {
-          const data = doc.data();
-          map[data.leadId] = { id: doc.id, leadId: data.leadId, status: data.status };
-        });
-        setAccessRequests(map);
-      } catch (e) {
-        console.warn('Failed to fetch access requests:', e);
-      }
-    };
-    fetchAccessRequests();
+    
+    const unsubscribe = firestore()
+      .collection('leadAccessRequests')
+      .where('requestedBy', '==', user.id)
+      .onSnapshot(
+        (snap) => {
+          const map: Record<string, AccessRequest> = {};
+          snap.forEach((doc) => {
+            const data = doc.data();
+            map[data.leadId] = { id: doc.id, leadId: data.leadId, status: data.status };
+          });
+          setAccessRequests(map);
+        },
+        (error) => {
+          console.warn('Failed to fetch access requests:', error);
+        }
+      );
+      
+    return () => unsubscribe();
   }, [user?.id]);
 
 
@@ -83,7 +85,7 @@ export default function LeadsScreen() {
 
     try {
       setRequestingAccess(leadId);
-      await firestore().collection('leadAccessRequests').add({
+      await firestore().collection('leadAccessRequests').doc(`${user.id}_${leadId}`).set({
         leadId,
         leadName,
         ownerEmail,

@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { MapPin, Clock, Info, CheckCircle, FileAudio, Image as ImageIcon, X, ArrowRight, User, Phone, FileText, Calendar as CalendarIcon, ExternalLink } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
-import { STAGE_SHORT, STAGE_COLORS, getStageIndex } from './CrmActivityCard';
+import { STAGE_SHORT, STAGE_COLORS, getStageIndex } from '../lib/constants';
 
 interface TimelineActivityDialogProps {
   open: boolean;

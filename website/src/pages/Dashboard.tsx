@@ -17,7 +17,7 @@ import { format } from "date-fns";
 import { cleanGpsRoute, buildRouteCacheKey, type RawPing } from '../lib/gpsUtils';
 
 export default function Dashboard() {
-  const { user, users, addAssociate } = useAuthStore();
+  const { user, users } = useAuthStore();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAssociate, setSelectedAssociate] = useState<User | null>(null);
@@ -38,9 +38,8 @@ export default function Dashboard() {
   const [mapZoom, setMapZoom] = useState(13);
 
   // Add Associate State
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newAssociate, setNewAssociate] = useState({ name: '', email: '', phone: '', password: '', regionId: '' });
   const [selectedActivity, setSelectedActivity] = useState<any>(null);
+  const [selectedManagerId, setSelectedManagerId] = useState<string>('all');
   const [expandedActivityIdx, setExpandedActivityIdx] = useState<number | null>(null);
   const [, setSelectedAssociateTasks] = useState<any[]>([]);
 
@@ -256,7 +255,7 @@ export default function Dashboard() {
       if (typeof unsubCrm === 'function') unsubCrm();
       unsubTasks();
     };
-  }, [selectedAssociate, selectedDateStart, selectedDateEnd]);
+  }, [selectedAssociate, selectedDateStart, selectedDateEnd, selectedDate]);
 
   const timeline = useMemo(() => {
     return buildTimeline(selectedDateLocReqs, selectedDateCrmActivities, rawPings);
@@ -264,19 +263,40 @@ export default function Dashboard() {
 
   const visibleUsers = useMemo(() => {
     const allUsers = Object.values(users);
-    if (user?.role === 'admin') return allUsers.filter(u => u.role !== 'admin');
-    if (user?.role === 'teamLead') return allUsers.filter(u => u.managerId === user.id);
+    
+    if (user?.role === 'admin') {
+      return allUsers; 
+    }
+    
+    if (user?.role === 'regionalManager') {
+      const myManagers = allUsers.filter(u => u.role === 'teamLead' && u.managerId === user.id);
+      const myManagerIds = new Set(myManagers.map(m => m.id));
+      const myExecutives = allUsers.filter(u => u.role === 'executive' && u.managerId && myManagerIds.has(u.managerId));
+      return [...myManagers, ...myExecutives, user]; // Include the AGM themselves
+    }
+    
+    if (user?.role === 'teamLead') {
+      return allUsers.filter(u => u.managerId === user.id || u.id === user.id); // Include the Manager themselves
+    }
+    
     return [];
   }, [user, users]);
 
   const filteredUsers = useMemo(() => {
-    if (!searchQuery) return visibleUsers;
+    let result = visibleUsers;
+    
+    // Filter by selected manager (for AGMs and Admins)
+    if (selectedManagerId !== 'all') {
+      result = result.filter(u => u.managerId === selectedManagerId || u.id === selectedManagerId);
+    }
+    
+    if (!searchQuery) return result;
     const lowerQ = searchQuery.toLowerCase();
-    return visibleUsers.filter(u =>
+    return result.filter(u =>
       u.name.toLowerCase().includes(lowerQ) ||
       (u.regionId && u.regionId.toLowerCase().includes(lowerQ))
     );
-  }, [visibleUsers, searchQuery]);
+  }, [visibleUsers, searchQuery, selectedManagerId]);
 
   const totalAssociates = visibleUsers.filter(u => u.role === 'executive').length;
   const totalLeads = visibleUsers.filter(u => u.role === 'teamLead').length;
@@ -324,26 +344,7 @@ export default function Dashboard() {
     }
   }, [selectedActivity]);
 
-  const handleAddAssociate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const id = `exec_${Date.now()}`;
-    try {
-      await addAssociate({
-        id,
-        name: newAssociate.name,
-        email: newAssociate.email,
-        phone: newAssociate.phone,
-        role: 'executive',
-        regionId: newAssociate.regionId || user?.regionId || 'south-1',
-        managerId: user?.id,
-        active: true,
-      }, newAssociate.password);
-      setShowAddModal(false);
-      setNewAssociate({ name: '', email: '', phone: '', password: '', regionId: '' });
-    } catch (err) {
-      alert('Failed to create associate. Check console for details.');
-    }
-  };
+
 
   const handleSyncLSQ = async () => {
     try {
@@ -357,10 +358,15 @@ export default function Dashboard() {
         title: 'Sync Complete',
         description: data.message || `Sync started in the background.`
       });
-    } catch (err) {
+    } catch (err: any) {
+      console.error(err);
       toast({ title: 'Sync Failed', description: 'Make sure the Firebase Emulator or Cloud Function is running.', variant: 'destructive' });
     }
   };
+
+  const availableManagers = useMemo(() => {
+    return visibleUsers.filter(u => u.role === 'teamLead');
+  }, [visibleUsers]);
 
   return (
     <div className="flex h-[calc(100vh-48px)] gap-6 bg-transparent text-gray-900 animate-in fade-in duration-700">
@@ -371,13 +377,11 @@ export default function Dashboard() {
         selectedAssociate={selectedAssociate}
         setSelectedAssociate={setSelectedAssociate}
         handleSyncLSQ={handleSyncLSQ}
-        showAddModal={showAddModal}
-        setShowAddModal={setShowAddModal}
-        newAssociate={newAssociate}
-        setNewAssociate={setNewAssociate}
-        handleAddAssociate={handleAddAssociate}
         ongoingWalkIns={ongoingWalkIns}
         teamTrackingStatus={teamTrackingStatus}
+        managers={availableManagers}
+        selectedManagerId={selectedManagerId}
+        setSelectedManagerId={setSelectedManagerId}
       />
 
       <div className="flex-1 flex flex-col h-full gap-6 overflow-hidden">

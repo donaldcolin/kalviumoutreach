@@ -78,7 +78,7 @@ app.get('/api/leads', async (req, res) => {
         "SqlOperator": "="
       },
       "Columns": {
-        "Include_CSV": "ProspectID,FirstName,LastName,EmailAddress,Phone,Company,OwnerIdEmailAddress,mx_Street1,mx_City,mx_State"
+        "Include_CSV": "ProspectID,FirstName,LastName,EmailAddress,Phone,Company,OwnerIdEmailAddress,mx_Street1,mx_City,mx_State,ProspectStage,Source,ModifiedOn"
       },
       "Paging": {
         "PageIndex": 1,
@@ -87,7 +87,7 @@ app.get('/api/leads', async (req, res) => {
     };
 
     const lsqResp = await lsqFetch('/v2/LeadManagement.svc/Leads.Get', 'POST', searchBody);
-    
+
     res.json({
       success: true,
       leads: Array.isArray(lsqResp) ? lsqResp : []
@@ -151,7 +151,7 @@ app.get('/api/leads/search', async (req, res) => {
     const managerId = userData.managerId;
 
     let teamEmails = [userEmail.toLowerCase()]; // always include self
-    
+
     // 2. Find all users under the same manager
     if (managerId) {
       const teamSnapshot = await db.collection('users').where('managerId', '==', managerId).get();
@@ -181,7 +181,7 @@ app.get('/api/leads/search', async (req, res) => {
     const lsqResp = await lsqFetch('/v2/LeadManagement.svc/Leads.Get', 'POST', searchBody);
 
     let leads = Array.isArray(lsqResp) ? lsqResp : [];
-    
+
     // 4. Filter locally for 'School Prospect' AND belonging to the team
     leads = leads.filter(l => {
       const isSchoolProspect = l.ProspectStage === 'School Prospect';
