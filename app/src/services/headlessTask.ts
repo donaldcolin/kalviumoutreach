@@ -12,13 +12,13 @@ const BACKGROUND_FETCH_TASK = 'background-location-fetch';
 
 TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
   try {
-    logger.info('Background fetch woke up');
+    logger.info('App checked in from the background');
     
     // In a Headless JS context, React state and Zustand memory are often uninitialized.
     // Read directly from the disk-persisted tracking session.
     const sessionStr = await AsyncStorage.getItem('tracking_session');
     if (!sessionStr) {
-      logger.info('No active tracking session found in AsyncStorage, aborting.');
+      logger.info('User has not started their day yet, skipping background location check.');
       return BackgroundFetch.BackgroundFetchResult.NoData;
     }
 
@@ -27,6 +27,20 @@ TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
     // ALWAYS act as a backup location tracker (runs ~every 15 mins)
     // We rely purely on FCM push notifications for live TL ping requests now.
     try {
+      // 1. Check if the user turned off their GPS globally
+      const servicesEnabled = await Location.hasServicesEnabledAsync();
+      if (!servicesEnabled) {
+        logger.warn('User s phone GPS is turned off, skipping location check.');
+        return BackgroundFetch.BackgroundFetchResult.NoData;
+      }
+
+      // 2. Check if background permissions are still granted
+      const { status } = await Location.getBackgroundPermissionsAsync();
+      if (status !== 'granted') {
+        logger.warn('User has not allowed background location, skipping location check.');
+        return BackgroundFetch.BackgroundFetchResult.NoData;
+      }
+
       const accuracy = Location.Accuracy.Balanced;
       const loc = await Location.getCurrentPositionAsync({ accuracy });
       const ping: LocationPing = {
@@ -36,14 +50,14 @@ TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
         accuracy: loc.coords.accuracy ?? 0,
       };
       await appendPing(userId, dateStr, ping);
-      logger.info('Backup location ping saved (Accuracy: Balanced)');
+      logger.info('Successfully saved background location.');
     } catch (e) {
-      logger.warn('Failed to get backup location', e instanceof Error ? e.message : String(e));
+      logger.warn('Could not get background location:', e instanceof Error ? e.message : String(e));
     }
 
     return BackgroundFetch.BackgroundFetchResult.NewData;
   } catch (error) {
-    logger.error('Background fetch failed', error instanceof Error ? error.message : String(error));
+    logger.error('Background task failed:', error instanceof Error ? error.message : String(error));
     return BackgroundFetch.BackgroundFetchResult.Failed;
   }
 });

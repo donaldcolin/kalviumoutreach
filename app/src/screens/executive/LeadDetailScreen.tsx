@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, Pressable, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { View, ScrollView, FlatList, Pressable, ActivityIndicator, TouchableOpacity, Linking, Platform, RefreshControl } from 'react-native';
+import { Toast } from '@/components/ui/ToastManager';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { Text } from '@/components/ui/text';
@@ -8,6 +9,7 @@ import firestore from '@react-native-firebase/firestore';
 import { useAuthStore } from '../../stores/authStore';
 import { useWalkInStore } from '../../stores/walkInStore';
 import { Building2 } from 'lucide-react-native';
+import type { CrmActivity } from '../../types';
 
 // ─── Status Tags (Red/White/Gray only) ───────────────────────────────────────
 const getStatusTag = (status: string) => {
@@ -39,23 +41,23 @@ function formatShortDate(dateStr: string) {
   } catch { return ''; }
 }
 
-function getSubStatus(act: any): string | null {
+function getSubStatus(act: CrmActivity): string | null {
   return act.statusFrontDesk || act.statusPIC || act.statusPrincipal || null;
 }
 
-function getContactInfo(act: any): { name: string; phone?: string; label: string } | null {
+function getContactInfo(act: CrmActivity): { name: string; phone?: string; label: string } | null {
   if (act.picName) return { name: act.picName, phone: act.picPhone, label: 'PIC' };
   if (act.principalName) return { name: act.principalName, phone: act.principalPhone, label: 'Principal' };
   return null;
 }
 
-function getAppointmentDate(act: any): string | null {
+function getAppointmentDate(act: CrmActivity): string | null {
   return act.picAppointmentDate || act.principalAppointmentDate || act.seminarAppointmentDate || null;
 }
 
 // ─── Activity Card ───────────────────────────────────────────────────────────
 
-function ActivityCard({ act, index }: { act: any; index: number }) {
+function ActivityCard({ act, index }: { act: CrmActivity; index: number }) {
   const statusTag = act.walkInStatus ? getStatusTag(act.walkInStatus) : null;
   const subStatus = getSubStatus(act);
   const contact = getContactInfo(act);
@@ -169,7 +171,7 @@ export default function LeadDetailScreen() {
   const { user } = useAuthStore();
   const { beginWalkIn } = useWalkInStore();
 
-  const [activities, setActivities] = useState<any[]>([]);
+  const [activities, setActivities] = useState<CrmActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -179,7 +181,7 @@ export default function LeadDetailScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Location permission is required to start a walk-in.');
+        Toast.show({ title: 'Permission needed', message: 'Location permission is required to start a walk-in.', type: 'error' });
         setIsStarting(false);
         return;
       }
@@ -218,7 +220,7 @@ export default function LeadDetailScreen() {
         startTime,
       });
     } catch (e) {
-      Alert.alert('Error', 'Failed to get your location. Please ensure location services are enabled.');
+      Toast.show({ title: 'Error', message: 'Failed to get your location. Please ensure location services are enabled.', type: 'error' });
     } finally {
       setIsStarting(false);
     }
@@ -234,7 +236,7 @@ export default function LeadDetailScreen() {
         .where('lsqLeadId', '==', leadId)
         .get();
 
-      const acts = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+      const acts = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as Omit<CrmActivity, 'id'>) }));
       acts.sort((a, b) => {
         const ta = new Date(a.walkInDateTime || a.lsqCreatedOn || 0).getTime();
         const tb = new Date(b.walkInDateTime || b.lsqCreatedOn || 0).getTime();
@@ -275,9 +277,12 @@ export default function LeadDetailScreen() {
       </View>
 
       {/* Activity Timeline */}
-      <ScrollView
+      {/* Activity Timeline */}
+      <FlatList
         className="flex-1 bg-gray-50 px-4 pt-6"
         contentContainerStyle={{ paddingBottom: 120 }}
+        data={activities}
+        keyExtractor={(item) => item.id}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -290,31 +295,31 @@ export default function LeadDetailScreen() {
             tintColor="#DC2626"
           />
         }
-      >
-        {loading ? (
-          <View className="flex-1 justify-center items-center py-20">
-            <ActivityIndicator size="large" color="#DC2626" />
-          </View>
-        ) : activities.length === 0 ? (
-          <View className="items-center justify-center py-16">
-            <Text className="text-lg font-bold text-gray-900 mb-2">No activities yet</Text>
-            <Text className="text-gray-500 text-center text-sm px-8 leading-relaxed">
-              Start your first walk-in visit to this school. Activities will appear here as a timeline.
-            </Text>
-          </View>
-        ) : (
-          <View>
+        ListEmptyComponent={
+          loading ? (
+            <View className="flex-1 justify-center items-center py-20">
+              <ActivityIndicator size="large" color="#DC2626" />
+            </View>
+          ) : (
+            <View className="items-center justify-center py-16">
+              <Text className="text-lg font-bold text-gray-900 mb-2">No activities yet</Text>
+              <Text className="text-gray-500 text-center text-sm px-8 leading-relaxed">
+                Start your first walk-in visit to this school. Activities will appear here as a timeline.
+              </Text>
+            </View>
+          )
+        }
+        ListHeaderComponent={
+          (!loading && activities.length > 0) ? (
             <Text className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-6">
               Activity Timeline
             </Text>
-            <View>
-              {activities.map((act, index) => (
-                <ActivityCard key={act.id} act={act} index={index} />
-              ))}
-            </View>
-          </View>
+          ) : null
+        }
+        renderItem={({ item, index }) => (
+          <ActivityCard act={item} index={index} />
         )}
-      </ScrollView>
+      />
 
       {/* Floating Add Walk-In Button */}
       <View

@@ -3,12 +3,13 @@ import { View, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, FlatList 
 import { VStack } from '@/components/ui/vstack';
 import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
+import type { CrmActivity } from '../../types';
 
 export interface PushToLsModalProps {
   visible: boolean;
   onClose: () => void;
-  activities: any[];
-  onPush: (activity: any) => void;
+  activities: CrmActivity[];
+  onPush: (activity: CrmActivity) => void;
   isPushing: boolean;
 }
 

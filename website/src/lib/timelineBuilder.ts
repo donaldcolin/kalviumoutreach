@@ -1,4 +1,5 @@
 import { calculateDistanceMeters } from './distance';
+import type { CrmActivity } from '@kalvium-outreach/shared';
 
 export interface LocationRequest {
   status: string;
@@ -6,18 +7,7 @@ export interface LocationRequest {
   [key: string]: any;
 }
 
-export interface CrmActivity {
-  walkInDateTime?: string;
-  lsqCreatedOn?: string;
-  walkInStatus?: string;
-  schoolName?: string;
-  typeOfWalkIn?: string;
-  lat?: number;
-  lng?: number;
-  startLocation?: { lat: number; lng: number };
-  createdAt?: any;
-  [key: string]: any;
-}
+
 
 export interface RawPing {
   ts: any;

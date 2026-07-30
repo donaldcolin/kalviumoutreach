@@ -1,28 +1,34 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { format, parseISO } from 'date-fns';
+import type { CrmActivity } from '../../types';
 
 export interface ActivityListProps {
-  activities: any[];
-  onViewDetails?: (activity: any) => void;
+  activities: CrmActivity[];
+  onViewDetails?: (activity: CrmActivity) => void;
 }
 
-export function ActivityList({ activities, onViewDetails }: ActivityListProps) {
-  if (activities.length === 0) return null;
-
+export function ActivityListHeader({ count }: { count: number }) {
+  if (count === 0) return null;
   return (
-    <View style={styles.container}>
-      <View style={styles.headerRow}>
-        <Text style={styles.heading}>Today's Visits</Text>
-        <View style={styles.countBadge}>
-          <Text style={styles.countText}>{activities.length}</Text>
-        </View>
+    <View style={styles.headerRow}>
+      <Text style={styles.heading}>Today's Visits</Text>
+      <View style={styles.countBadge}>
+        <Text style={styles.countText}>{count}</Text>
       </View>
+    </View>
+  );
+}
 
-      {activities.map((activity) => {
-        const dt = activity.walkInDateTime || activity.lsqCreatedOn;
-        const time = dt ? format(new Date(dt), 'h:mm a') : '';
-        const schoolName = activity.schoolName || activity.leadName || 'Unknown School';
+export interface ActivityCardItemProps {
+  activity: CrmActivity;
+  onViewDetails?: (activity: CrmActivity) => void;
+}
+
+export const ActivityCardItem = React.memo(function ActivityCardItem({ activity, onViewDetails }: ActivityCardItemProps) {
+  const dt = activity.walkInDateTime || activity.lsqCreatedOn;
+  const time = dt ? format(new Date(dt), 'h:mm a') : '';
+  const schoolName = activity.schoolName || activity.leadName || 'Unknown School';
 
         const isFirstVisit = activity.typeOfWalkIn === 'First Visit';
         const walkInStatus = activity.walkInStatus || '';
@@ -53,11 +59,11 @@ export function ActivityList({ activities, onViewDetails }: ActivityListProps) {
         // Determine specific outcome text based on the active status interaction
         let outcomeText = '';
         if (isPICInteraction) {
-          outcomeText = activity.statusPIC;
+          outcomeText = activity.statusPIC || '';
         } else if (isPrincipalInteraction) {
-          outcomeText = activity.statusPrincipal;
+          outcomeText = activity.statusPrincipal || '';
         } else if (isFrontDesk) {
-          outcomeText = activity.statusFrontDesk;
+          outcomeText = activity.statusFrontDesk || '';
         }
 
         // Appointment box logic
@@ -123,8 +129,18 @@ export function ActivityList({ activities, onViewDetails }: ActivityListProps) {
             ) : null}
 
           </TouchableOpacity>
-        );
-      })}
+  );
+});
+
+export function ActivityList({ activities, onViewDetails }: ActivityListProps) {
+  if (activities.length === 0) return null;
+
+  return (
+    <View style={styles.container}>
+      <ActivityListHeader count={activities.length} />
+      {activities.map((activity) => (
+        <ActivityCardItem key={activity.id} activity={activity} onViewDetails={onViewDetails} />
+      ))}
     </View>
   );
 }

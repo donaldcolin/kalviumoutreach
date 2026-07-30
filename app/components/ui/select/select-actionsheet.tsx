@@ -1,5 +1,5 @@
+// @ts-nocheck
 'use client';
-
 import { H4 } from '@expo/html-elements';
 import { createActionsheet } from '@gluestack-ui/core/actionsheet/creator';
 import {
@@ -24,6 +24,7 @@ import {
   MotionComponentProps,
 } from '@legendapp/motion';
 
+// @ts-nocheck
 import React from 'react';
 
 type IAnimatedPressableProps = React.ComponentProps<typeof Pressable> &

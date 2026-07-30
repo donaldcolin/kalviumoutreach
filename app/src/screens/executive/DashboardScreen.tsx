@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback } from 'react';
-import { ScrollView, View, AppState, RefreshControl } from 'react-native';
+import { ScrollView, View, AppState, RefreshControl, FlatList, InteractionManager } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, interpolateColor, Easing, FadeInUp } from 'react-native-reanimated';
 import * as Location from 'expo-location';
 import { useAuthStore } from '../../stores/authStore';
@@ -19,25 +19,32 @@ import {
   OngoingWalkInCard,
   UpcomingTasksList,
   StartDayModal,
-  ActivityList,
+  ActivityListHeader,
+  ActivityCardItem,
 } from '../../components/dashboard';
 
 export default function DashboardScreen() {
   const { user } = useAuthStore();
   const navigation = useNavigation<any>();
-  const { isTracking, isTrackingInitialized, startDay, activeSchoolMatch } = useOutreachTracking(user?.id);
+  const { isTracking, isTrackingInitialized, startDay, endDay, activeSchoolMatch } = useOutreachTracking(user?.id);
   const { activities: allActivities, initialize: initCrm, refresh: refreshCrm, isRefreshing: crmRefreshing } = useCrmActivitiesStore();
   const { pendingTasks: appointments, completeTask, initialize: initTasks, refresh: refreshTasks, isRefreshing: tasksRefreshing } = useTasksStore();
 
   useEffect(() => {
-    if (user?.email) initCrm(user.email);
-    if (user?.id) initTasks(user.id);
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (user?.email) initCrm(user.email);
+      if (user?.id) initTasks(user.id);
+    });
+    return () => task.cancel();
   }, [user?.email, user?.id]);
   const { ongoingWalkIn, loadOngoing } = useWalkInStore();
 
   useEffect(() => {
     if (user?.id) {
-      loadOngoing(user.id);
+      const task = InteractionManager.runAfterInteractions(() => {
+        loadOngoing(user.id);
+      });
+      return () => task.cancel();
     }
   }, [user?.id]);
 
@@ -167,47 +174,51 @@ export default function DashboardScreen() {
 
   return (
     <View className="flex-1 bg-white">
-      <ScrollView
+      <FlatList
+        data={filteredActivities}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 12, paddingBottom: 18 }}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} colors={['#E11D48']} tintColor="#E11D48" />
         }
-      >
-        <DashboardDatePicker
-          dates={dates}
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          scrollViewRef={dateScrollViewRef}
-        />
+        ListHeaderComponent={
+          <>
+            <DashboardDatePicker
+              dates={dates}
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              scrollViewRef={dateScrollViewRef}
+            />
 
-        <DailyStatsCard
-          selectedDate={selectedDate}
-          visitCount={filteredActivities.length}
-        />
+            <DailyStatsCard
+              selectedDate={selectedDate}
+              visitCount={filteredActivities.length}
+            />
 
-        <TrackingStatusIndicator isTracking={isTracking} />
+            <TrackingStatusIndicator isTracking={isTracking} onEndDay={endDay} />
 
-  
+            {ongoingWalkIn && (
+              <OngoingWalkInCard
+                walkIn={ongoingWalkIn}
+                onResume={() => navigation.navigate('ActivityForm', {
+                  leadId: ongoingWalkIn.leadId,
+                  leadName: ongoingWalkIn.leadName,
+                  resumeWalkIn: true,
+                  startLocation: ongoingWalkIn.startLocation,
+                  startTime: ongoingWalkIn.startTime,
+                })}
+              />
+            )}
 
-        {ongoingWalkIn && (
-          <OngoingWalkInCard
-            walkIn={ongoingWalkIn}
-            onResume={() => navigation.navigate('ActivityForm', {
-              leadId: ongoingWalkIn.leadId,
-              leadName: ongoingWalkIn.leadName,
-              resumeWalkIn: true,
-              startLocation: ongoingWalkIn.startLocation,
-              startTime: ongoingWalkIn.startTime,
-            })}
-          />
-        )}
-
-        <UpcomingTasksList
-          tasks={appointments}
-          onCompleteTask={completeTask}
-        />
-        <ActivityList activities={filteredActivities} />
-      </ScrollView>
+            <UpcomingTasksList
+              tasks={appointments}
+              onCompleteTask={completeTask}
+            />
+            <ActivityListHeader count={filteredActivities.length} />
+          </>
+        }
+        renderItem={({ item }) => <ActivityCardItem activity={item} />}
+      />
 
       <StartDayModal
         isTrackingInitialized={isTrackingInitialized}

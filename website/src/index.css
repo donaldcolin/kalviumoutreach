@@ -1,7 +1,4 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-@import "tw-animate-css";
-@import "@fontsource-variable/geist";
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -15,57 +12,57 @@
   }
 
   :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.1 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.1 0 0);
+    --background: oklch(0.98 0.002 247); /* slate-50 background */
+    --foreground: oklch(0.13 0.02 247); /* slate-900 */
+    --card: oklch(1 0 0); /* pure white cards */
+    --card-foreground: oklch(0.2 0.02 247); /* slate-800 */
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.1 0 0);
-    --primary: oklch(0.1 0 0);
-    --primary-foreground: oklch(0.98 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.1 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.5 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.1 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --destructive-foreground: oklch(0.98 0 0);
-    --border: oklch(0.92 0 0);
-    --input: oklch(0.92 0 0);
-    --ring: oklch(0.1 0 0);
-    --radius: 0.75rem;
+    --popover-foreground: oklch(0.2 0.02 247);
+    --primary: oklch(0.62 0.22 25); /* Kalvium Red */
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.96 0.01 247); /* slate-100 */
+    --secondary-foreground: oklch(0.2 0.02 247);
+    --muted: oklch(0.96 0.01 247);
+    --muted-foreground: oklch(0.4 0.02 247); /* slate-500 */
+    --accent: oklch(0.96 0.01 247);
+    --accent-foreground: oklch(0.13 0.02 247);
+    --destructive: oklch(0.6 0.2 25);
+    --destructive-foreground: oklch(1 0 0);
+    --border: oklch(0.9 0.01 247); /* slate-200 */
+    --input: oklch(0.9 0.01 247);
+    --ring: oklch(0.62 0.22 25);
+    --radius: 0.75rem; /* 12px unified card radius */
     --sidebar: oklch(1 0 0);
-    --sidebar-foreground: oklch(0.1 0 0);
-    --sidebar-primary: oklch(0.1 0 0);
-    --sidebar-primary-foreground: oklch(0.98 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.1 0 0);
-    --sidebar-border: oklch(0.92 0 0);
-    --sidebar-ring: oklch(0.1 0 0);
+    --sidebar-foreground: oklch(0.13 0.02 247);
+    --sidebar-primary: oklch(0.62 0.22 25);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-accent: oklch(0.96 0.01 247);
+    --sidebar-accent-foreground: oklch(0.13 0.02 247);
+    --sidebar-border: oklch(0.9 0.01 247);
+    --sidebar-ring: oklch(0.62 0.22 25);
   }
 
   /* Disable dark mode by overriding it with the exact same light values */
   .dark {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.1 0 0);
+    --background: oklch(0.98 0.002 247);
+    --foreground: oklch(0.13 0.02 247);
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.1 0 0);
+    --card-foreground: oklch(0.2 0.02 247);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.1 0 0);
-    --primary: oklch(0.1 0 0);
-    --primary-foreground: oklch(0.98 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.1 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.5 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.1 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --destructive-foreground: oklch(0.98 0 0);
-    --border: oklch(0.92 0 0);
-    --input: oklch(0.92 0 0);
-    --ring: oklch(0.1 0 0);
+    --popover-foreground: oklch(0.2 0.02 247);
+    --primary: oklch(0.62 0.22 25);
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.96 0.01 247);
+    --secondary-foreground: oklch(0.2 0.02 247);
+    --muted: oklch(0.96 0.01 247);
+    --muted-foreground: oklch(0.4 0.02 247);
+    --accent: oklch(0.96 0.01 247);
+    --accent-foreground: oklch(0.13 0.02 247);
+    --destructive: oklch(0.6 0.2 25);
+    --destructive-foreground: oklch(1 0 0);
+    --border: oklch(0.9 0.01 247);
+    --input: oklch(0.9 0.01 247);
+    --ring: oklch(0.62 0.22 25);
     --radius: 0.75rem;
   }
 

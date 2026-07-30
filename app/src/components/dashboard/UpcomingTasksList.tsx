@@ -5,9 +5,10 @@ import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import { Heading } from '@/components/ui/heading';
 import { Button, ButtonText } from '@/components/ui/button';
+import type { Task } from '../../types';
 
 export interface UpcomingTasksListProps {
-  tasks: any[];
+  tasks: Task[];
   onCompleteTask: (taskId: string) => void;
 }
 

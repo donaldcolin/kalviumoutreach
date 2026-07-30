@@ -3,6 +3,9 @@
 # dependencies
 node_modules/
 
+# shared package build output
+packages/shared/dist/
+
 # Expo
 .expo/
 dist/

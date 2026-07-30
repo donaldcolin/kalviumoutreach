@@ -52,7 +52,16 @@ export const CustomSelect = ({ label, options, value, onChange, placeholder = "S
   );
 };
 
-export const FormInput = ({ label, value, onChangeText, keyboardType = 'default', placeholder = '', multiline = false }: any) => (
+interface FormInputProps {
+  label: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad';
+  placeholder?: string;
+  multiline?: boolean;
+}
+
+export const FormInput = ({ label, value, onChangeText, keyboardType = 'default', placeholder = '', multiline = false }: FormInputProps) => (
   <VStack space="xs">
     <Text className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-1">{label}</Text>
     <TextInput
@@ -72,7 +81,7 @@ export const CustomDateTimePicker = ({ label, date, setDate }: { label: string, 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
-  const handleDateChange = (event: any, selectedDate?: Date) => {
+  const handleDateChange = (_event: unknown, selectedDate?: Date) => {
     setShowDatePicker(Platform.OS === 'ios');
     if (selectedDate) {
       const currentDate = date || new Date();
@@ -81,7 +90,7 @@ export const CustomDateTimePicker = ({ label, date, setDate }: { label: string, 
     }
   };
 
-  const handleTimeChange = (event: any, selectedDate?: Date) => {
+  const handleTimeChange = (_event: unknown, selectedDate?: Date) => {
     setShowTimePicker(Platform.OS === 'ios');
     if (selectedDate) {
       const currentDate = date || new Date();

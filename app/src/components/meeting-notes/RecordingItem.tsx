@@ -6,11 +6,12 @@ import { Text } from '@/components/ui/text';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Play, Pause, Upload } from 'lucide-react-native';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import type { MeetingRecording } from '../../types';
 
 export interface RecordingItemProps {
-  item: any;
+  item: MeetingRecording;
   index: number;
-  onPushPress: (item: any) => void;
+  onPushPress: (item: MeetingRecording) => void;
 }
 
 export function RecordingItem({ item, index, onPushPress }: RecordingItemProps) {

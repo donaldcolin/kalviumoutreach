@@ -1,3 +1,5 @@
+import type { WalkInExtraData } from '../types';
+
 export interface WalkInFormState {
   typeOfWalkIn: string;
   walkInDateTime: Date | null;
@@ -81,7 +83,7 @@ export function buildWalkInActivityData(form: WalkInFormState) {
   const filteredData = activityData.filter((item) => item.Value && item.Value.trim() !== '');
 
   // Build extra data for local Firestore (timeline display)
-  const extraData: Record<string, any> = {
+  const extraData: Partial<WalkInExtraData> = {
     typeOfWalkIn: form.typeOfWalkIn,
     walkInStatus: form.walkInStatus,
     activityType: 'Walk-in Activity',

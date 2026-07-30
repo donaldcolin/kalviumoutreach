@@ -1,7 +1,7 @@
 import { useEffect, useState,  useRef } from 'react';
 import { MapContainer, TileLayer, Polyline, Marker, Popup, Tooltip, useMap, CircleMarker } from 'react-leaflet';
 
-import { School, Clipboard, Radio, MapPin, Flag } from 'lucide-react';
+import { School, Clipboard, Radio, MapPin, Flag, Route, Navigation } from 'lucide-react';
 
 import { currentLocationIcon, requestIcon, crmIcon, schoolIcon, startIcon, ongoingWalkInIcon } from './map/mapIcons';
 import { readCache, writeCache, snapToRoads } from '../../lib/osrmService';
@@ -38,6 +38,7 @@ export function AssociateMap({
   // Road-snapped route state
   const [snappedRoute, setSnappedRoute] = useState<[number, number][] | null>(null);
   const [snapStatus, setSnapStatus] = useState<'idle' | 'loading' | 'done' | 'failed'>('idle');
+  const [useSnapped, setUseSnapped] = useState(true); // toggle: true = road-snapped, false = raw GPS
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -82,30 +83,61 @@ export function AssociateMap({
     };
   }, [route, routeCacheKey]);
 
+  // Determine which route to display
+  const showSnapped = useSnapped && snappedRoute && snappedRoute.length > 0;
+
   return (
     <div className="flex-1 bg-gray-100 border border-gray-200 shadow-sm relative overflow-hidden group rounded-xl">
 
-      {/* Road Snap Status Badge */}
+      {/* Road Snap Toggle */}
       {route.length > 0 && (
         <div className="absolute top-4 left-4 z-[400]">
-          {snapStatus === 'loading' && (
+          {snapStatus === 'loading' ? (
             <div className="flex items-center gap-2 bg-white/90 backdrop-blur border border-gray-200 text-gray-700 px-3 py-1.5 rounded-xl text-[11px] font-semibold shadow-sm animate-pulse">
               <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />
               Snapping to roads...
             </div>
-          )}
-          {snapStatus === 'done' && (
-            <div className="flex items-center gap-2 bg-white/90 backdrop-blur border border-green-200 text-green-700 px-3 py-1.5 rounded-xl text-[11px] font-semibold shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
-              Road-snapped route
-            </div>
-          )}
-          {snapStatus === 'failed' && (
+          ) : snapStatus === 'done' ? (
+            <button
+              onClick={() => setUseSnapped(prev => !prev)}
+              className={`
+                flex items-center gap-2 backdrop-blur px-3 py-1.5 rounded-xl text-[11px] font-semibold shadow-sm
+                transition-all duration-200 cursor-pointer select-none
+                ${showSnapped
+                  ? 'bg-green-50/90 border border-green-300 text-green-700 hover:bg-green-100/90'
+                  : 'bg-white/90 border border-gray-200 text-gray-600 hover:bg-gray-50/90'
+                }
+              `}
+              title={showSnapped ? 'Click to show raw GPS route' : 'Click to show road-snapped route'}
+            >
+              {showSnapped ? (
+                <>
+                  <Route size={13} className="text-green-600" />
+                  Road-snapped
+                </>
+              ) : (
+                <>
+                  <Navigation size={13} className="text-gray-500" />
+                  Raw GPS
+                </>
+              )}
+              {/* Toggle pill */}
+              <div className={`
+                relative w-7 h-4 rounded-full transition-colors duration-200
+                ${showSnapped ? 'bg-green-500' : 'bg-gray-300'}
+              `}>
+                <div className={`
+                  absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-200
+                  ${showSnapped ? 'translate-x-3.5' : 'translate-x-0.5'}
+                `} />
+              </div>
+            </button>
+          ) : snapStatus === 'failed' ? (
             <div className="flex items-center gap-2 bg-white/90 backdrop-blur border border-amber-200 text-amber-700 px-3 py-1.5 rounded-xl text-[11px] font-semibold shadow-sm">
               <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
-              GPS route (no snap)
+              GPS route (snap failed)
             </div>
-          )}
+          ) : null}
         </div>
       )}
       <MapContainer
@@ -120,8 +152,8 @@ export function AssociateMap({
           attribution='&copy; OpenStreetMap &copy; CARTO'
         />
 
-        {/* Road-snapped route (solid green) — shown when OSRM succeeds */}
-        {snappedRoute && snappedRoute.length > 0 && (
+        {/* Road-snapped route (solid green) — shown when toggle is ON and data is available */}
+        {showSnapped && (
           <Polyline
             positions={snappedRoute}
             color="#16a34a"
@@ -130,8 +162,8 @@ export function AssociateMap({
           />
         )}
 
-        {/* Raw GPS route — shown as fallback if snapping fails or is loading */}
-        {route.length > 0 && !snappedRoute && (
+        {/* Raw GPS route — shown when toggle is OFF, or snapping failed/loading */}
+        {route.length > 0 && !showSnapped && (
           <Polyline
             positions={route}
             color="#ef4444"
@@ -246,3 +278,4 @@ export function AssociateMap({
     </div>
   );
 }
+

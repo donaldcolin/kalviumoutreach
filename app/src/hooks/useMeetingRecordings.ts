@@ -1,13 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import firestore from '@react-native-firebase/firestore';
+import type { MeetingRecording } from '../types';
 
 export interface GroupedRecordings {
   title: string;
-  data: any[];
+  data: MeetingRecording[];
 }
 
 export function useMeetingRecordings(userId: string | undefined) {
-  const [recordings, setRecordings] = useState<any[]>([]);
+  const [recordings, setRecordings] = useState<MeetingRecording[]>([]);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -21,8 +22,8 @@ export function useMeetingRecordings(userId: string | undefined) {
         .limit(50)
         .get();
       
-      const recs: any[] = [];
-      snap.forEach((doc) => recs.push({ id: doc.id, ...doc.data() }));
+      const recs: MeetingRecording[] = [];
+      snap.forEach((doc) => recs.push({ id: doc.id, ...doc.data() } as MeetingRecording));
       setRecordings(recs);
     } catch (err) {
       console.warn('Failed to fetch meeting recordings:', err);

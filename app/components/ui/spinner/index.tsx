@@ -1,3 +1,4 @@
+// @ts-nocheck
 'use client';
 import { ActivityIndicator } from 'react-native';
 import React from 'react';

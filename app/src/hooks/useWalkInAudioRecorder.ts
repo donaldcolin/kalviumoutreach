@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { Toast } from '@/components/ui/ToastManager';
 import { Alert } from 'react-native';
 import {
   useAudioRecorder,
@@ -34,11 +35,11 @@ export function useWalkInAudioRecorder() {
         setRecordingUrl(url);
       } else {
         setRecordingUrl(uri);
-        Alert.alert('Saved Locally', 'Audio will upload automatically when connected to Wi-Fi.');
+        Toast.show({ title: 'Saved Locally', message: 'Audio will upload automatically when connected to Wi-Fi.', type: 'info' });
       }
     } catch (err) {
       console.error('Upload failed:', err);
-      Alert.alert('Upload Failed', 'Could not save the audio note.');
+      Toast.show({ title: 'Upload Failed', message: 'Could not save the audio note.', type: 'error' });
     } finally {
       setIsUploading(false);
     }
@@ -69,7 +70,7 @@ export function useWalkInAudioRecorder() {
         await recorder.prepareToRecordAsync();
         recorder.record();
       } else {
-        Alert.alert('Permission needed', 'Microphone permission is required to save notes.');
+        Toast.show({ title: 'Permission needed', message: 'Microphone permission is required to save notes.', type: 'error' });
       }
     }
   };

@@ -79,82 +79,84 @@ export function AnalyticsTab({ users, globalActivities }: AnalyticsTabProps) {
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-start gap-4">
-            <div className="p-3 bg-gray-50 text-gray-900 rounded-xl">
+          <div className="bg-card p-5 rounded-2xl border border-border shadow-card flex items-start gap-4">
+            <div className="p-3 bg-secondary text-foreground rounded-xl">
               <CalendarCheck size={20} />
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-300" /> Booked
+              <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-1 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" /> Booked
               </p>
-              <p className="text-2xl font-bold text-gray-900">{totals.booked}</p>
+              <p className="text-2xl font-bold text-foreground">{totals.booked}</p>
             </div>
           </div>
-          <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-start gap-4">
-            <div className="p-3 bg-gray-900 text-white rounded-xl">
+          <div className="bg-card p-5 rounded-2xl border border-border shadow-card flex items-start gap-4">
+            <div className="p-3 bg-primary text-primary-foreground rounded-xl">
               <Presentation size={20} />
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-900" /> Conducted
+              <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-1 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary" /> Conducted
               </p>
-              <p className="text-2xl font-bold text-gray-900">{totals.conducted}</p>
+              <p className="text-2xl font-bold text-foreground">{totals.conducted}</p>
             </div>
           </div>
-          <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-start gap-4">
-            <div className="p-3 bg-gray-50 text-gray-900 rounded-xl">
+          <div className="bg-card p-5 rounded-2xl border border-border shadow-card flex items-start gap-4">
+            <div className="p-3 bg-secondary text-foreground rounded-xl">
               <Users size={20} />
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Active</p>
-              <p className="text-2xl font-bold text-gray-900">{totals.activeCount}</p>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Active</p>
+              <p className="text-2xl font-bold text-foreground">{totals.activeCount}</p>
             </div>
           </div>
-          <div className="bg-white p-5 rounded-2xl border border-gray-900 shadow-sm flex items-start gap-4 relative overflow-hidden">
-            <div className="absolute -right-4 -bottom-4 text-gray-50">
+          <div className="bg-foreground p-5 rounded-2xl border border-foreground shadow-card flex items-start gap-4 relative overflow-hidden text-background">
+            <div className="absolute -right-4 -bottom-4 text-background/10">
               <Trophy size={80} />
             </div>
-            <div className="p-3 bg-gray-900 text-white rounded-xl relative z-10">
+            <div className="p-3 bg-background/20 text-background rounded-xl relative z-10">
               <Trophy size={20} />
             </div>
             <div className="relative z-10">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-1">Top Performer</p>
-              <p className="text-lg font-bold text-gray-900 leading-tight">{topPerformer ? topPerformer.name : 'N/A'}</p>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-background/70 mb-1">Top Performer</p>
+              <p className="text-lg font-bold text-background leading-tight">{topPerformer ? topPerformer.name : 'N/A'}</p>
             </div>
           </div>
         </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
         {/* Performance Chart */}
-        <div className="bg-white p-8 border border-gray-100 shadow-sm rounded-2xl">
-          <div className="mb-8 flex items-center justify-between">
+        <div className="bg-card p-8 border border-border shadow-card rounded-2xl flex flex-col h-[500px]">
+          <div className="mb-8 flex items-center justify-between shrink-0">
             <div>
-              <h3 className="text-lg font-bold text-gray-900 tracking-tight">Associate Performance</h3>
-              <p className="text-gray-500 text-sm mt-1">Comparing booked vs. conducted seminars by team member.</p>
+              <h3 className="text-lg font-bold text-foreground tracking-tight">Associate Performance</h3>
+              <p className="text-muted-foreground text-sm mt-1">Comparing booked vs. conducted seminars by team member.</p>
             </div>
           </div>
-          <div className="h-[340px] w-full">
+          <div className="flex-1 w-full min-h-0">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12, fontWeight: 500 }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
+                <BarChart data={chartData} margin={{ top: 0, right: 20, left: 0, bottom: 0 }} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
+                  <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }} />
+                  <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: 'var(--foreground)', fontSize: 12, fontWeight: 600 }} width={80} />
                   <Tooltip 
-                    cursor={{ fill: '#f9fafb' }}
-                    contentStyle={{ borderRadius: '16px', border: '1px solid #f3f4f6', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', fontWeight: 500 }}
+                    cursor={{ fill: 'var(--secondary)' }}
+                    contentStyle={{ borderRadius: '12px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)', fontWeight: 500 }}
                   />
-                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '12px', fontWeight: 500, color: '#6b7280' }} />
-                  <Bar name="Booked" dataKey="booked" fill="#d1d5db" radius={[6, 6, 0, 0]} maxBarSize={40} />
-                  <Bar name="Conducted" dataKey="conducted" fill="#111827" radius={[6, 6, 0, 0]} maxBarSize={40} />
+                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px', fontSize: '12px', fontWeight: 500, color: 'var(--muted-foreground)' }} />
+                  <Bar name="Booked" dataKey="booked" fill="var(--muted-foreground)" radius={[0, 4, 4, 0]} maxBarSize={20} />
+                  <Bar name="Conducted" dataKey="conducted" fill="var(--primary)" radius={[0, 4, 4, 0]} maxBarSize={20} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center">
                 <div className="text-center">
-                  <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3 border border-gray-100">
-                    <Presentation size={20} className="text-gray-300" />
+                  <div className="w-12 h-12 bg-secondary rounded-full flex items-center justify-center mx-auto mb-3 border border-border">
+                    <Presentation size={20} className="text-muted-foreground" />
                   </div>
-                  <p className="text-sm font-medium text-gray-900">No seminar data yet.</p>
+                  <p className="text-sm font-medium text-foreground">No seminar data yet.</p>
                 </div>
               </div>
             )}
@@ -162,62 +164,56 @@ export function AnalyticsTab({ users, globalActivities }: AnalyticsTabProps) {
         </div>
 
         {/* Leaderboard Table */}
-        <div className="bg-white border border-gray-100 shadow-sm rounded-2xl overflow-hidden">
-          <div className="p-8 pb-6 border-b border-gray-100 flex items-center justify-between">
+        <div className="bg-card border border-border shadow-card rounded-2xl overflow-hidden flex flex-col h-[500px]">
+          <div className="p-8 pb-6 border-b border-border flex items-center justify-between shrink-0">
             <div>
-              <h3 className="text-lg font-bold text-gray-900 tracking-tight">Leaderboard</h3>
-              <p className="text-gray-500 text-sm mt-1">Ranked by total seminars booked and conducted.</p>
+              <h3 className="text-lg font-bold text-foreground tracking-tight">Leaderboard</h3>
+              <p className="text-muted-foreground text-sm mt-1">Ranked by total seminars booked and conducted.</p>
             </div>
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-y-auto flex-1 custom-scrollbar">
             <table className="w-full text-sm text-left">
-              <thead className="text-[11px] uppercase tracking-widest text-gray-400 bg-gray-50/50">
+              <thead className="text-[11px] uppercase tracking-widest text-muted-foreground bg-secondary/50 sticky top-0 z-10 backdrop-blur-sm">
                 <tr>
-                  <th className="px-8 py-4 font-bold w-24">Rank</th>
-                  <th className="px-8 py-4 font-bold">Associate</th>
-                  <th className="px-8 py-4 font-bold text-center">Booked</th>
-                  <th className="px-8 py-4 font-bold text-center">Conducted</th>
-                  <th className="px-8 py-4 font-bold text-right w-1/4">Performance</th>
+                  <th className="px-6 py-4 font-bold w-16 text-center">Rank</th>
+                  <th className="px-6 py-4 font-bold">Associate</th>
+                  <th className="px-6 py-4 font-bold text-center">Score</th>
+                  <th className="px-6 py-4 font-bold text-right">Performance</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-border">
                 {chartData.map((row, idx) => {
                   const maxScore = topPerformer ? topPerformer.score : 1;
                   const percent = Math.max(5, (row.score / maxScore) * 100);
                   
                   return (
-                    <tr key={row.name} className="hover:bg-gray-50/50 transition-colors group">
-                      <td className="px-8 py-5">
+                    <tr key={row.name} className="hover:bg-secondary/30 transition-colors group">
+                      <td className="px-6 py-4 text-center">
                         {idx === 0 ? (
-                          <div className="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center font-bold shadow-sm">
-                            <Trophy size={14} />
+                          <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold shadow-sm mx-auto">
+                            <Trophy size={12} />
                           </div>
                         ) : (
-                          <div className="w-8 h-8 rounded-full bg-white text-gray-400 border border-gray-200 flex items-center justify-center font-bold">
+                          <div className="w-7 h-7 rounded-full bg-secondary text-muted-foreground border border-border flex items-center justify-center font-bold text-xs mx-auto">
                             #{idx + 1}
                           </div>
                         )}
                       </td>
-                      <td className="px-8 py-5 font-semibold text-gray-900 flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center text-gray-900 text-xs font-bold border border-gray-200 group-hover:border-gray-300 shadow-sm transition-colors">
+                      <td className="px-6 py-4 font-semibold text-foreground flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center text-foreground text-[10px] font-bold border border-border group-hover:border-primary/50 transition-colors shrink-0">
                           {row.name.substring(0, 2).toUpperCase()}
                         </div>
-                        {row.name}
+                        <span className="truncate">{row.name}</span>
                       </td>
-                      <td className="px-8 py-5 text-center">
-                        <span className="font-semibold text-gray-500">
-                          {row.booked}
+                      <td className="px-6 py-4 text-center">
+                        <span className="font-bold text-foreground">
+                          {row.score}
                         </span>
                       </td>
-                      <td className="px-8 py-5 text-center">
-                        <span className="font-bold text-gray-900">
-                          {row.conducted}
-                        </span>
-                      </td>
-                      <td className="px-8 py-5">
+                      <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-3">
-                          <div className="h-1.5 w-full max-w-[120px] bg-gray-100 rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full ${idx === 0 ? 'bg-gray-900' : 'bg-gray-400'}`} style={{ width: `${percent}%` }} />
+                          <div className="h-1.5 w-full max-w-[80px] bg-secondary rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${idx === 0 ? 'bg-primary' : 'bg-muted-foreground'}`} style={{ width: `${percent}%` }} />
                           </div>
                         </div>
                       </td>
@@ -226,12 +222,14 @@ export function AnalyticsTab({ users, globalActivities }: AnalyticsTabProps) {
                 })}
                 {chartData.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-gray-400 font-medium">No seminars recorded in this period.</td>
+                    <td colSpan={4} className="py-12 text-center text-muted-foreground font-medium">No seminars recorded in this period.</td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
+        </div>
+
         </div>
 
       </div>

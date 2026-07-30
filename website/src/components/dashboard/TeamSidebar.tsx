@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { Search, ChevronRight, RefreshCw, Users, Check, ChevronsUpDown } from 'lucide-react';
 import { Input } from '../ui/input';
 import { Avatar, AvatarFallback } from '../ui/avatar';
@@ -13,7 +13,7 @@ interface TeamSidebarProps {
   setSelectedAssociate: (user: User) => void;
   handleSyncLSQ: () => void;
   ongoingWalkIns?: Record<string, any>;
-  teamTrackingStatus?: Record<string, 'active' | 'ended'>;
+  teamTrackingStatus?: Record<string, 'active' | 'ended' | 'stale'>;
   managers: User[];
   selectedManagerId: string;
   setSelectedManagerId: (val: string) => void;
@@ -46,6 +46,22 @@ export function TeamSidebar({
       setIsHovered(false);
     }, 1000);
   };
+
+  const groupedUsers = useMemo(() => {
+    const executives = filteredUsers.filter(u => u.role === 'executive');
+    const grouped: Record<string, User[]> = {};
+    executives.forEach(u => {
+      const managerName = managers.find(m => m.id === u.managerId)?.name || 'Unassigned';
+      if (!grouped[managerName]) grouped[managerName] = [];
+      grouped[managerName].push(u);
+    });
+    
+    // Sort keys so they are alphabetical
+    return Object.keys(grouped).sort().reduce((acc, key) => {
+      acc[key] = grouped[key];
+      return acc;
+    }, {} as Record<string, User[]>);
+  }, [filteredUsers, managers]);
 
   return (
     <div
@@ -126,43 +142,53 @@ export function TeamSidebar({
 
       <div className="flex-1 overflow-y-auto min-h-0 p-2">
         <div className="flex flex-col gap-1">
-          {filteredUsers.filter(u => u.role === 'executive').map(u => {
-            const hasWalkIn = ongoingWalkIns[u.id];
-            const trackStatus = teamTrackingStatus[u.id];
-            const isSelected = selectedAssociate?.id === u.id;
+          {Object.entries(groupedUsers).map(([region, users]) => (
+            <div key={region} className="flex flex-col gap-1 mb-2">
+              <div className={`px-2 mb-1 mt-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 transition-opacity duration-300 ${isHovered ? 'block opacity-100' : 'hidden opacity-0'}`}>
+                {region}
+              </div>
+              {users.map(u => {
+                const hasWalkIn = ongoingWalkIns[u.id];
+                const trackStatus = teamTrackingStatus[u.id];
+                const isSelected = selectedAssociate?.id === u.id;
 
-            return (
-              <div
-                key={u.id}
-                onClick={() => setSelectedAssociate(u)}
-                className={`flex items-center gap-3 p-2 cursor-pointer transition-colors duration-200 rounded-xl border ${isSelected
-                    ? 'bg-red-50 border-red-200 text-red-900'
-                    : 'bg-white border-transparent hover:bg-gray-50 text-gray-900'
-                  }`}
-              >
-                <div className={`relative shrink-0 flex items-center justify-center w-10 h-10 transition-all ${isHovered ? 'mx-0' : 'mx-auto'}`}>
-                  <Avatar className="w-10 h-10 border border-gray-200">
-                    <AvatarFallback className={`${isSelected ? 'bg-red-100 text-red-700 font-bold' : 'bg-gray-100 text-gray-600 font-bold'}`}>
-                      {u.name.substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  {hasWalkIn && (
-                    <div className="absolute -bottom-1 -right-1 flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500 border-2 border-white"></span>
+                return (
+                  <div
+                    key={u.id}
+                    onClick={() => setSelectedAssociate(u)}
+                    className={`flex items-center gap-3 p-2 cursor-pointer transition-colors duration-200 rounded-xl border ${isSelected
+                        ? 'bg-red-50 border-red-200 text-red-900'
+                        : 'bg-white border-transparent hover:bg-gray-50 text-gray-900'
+                      }`}
+                  >
+                    <div className={`relative shrink-0 flex items-center justify-center w-10 h-10 transition-all ${isHovered ? 'mx-0' : 'mx-auto'}`}>
+                      <Avatar className="w-10 h-10 border border-gray-200">
+                        <AvatarFallback className={`${isSelected ? 'bg-red-100 text-red-700 font-bold' : 'bg-gray-100 text-gray-600 font-bold'}`}>
+                          {u.name.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      
+                      {/* Tracking Status Dot */}
+                      <div className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 z-10">
+                        {trackStatus === 'active' && <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-green-500 border-2 border-white" title="Tracking Active"></span>}
+                        {trackStatus === 'stale' && <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-yellow-500 border-2 border-white" title="Session Stale (App Closed)"></span>}
+                        {(!trackStatus || trackStatus === 'ended') && <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-gray-400 border-2 border-white" title="Tracking Ended / Not Started"></span>}
+                      </div>
+
+                      {hasWalkIn && (
+                        <div className="absolute -bottom-1 -right-1 flex h-3.5 w-3.5 z-10" title="In Walk-in">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-blue-500 border-2 border-white"></span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
 
-                <div className={`flex-1 min-w-0 transition-opacity duration-300 ${isHovered ? 'block opacity-100' : 'hidden opacity-0'}`}>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold tracking-tight truncate flex items-center gap-2">
-                      {u.name}
-                    </p>
-                    {trackStatus === 'active' && <span className="h-2 w-2 rounded-full bg-green-500 shrink-0" title="Tracking Active" />}
-                    {trackStatus === 'ended' && <span className="h-2 w-2 rounded-full bg-gray-300 shrink-0" title="Tracking Ended" />}
-                    {!trackStatus && <span className="h-2 w-2 rounded-full bg-gray-200 shrink-0" title="Not Started" />}
-                  </div>
+                    <div className={`flex-1 min-w-0 transition-opacity duration-300 ${isHovered ? 'block opacity-100' : 'hidden opacity-0'}`}>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold tracking-tight truncate flex items-center gap-2">
+                          {u.name}
+                        </p>
+                      </div>
                   {hasWalkIn ? (
                     <p className="text-xs text-green-600 font-medium truncate mt-0.5">
                       📍 {hasWalkIn.schoolName || 'In Walk-in'}
@@ -174,12 +200,14 @@ export function TeamSidebar({
                   )}
                 </div>
 
-                <div className={`shrink-0 transition-opacity duration-300 ${isHovered ? 'block opacity-100' : 'hidden opacity-0'}`}>
-                  {isSelected && <ChevronRight size={16} className="text-red-400 mr-1" />}
-                </div>
-              </div>
-            );
-          })}
+                    <div className={`shrink-0 transition-opacity duration-300 ${isHovered ? 'block opacity-100' : 'hidden opacity-0'}`}>
+                      {isSelected && <ChevronRight size={16} className="text-red-400 mr-1" />}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
           {filteredUsers.length === 0 && (
             <div className={`flex-col items-center justify-center h-40 text-gray-400 ${isHovered ? 'flex' : 'hidden'}`}>
               <Search size={20} className="mb-2 opacity-20" />

@@ -1,15 +1,8 @@
 import { create } from 'zustand';
+import { Toast } from '@/components/ui/ToastManager';
 import firestore from '@react-native-firebase/firestore';
 import { Alert } from 'react-native';
-
-export interface Task {
-  id: string;
-  executiveId: string;
-  status: 'pending' | 'completed';
-  date?: string;
-  completedAt?: any;
-  [key: string]: any;
-}
+import type { Task } from '../types';
 
 interface TasksState {
   pendingTasks: Task[];
@@ -107,7 +100,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
       await get().refresh();
     } catch (err) {
       console.error('Failed to complete task', err);
-      Alert.alert('Error', 'Failed to complete task. Please try again.');
+      Toast.show({ title: 'Error', message: 'Failed to complete task. Please try again.', type: 'error' });
     }
   },
 }));

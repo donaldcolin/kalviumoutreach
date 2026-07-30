@@ -1,13 +1,6 @@
 import { create } from 'zustand';
 import firestore from '@react-native-firebase/firestore';
-
-export interface CrmActivity {
-  id: string;
-  executiveEmail?: string;
-  walkInDateTime?: string;
-  lsqCreatedOn?: string;
-  [key: string]: any;
-}
+import type { CrmActivity } from '../types';
 
 interface CrmActivitiesState {
   activities: CrmActivity[];

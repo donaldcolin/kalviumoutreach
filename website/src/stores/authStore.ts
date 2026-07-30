@@ -3,19 +3,8 @@ import { auth, secondaryAuth, db } from '../firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, onSnapshot } from 'firebase/firestore';
 
-export type UserRole = 'executive' | 'teamLead' | 'regionalManager' | 'admin';
-
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  role: UserRole;
-  employeeId?: string;
-  regionId: string;
-  managerId?: string;
-  active: boolean;
-}
+import type { User, UserRole } from '@kalvium-outreach/shared';
+export type { User, UserRole };
 
 interface AuthState {
   users: Record<string, User>;

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { collection, query, orderBy, onSnapshot, limit, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuthStore } from '../stores/authStore';
@@ -22,6 +22,7 @@ export default function DevLogs() {
   const [filterLevel, setFilterLevel] = useState<string>('all');
   const [filterUser, setFilterUser] = useState<string>('all');
   const [logLimit, setLogLimit] = useState<number>(50);
+  const [isCompact, setIsCompact] = useState<boolean>(true);
   
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -76,6 +77,29 @@ export default function DevLogs() {
     return true;
   });
 
+  const groupedLogs = useMemo(() => {
+    const result: (SystemLog & { count: number })[] = [];
+    let currentGroup: (SystemLog & { count: number }) | null = null;
+
+    for (const log of filteredLogs) {
+      if (
+        currentGroup &&
+        currentGroup.message === log.message &&
+        currentGroup.level === log.level &&
+        currentGroup.associateId === log.associateId
+      ) {
+        currentGroup.count += 1;
+        currentGroup.timestamp = log.timestamp;
+        currentGroup.metadata = log.metadata;
+      } else {
+        if (currentGroup) result.push(currentGroup);
+        currentGroup = { ...log, count: 1 };
+      }
+    }
+    if (currentGroup) result.push(currentGroup);
+    return result;
+  }, [filteredLogs]);
+
   const getLevelColor = (level: string) => {
     switch (level) {
       case 'error': return 'text-red-500';
@@ -85,7 +109,7 @@ export default function DevLogs() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-48px)] bg-slate-950 text-slate-300 rounded-xl overflow-hidden font-mono text-sm border border-slate-800  relative animate-in fade-in duration-500">
+    <div className="flex flex-col h-[calc(100vh-48px)] bg-slate-950 text-slate-300 rounded-xl overflow-hidden text-sm border border-slate-800 relative animate-in fade-in duration-500">
       
       {/* Header */}
       <div className="flex items-center justify-between p-4 bg-slate-900 border-b border-slate-800 shrink-0">
@@ -105,7 +129,7 @@ export default function DevLogs() {
             <select 
               value={filterLevel}
               onChange={(e) => setFilterLevel(e.target.value)}
-              className="bg-transparent text-slate-300 border-none outline-none text-xs cursor-pointer"
+              className="bg-transparent text-slate-300 border-none outline-none text-xs cursor-pointer font-sans"
             >
               <option value="all">All Levels</option>
               <option value="info">Info</option>
@@ -119,7 +143,7 @@ export default function DevLogs() {
             <select 
               value={filterUser}
               onChange={(e) => setFilterUser(e.target.value)}
-              className="bg-transparent text-slate-300 border-none outline-none text-xs cursor-pointer max-w-[150px] truncate"
+              className="bg-transparent text-slate-300 border-none outline-none text-xs cursor-pointer max-w-[150px] truncate font-sans"
             >
               <option value="all">All Associates</option>
               {Object.values(users).map(u => (
@@ -128,10 +152,17 @@ export default function DevLogs() {
             </select>
           </div>
 
+          <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 border-r border-slate-800">
+            <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-400 font-sans">
+              <input type="checkbox" checked={isCompact} onChange={(e) => setIsCompact(e.target.checked)} className="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500" />
+              Compact
+            </label>
+          </div>
+
           <button 
             onClick={handleClearLogs}
             disabled={isClearing}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white rounded-md px-4 py-2 shadow-sm font-medium transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 bg-red-900/30 hover:bg-red-900/50 text-red-400 border border-red-900/50 rounded-md px-3 py-1.5 shadow-sm font-medium transition-colors disabled:opacity-50 text-xs font-sans"
           >
             <Trash2 className="w-4 h-4" />
             {isClearing ? 'Clearing...' : 'Clear Logs'}
@@ -140,7 +171,7 @@ export default function DevLogs() {
       </div>
 
       {/* Log Terminal */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2 relative">
+      <div className={`flex-1 overflow-y-auto p-4 relative font-mono ${isCompact ? 'space-y-0.5 text-[11px]' : 'space-y-2 text-sm'}`}>
         {logs.length >= logLimit && (
           <div className="flex justify-center mb-4">
             <button 
@@ -152,26 +183,31 @@ export default function DevLogs() {
           </div>
         )}
         
-        {filteredLogs.length === 0 ? (
-          <div className="absolute inset-0 flex items-center justify-center text-slate-600 italic">
+        {groupedLogs.length === 0 ? (
+          <div className="absolute inset-0 flex items-center justify-center text-slate-600 italic font-sans">
             Waiting for logs...
           </div>
         ) : (
-          filteredLogs.map((log) => {
+          groupedLogs.map((log) => {
             const date = log.timestamp?.toDate ? log.timestamp.toDate() : new Date();
             const timeStr = format(date, 'HH:mm:ss.SSS');
             const userName = users[log.associateId]?.name || log.associateId.substring(0, 8);
             
             return (
-              <div key={log.id} className="flex gap-4 hover:bg-slate-900/50 p-1.5 rounded px-2 transition-colors">
-                <span className="text-slate-600 shrink-0 w-[100px]">{timeStr}</span>
-                <span className={`shrink-0 w-[50px] font-bold uppercase ${getLevelColor(log.level)}`}>
+              <div key={log.id} className={`flex gap-4 hover:bg-slate-900/50 rounded transition-colors ${isCompact ? 'p-1' : 'p-1.5 px-2'}`}>
+                <span className={`text-slate-600 shrink-0 ${isCompact ? 'w-[85px]' : 'w-[100px]'}`}>{timeStr}</span>
+                <span className={`shrink-0 ${isCompact ? 'w-[40px]' : 'w-[50px]'} font-bold uppercase ${getLevelColor(log.level)}`}>
                   {log.level}
                 </span>
-                <span className="text-slate-400 shrink-0 w-[120px] truncate" title={userName}>
+                <span className={`text-slate-400 shrink-0 ${isCompact ? 'w-[100px]' : 'w-[120px]'} truncate`} title={userName}>
                   [{userName}]
                 </span>
-                <span className="text-slate-200">
+                <span className="text-slate-200 flex-1">
+                  {log.count > 1 && (
+                    <span className="inline-block bg-slate-800 text-slate-400 rounded px-1.5 py-0.5 mr-2 text-[10px] font-bold">
+                      {log.count}x
+                    </span>
+                  )}
                   {log.message}
                   {log.metadata && (
                     <span className="ml-2 text-slate-500 truncate block sm:inline-block max-w-xl">

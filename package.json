@@ -1,0 +1,16 @@
+{
+  "name": "kalvium-outreach",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "app",
+    "website",
+    "webhook-server"
+  ],
+  "scripts": {
+    "build:shared": "npm run build -w packages/shared",
+    "dev:website": "npm run dev -w website",
+    "dev:app": "npm run start -w app",
+    "typecheck": "npm run build:shared && cd app && npx tsc --noEmit && cd ../website && npx tsc -b"
+  }
+}

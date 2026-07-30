@@ -90,24 +90,37 @@ export async function appendPing(
   const docId = trackDocId(executiveId, date);
   const ref = dailyTracksRef().doc(docId);
 
+  // Use a batch so all writes succeed or fail together
+  const batch = firestore().batch();
+
   // Ensure the parent dailyTrack doc exists
-  await ref.set(
-    {
-      userId: executiveId,
-      date,
-      lastPing: firestore.FieldValue.serverTimestamp(),
-    },
-    { merge: true }
-  );
+  batch.set(ref, {
+    userId: executiveId,
+    date,
+    lastPing: firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
 
   // Write the ping as a subcollection doc (keyed by timestamp) so the website can read it
-  await ref.collection('locations').doc(ping.timestamp.toString()).set({
+  batch.set(ref.collection('locations').doc(ping.timestamp.toString()), {
     lat: ping.lat,
     lng: ping.lng,
     ts: ping.timestamp,
     speed: null,
     accuracy: ping.accuracy,
   });
+
+  // Also update the user's lastKnownLocation so the dashboard stays fresh
+  // even when only the headless background fetch is running
+  batch.update(firestore().collection('users').doc(executiveId), {
+    lastKnownLocation: {
+      lat: ping.lat,
+      lng: ping.lng,
+      ts: ping.timestamp,
+      updatedAt: firestore.FieldValue.serverTimestamp(),
+    },
+  });
+
+  await batch.commit();
 }
 
 

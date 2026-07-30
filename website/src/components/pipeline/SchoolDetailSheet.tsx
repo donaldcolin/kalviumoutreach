@@ -12,7 +12,7 @@ interface SchoolDetailSheetProps {
 export function SchoolDetailSheet({ selectedSchool, setSelectedSchool, schoolActivities }: SchoolDetailSheetProps) {
   return (
     <Sheet open={!!selectedSchool} onOpenChange={(open) => !open && setSelectedSchool(null)}>
-      <SheetContent side="right" className="w-[400px] sm:w-[540px] p-0 flex flex-col border-l-0 shadow-2xl bg-white [&>button]:top-6 [&>button]:right-6 sm:max-w-none">
+      <SheetContent side="right" className="w-[400px] sm:w-[540px] p-0 flex flex-col border-l-0 shadow-2xl bg-white [&>button]:top-6 [&>button]:right-6 [&>button]:z-50 sm:max-w-none">
         {selectedSchool && (
           <>
             {/* Header */}
@@ -109,7 +109,7 @@ export function SchoolDetailSheet({ selectedSchool, setSelectedSchool, schoolAct
                             </span>
                             {act.walkInStatus && (
                               <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider ${stageIdx >= 0 ? STAGES[stageIdx].lightColor : 'bg-gray-50 border border-gray-100'} ${stageIdx >= 0 ? STAGES[stageIdx].textColor : 'text-gray-500'}`}>
-                                {STAGES[stageIdx]?.short || act.walkInStatus}
+                                {STAGES[stageIdx]?.label || act.walkInStatus.replace(/\s*-\s*[A-Z]+$/, '')}
                               </span>
                             )}
                           </div>

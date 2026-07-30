@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Modal, TouchableOpacity, ActivityIndicator } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { View, Modal, TouchableOpacity, ActivityIndicator, ViewStyle } from 'react-native';
+import Animated, { FadeIn, FadeOut, AnimatedStyle } from 'react-native-reanimated';
 import { MapPin } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 
@@ -9,7 +9,7 @@ export interface StartDayModalProps {
   isTracking: boolean;
   isStarting: boolean;
   startCoords: { lat: number; lng: number } | null;
-  animatedButtonStyle: any;
+  animatedButtonStyle: AnimatedStyle<ViewStyle>;
   onStartDay: () => void;
 }
 

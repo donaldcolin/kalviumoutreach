@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, FlatList, TouchableOpacity, ActivityIndicator, TextInput, Alert } from 'react-native';
+import { View, FlatList, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native';
+import { Toast } from '@/components/ui/ToastManager';
 import { Box } from '@/components/ui/box';
 import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
@@ -9,6 +10,7 @@ import { useNavigation } from '@react-navigation/native';
 import firestore from '@react-native-firebase/firestore';
 import { useLeadSearch } from '../../hooks/useLeadSearch';
 import { LeadCard } from '../../components/leads/LeadCard';
+import type { Lead } from '../../types';
 
 type TabMode = 'my' | 'global';
 type AccessStatus = 'none' | 'pending' | 'approved';
@@ -71,7 +73,11 @@ export default function LeadsScreen() {
 
 
 
-  const requestAccess = async (lead: any) => {
+  const handleLeadPress = React.useCallback((leadId: string, leadName: string) => {
+    navigation.navigate('LeadDetail', { leadId, leadName });
+  }, [navigation]);
+
+  const requestAccess = async (lead: Lead) => {
     if (!user?.id || !user?.email || !user?.name) return;
     const leadId = lead.ProspectID;
     const leadName = `${lead.FirstName || ''} ${lead.LastName || ''}`.trim();
@@ -79,7 +85,7 @@ export default function LeadsScreen() {
 
     // Don't request if already pending/approved
     if (accessRequests[leadId]) {
-      Alert.alert('Already Requested', `Your request for "${leadName}" is ${accessRequests[leadId].status}.`);
+      Toast.show({ title: 'Already Requested', message: `Your request for "${leadName}" is ${accessRequests[leadId].status}.`, type: 'info' });
       return;
     }
 
@@ -97,7 +103,7 @@ export default function LeadsScreen() {
       });
     } catch (err) {
       console.error('Failed to request access:', err);
-      Alert.alert('Error', 'Failed to send access request. Please try again.');
+      Toast.show({ title: 'Error', message: 'Failed to send access request. Please try again.', type: 'error' });
     } finally {
       setRequestingAccess(null);
     }
@@ -118,7 +124,7 @@ export default function LeadsScreen() {
   );
 
   // Check if a lead from global results is the user's own
-  const isOwnLead = (lead: any) => {
+  const isOwnLead = (lead: Lead) => {
     return (lead.OwnerIdEmailAddress || '').toLowerCase() === (user?.email || '').toLowerCase();
   };
 
@@ -191,7 +197,7 @@ export default function LeadsScreen() {
                 <LeadCard
                   item={item}
                   type="my"
-                  onPress={(leadId, leadName) => navigation.navigate('LeadDetail', { leadId, leadName })}
+                  onPress={handleLeadPress}
                 />
               )}
             />
@@ -262,7 +268,7 @@ export default function LeadsScreen() {
                   accessStatus={getAccessStatus(item.ProspectID)}
                   requestingAccess={requestingAccess === item.ProspectID}
                   onRequestAccess={requestAccess}
-                  onPress={(leadId, leadName) => navigation.navigate('LeadDetail', { leadId, leadName })}
+                  onPress={handleLeadPress}
                 />
               )}
             />

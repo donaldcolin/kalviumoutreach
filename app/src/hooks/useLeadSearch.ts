@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { Lead } from '../types';
 
 const API_BASE = 'https://us-central1-kalvium-outreach-53f54.cloudfunctions.net/api';
 const PAGE_SIZE = 20;
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 export function useLeadSearch(userEmail?: string) {
-  const [leads, setLeads] = useState<any[]>([]);
-  const [globalResults, setGlobalResults] = useState<any[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [globalResults, setGlobalResults] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [globalLoading, setGlobalLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);

@@ -3,6 +3,7 @@ import firestore from '@react-native-firebase/firestore';
 import * as Crypto from 'expo-crypto';
 import { logger } from '../utils/logger';
 import { enqueueWalkInAudio } from '../services/audioUploadQueue';
+import type { LsqActivityField, WalkInExtraData } from '../types';
 
 export function useWalkInSync(userId?: string, executiveEmail?: string) {
   const [isSyncing, setIsSyncing] = useState(false);
@@ -10,14 +11,14 @@ export function useWalkInSync(userId?: string, executiveEmail?: string) {
   const startWalkIn = async (
     schoolId: string,
     schoolName: string,
-    activityData?: any[],
+    activityData?: LsqActivityField[],
     locationPayload?: {
       startLocation: { lat: number; lng: number } | null;
       endLocation: { lat: number; lng: number } | null;
       distanceMeters: number | null;
       isValidWalkIn: boolean | null;
     },
-    extraData?: Record<string, any>,
+    extraData?: Partial<WalkInExtraData>,
     storageUrl?: string | null
   ) => {
     if (!userId || !executiveEmail) return null;
@@ -91,7 +92,7 @@ export function useWalkInSync(userId?: string, executiveEmail?: string) {
     }
   };
 
-  const endWalkIn = async (activityId: string, additionalNotes: string = '', activityData?: any[], storageUrl?: string | null) => {
+  const endWalkIn = async (activityId: string, additionalNotes: string = '', activityData?: LsqActivityField[], storageUrl?: string | null) => {
     if (!userId) return false;
     setIsSyncing(true);
 

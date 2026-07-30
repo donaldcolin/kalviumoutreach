@@ -4,26 +4,13 @@
  * Initializes Firebase, navigation, auth state, sync manager,
  * and orphaned recording detection.
  */
-// Suppress RNFB v22 deprecation spam from Metro terminal output.
-// MUST be before any imports so it catches warnings during module init.
-const _origWarn = console.warn;
-console.warn = (...args: any[]) => {
-  if (typeof args[0] === 'string' && (
-    args[0].includes('React Native Firebase namespaced API') ||
-    args[0].includes('expo-background-fetch')
-  )) return;
-  _origWarn(...args);
-};
-
+import './src/utils/setupLogging';
 import React, { useEffect, useState } from 'react';
-import { StatusBar, LogBox, View } from 'react-native';
+import { StatusBar, View } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring } from 'react-native-reanimated';
+import { configureLogging } from './src/utils/setupLogging';
 
-LogBox.ignoreLogs([
-  'This method is deprecated (as well as all React Native Firebase namespaced API)',
-  'expo-background-fetch: This library is deprecated',
-  'Require cycle',
-]);
+configureLogging();
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -44,20 +31,17 @@ import messaging from '@react-native-firebase/messaging';
 import * as Location from 'expo-location';
 import firestore from '@react-native-firebase/firestore';
 import { format } from 'date-fns';
-import { appendPing } from './src/tracking/firestoreSync';
+import { firestoreSync } from './src/tracking/firestoreSync';
 import type { LocationPing } from './src/types';
 
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import { VStack } from '@/components/ui/vstack';
 import { Spinner } from '@/components/ui/spinner';
+import { ToastManager } from '@/components/ui/ToastManager';
+// @ts-ignore
 import '@/global.css';
 
-import * as Sentry from '@sentry/react-native';
 
-Sentry.init({
-  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN || "",
-  tracesSampleRate: 1.0,
-});
 
 function App() {
   const initialize = useAuthStore(s => s.initialize);
@@ -92,10 +76,15 @@ function App() {
       console.log('Message handled in the foreground!', remoteMessage);
       if (remoteMessage.data?.type === 'LOCATION_PING_REQUEST') {
         try {
-          const userId = remoteMessage.data.userId;
-          const requestId = remoteMessage.data.requestId;
+          const userId = remoteMessage.data.userId as string;
+          const requestId = remoteMessage.data.requestId as string;
           
           if (!userId) return;
+
+          const servicesEnabled = await Location.hasServicesEnabledAsync();
+          if (!servicesEnabled) {
+            throw new Error('Location services are disabled');
+          }
 
           const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
           const ping: LocationPing = {
@@ -105,15 +94,21 @@ function App() {
             accuracy: loc.coords.accuracy ?? 0,
           };
           
-          const dateStr = format(new Date(), 'yyyy-MM-dd');
-          await appendPing(userId, dateStr, ping);
+          const dateStr = format(new Date(), 'yyyyMMdd');
+          await firestoreSync.appendHeadlessLocations(userId, dateStr, [{
+            lat: ping.lat,
+            lng: ping.lng,
+            ts: ping.timestamp,
+            speed: null,
+            accuracy: ping.accuracy,
+          }]);
           
           if (requestId) {
             await firestore().collection('locationRequests').doc(requestId).update({ status: 'fulfilled' });
           }
         } catch (e) {
           console.warn('Failed foreground location fetch from FCM:', e);
-          const requestId = remoteMessage.data?.requestId;
+          const requestId = remoteMessage.data?.requestId as string | undefined;
           if (requestId) {
             await firestore().collection('locationRequests').doc(requestId).update({ status: 'failed' });
           }
@@ -184,6 +179,7 @@ function App() {
           >
             <StatusBar barStyle="dark-content" backgroundColor="#FAF8F5" />
             <RootNavigator />
+            <ToastManager />
           </NavigationContainer>
         </SafeAreaProvider>
       </GestureHandlerRootView>
@@ -191,4 +187,4 @@ function App() {
   );
 }
 
-export default Sentry.wrap(App);
+export default App;

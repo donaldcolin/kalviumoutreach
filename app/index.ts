@@ -4,7 +4,7 @@ import messaging from '@react-native-firebase/messaging';
 import * as Location from 'expo-location';
 import firestore from '@react-native-firebase/firestore';
 import { format } from 'date-fns';
-import { appendPing } from './src/tracking/firestoreSync';
+import { firestoreSync } from './src/tracking/firestoreSync';
 import type { LocationPing } from './src/types';
 
 import App from './App';
@@ -27,16 +27,16 @@ messaging().setBackgroundMessageHandler(async remoteMessage => {
       };
       
       const dateStr = format(new Date(), 'yyyy-MM-dd');
-      await appendPing(userId, dateStr, ping);
+      await firestoreSync.appendHeadlessLocations(userId as string, dateStr, [ping as any]);
       
       if (requestId) {
-        await firestore().collection('locationRequests').doc(requestId).update({ status: 'fulfilled' });
+        await firestore().collection('locationRequests').doc(requestId as string).update({ status: 'fulfilled' });
       }
     } catch (e) {
       console.warn('Failed background location fetch from FCM:', e);
       const requestId = remoteMessage.data?.requestId;
       if (requestId) {
-        await firestore().collection('locationRequests').doc(requestId).update({ status: 'failed' });
+        await firestore().collection('locationRequests').doc(requestId as string).update({ status: 'failed' });
       }
     }
   }

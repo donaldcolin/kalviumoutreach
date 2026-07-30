@@ -1,12 +1,14 @@
 import { useState } from 'react';
+import { Toast } from '@/components/ui/ToastManager';
 import { Alert } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
+import type { MeetingRecording, CrmActivity } from '../types';
 
 export function usePushToLs(userId: string | undefined) {
-  const [mappingItem, setMappingItem] = useState<any | null>(null);
+  const [mappingItem, setMappingItem] = useState<MeetingRecording | null>(null);
   const [isPushing, setIsPushing] = useState(false);
 
-  const handlePushToLS = async (activity: any) => {
+  const handlePushToLS = async (activity: CrmActivity) => {
     if (!mappingItem || !userId) return;
     setIsPushing(true);
     try {
@@ -27,11 +29,12 @@ export function usePushToLs(userId: string | undefined) {
         mappedSchoolName: activity.schoolName || '',
       });
 
-      Alert.alert('Success', 'Recording queued for push to LeadSquared!');
+      Toast.show({ title: 'Success', message: 'Recording queued for push to LeadSquared!', type: 'success' });
       setMappingItem(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
       console.error(err);
-      Alert.alert('Push Failed', err.message);
+      Toast.show({ title: 'Push Failed', message, type: 'error' });
     } finally {
       setIsPushing(false);
     }

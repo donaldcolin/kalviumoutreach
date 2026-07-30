@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Alert } from 'react-native';
+import { Toast } from '@/components/ui/ToastManager';
 import {
   useAudioRecorder,
   useAudioRecorderState,
@@ -44,11 +44,11 @@ export function useMeetingAudioRecorder(userId: string | undefined) {
         });
       } else {
         await enqueueMeetingAudio(uri, durationMillis, userId);
-        Alert.alert('Saved Locally', 'Audio note will upload automatically when connected to Wi-Fi.');
+        Toast.show({ title: 'Saved Locally', message: 'Audio note will upload automatically when connected to Wi-Fi.', type: 'info' });
       }
     } catch (err) {
       console.error('Upload failed:', err);
-      Alert.alert('Upload Failed', 'Could not save the note to the cloud.');
+      Toast.show({ title: 'Upload Failed', message: 'Could not save the note to the cloud.', type: 'error' });
     } finally {
       setIsUploading(false);
     }
@@ -81,7 +81,7 @@ export function useMeetingAudioRecorder(userId: string | undefined) {
         await recorder.prepareToRecordAsync();
         recorder.record();
       } else {
-        Alert.alert('Permission needed', 'Microphone permission is required to save notes.');
+        Toast.show({ title: 'Permission needed', message: 'Microphone permission is required to save notes.', type: 'error' });
       }
     }
   };

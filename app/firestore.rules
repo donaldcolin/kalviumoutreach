@@ -1,14 +1,59 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Users can read their own profile, admins can read all
+
+    // ─── Helper Functions ──────────────────────────────────────────────────────
+    // Caller's role from the users collection
+    function callerRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    // Caller's user doc
+    function callerDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Get a target user's document
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data;
+    }
+
+    // Is the caller an admin?
+    function isAdmin() {
+      return callerRole() == 'admin';
+    }
+
+    // Is the caller a non-executive (admin, teamLead, or regionalManager)?
+    function isManager() {
+      return callerRole() != 'executive';
+    }
+
+    // Can the caller see data belonging to targetUserId?
+    // - Own data: always
+    // - Admin: always
+    // - TeamLead: if target's managerId == caller's uid
+    // - RegionalManager: if target's manager's managerId == caller's uid,
+    //                    OR target is a direct-report teamLead
+    function canSeeUser(targetUserId) {
+      let target = userDoc(targetUserId);
+      return request.auth.uid == targetUserId
+          || isAdmin()
+          || (callerRole() == 'teamLead' && target.managerId == request.auth.uid)
+          || (callerRole() == 'regionalManager' && (
+               target.managerId == request.auth.uid
+               || (target.managerId != null && userDoc(target.managerId).managerId == request.auth.uid)
+             ));
+    }
+
+    // ─── Users ─────────────────────────────────────────────────────────────────
+    // Executives can only read their own profile.
+    // Managers/admins can read all profiles (needed to build team sidebar).
     match /users/{userId} {
-      allow read: if request.auth != null;
-      // Only allow users to update their own lastKnownLocation (prevent role escalation)
-      // We include the nested paths because the deployed APK uses {merge: true} which generates deep field updates
-      allow update: if request.auth != null 
-                    && request.auth.uid == userId 
+      allow read: if request.auth != null
+                  && (request.auth.uid == userId || isManager());
+      // Users can only update their own lastKnownLocation (prevent role escalation)
+      allow update: if request.auth != null
+                    && request.auth.uid == userId
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                       'lastKnownLocation',
                       'lastKnownLocation.lat',
@@ -16,106 +61,141 @@ service cloud.firestore {
                       'lastKnownLocation.ts',
                       'lastKnownLocation.updatedAt'
                     ]);
-      allow create: if request.auth != null 
-                    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'teamLead', 'regionalManager'];
+      // Only managers can create new user profiles
+      allow create: if request.auth != null
+                    && callerRole() in ['admin', 'teamLead', 'regionalManager'];
       allow delete: if false; // Only manageable from server/admin SDK
     }
 
-    // Daily tracks, visits, stops, and pings are scoped to the executive
+    // ─── Daily Tracks (GPS) ────────────────────────────────────────────────────
+    // GPS location data — the most sensitive collection.
+    // Executives can only read/write their own tracks.
+    // Managers can read tracks of their direct reports.
+    // Admins can read all.
     match /dailyTracks/{trackId} {
-      allow read: if request.auth != null;
-      // An associate can only write to a track document if its ID starts with their own user ID. Admins/TLs can manage any track.
-      allow write: if request.auth != null && (trackId.split('_')[0] == request.auth.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != 'executive');
-      
+      allow read: if request.auth != null
+                  && canSeeUser(trackId.split('_')[0]);
+      // Write: own tracks, or non-executive managers
+      allow write: if request.auth != null
+                   && (trackId.split('_')[0] == request.auth.uid || isManager());
+
       match /locations/{locationId} {
-        allow read: if request.auth != null;
-        allow write: if request.auth != null && trackId.split('_')[0] == request.auth.uid;
+        allow read: if request.auth != null
+                    && canSeeUser(trackId.split('_')[0]);
+        allow write: if request.auth != null
+                     && trackId.split('_')[0] == request.auth.uid;
       }
       match /visits/{visitId} {
-        allow read: if request.auth != null;
-        allow write: if request.auth != null && trackId.split('_')[0] == request.auth.uid;
+        allow read: if request.auth != null
+                    && canSeeUser(trackId.split('_')[0]);
+        allow write: if request.auth != null
+                     && trackId.split('_')[0] == request.auth.uid;
       }
     }
 
-    // Visits collection (top level)
+    // ─── Visits (top-level) ────────────────────────────────────────────────────
     match /visits/{visitId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && resource.data.executiveId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.executiveId == request.auth.uid;
+      allow read: if request.auth != null
+                  && (resource.data.executiveId == request.auth.uid || isManager());
+      allow write: if request.auth != null
+                   && resource.data.executiveId == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.executiveId == request.auth.uid;
     }
 
-    // Meetings
+    // ─── Meetings ──────────────────────────────────────────────────────────────
     match /meetings/{meetingId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && resource.data.executiveId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.executiveId == request.auth.uid;
+      allow read: if request.auth != null
+                  && (resource.data.executiveId == request.auth.uid || isManager());
+      allow write: if request.auth != null
+                   && resource.data.executiveId == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.executiveId == request.auth.uid;
     }
 
-    // Appointments
+    // ─── Appointments / Tasks ──────────────────────────────────────────────────
     match /appointments/{appId} {
-      allow read: if request.auth != null;
+      allow read: if request.auth != null
+                  && (resource.data.executiveId == request.auth.uid || isManager());
       // Associate can update their own tasks (e.g. mark complete)
-      allow update: if request.auth != null && resource.data.executiveId == request.auth.uid;
+      allow update: if request.auth != null
+                    && resource.data.executiveId == request.auth.uid;
       // TLs/Admins can manage tasks (create, update, delete)
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != 'executive';
+      allow write: if request.auth != null && isManager();
     }
 
-    // Schools are readable by any authenticated user
+    // ─── Schools ───────────────────────────────────────────────────────────────
+    // Schools are reference data, readable by any authenticated user.
     match /schools/{schoolId} {
       allow read: if request.auth != null;
-      allow write: if false; // Only admin can edit schools
+      allow write: if false; // Only admin SDK
     }
 
-    // Location Requests
+    // ─── Location Requests ─────────────────────────────────────────────────────
+    // Scoped: executives see only their own, managers see all.
     match /locationRequests/{reqId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow read: if request.auth != null
+                  && (resource.data.targetUserId == request.auth.uid || isManager());
+      allow create: if request.auth != null && isManager();
+      allow update: if request.auth != null;
     }
 
-    // CRM Activities synced from LeadSquared — readable by any authenticated user
+    // ─── CRM Activities ────────────────────────────────────────────────────────
+    // Executives can only read/write their own activities.
+    // Managers can read their team's activities.
     match /crmActivities/{activityId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && (resource == null || resource.data.executiveId == request.auth.uid) && (request.resource == null || request.resource.data.executiveId == request.auth.uid);
+      allow read: if request.auth != null
+                  && (resource.data.executiveId == request.auth.uid || isManager());
+      allow write: if request.auth != null
+                   && (resource == null || resource.data.executiveId == request.auth.uid)
+                   && (request.resource == null || request.resource.data.executiveId == request.auth.uid);
     }
 
-    // Push queue for syncing to LeadSquared
+    // ─── Push Queue ────────────────────────────────────────────────────────────
     match /pushQueue/{docId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && (resource == null || resource.data.executiveId == request.auth.uid) && (request.resource == null || request.resource.data.executiveId == request.auth.uid);
+      allow read: if request.auth != null
+                  && (resource.data.executiveId == request.auth.uid || isManager());
+      allow write: if request.auth != null
+                   && (resource == null || resource.data.executiveId == request.auth.uid)
+                   && (request.resource == null || request.resource.data.executiveId == request.auth.uid);
     }
 
-    // Discreet meeting recordings
+    // ─── Meeting Recordings ────────────────────────────────────────────────────
     match /meetingRecordings/{recordingId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && resource.data.executiveId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.executiveId == request.auth.uid;
+      allow read: if request.auth != null
+                  && (resource.data.executiveId == request.auth.uid || isManager());
+      allow write: if request.auth != null
+                   && resource.data.executiveId == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.executiveId == request.auth.uid;
     }
 
-    // Ongoing walk-in sessions (one per user, keyed by userId)
-    match /ongoingWalkIns/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
-      allow delete: if request.auth != null && request.auth.uid == userId;
+    // ─── Ongoing Walk-Ins ──────────────────────────────────────────────────────
+    match /ongoingWalkIns/{wUserId} {
+      allow read: if request.auth != null
+                  && (request.auth.uid == wUserId || isManager());
+      allow write: if request.auth != null && request.auth.uid == wUserId;
+      allow delete: if request.auth != null && request.auth.uid == wUserId;
     }
 
-    // System logs — write-only from the mobile app (so users can't read others' logs)
-    // Only TLs/Admins can read logs via the website
+    // ─── System Logs ───────────────────────────────────────────────────────────
+    // Write-only from mobile app. Only non-executives can read.
     match /system_logs/{logId} {
-      // Allow read if user is not an executive
-      allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != 'executive';
-      // Allow create only if the log's associateId matches the caller's auth UID
-      allow create: if request.auth != null && request.resource.data.associateId == request.auth.uid;
+      allow read: if request.auth != null && isManager();
+      allow create: if request.auth != null
+                    && request.resource.data.associateId == request.auth.uid;
       allow update, delete: if false; // Logs are immutable
     }
 
-    // Lead Access Requests — associates request access, managers approve
+    // ─── Lead Access Requests ──────────────────────────────────────────────────
     match /leadAccessRequests/{reqId} {
-      // Anyone authenticated can read (to check their own requests)
-      allow read: if request.auth != null;
-      // Any authenticated user can create a request (requestedBy must be their own UID)
-      allow create: if request.auth != null && request.resource.data.requestedBy == request.auth.uid;
-      // Only TLs/Admins can approve (update status)
-      allow update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != 'executive';
+      // Users can read their own requests; managers can read all
+      allow read: if request.auth != null
+                  && (resource.data.requestedBy == request.auth.uid || isManager());
+      allow create: if request.auth != null
+                    && request.resource.data.requestedBy == request.auth.uid;
+      // Only managers can approve (update status)
+      allow update: if request.auth != null && isManager();
       allow delete: if false;
     }
   }

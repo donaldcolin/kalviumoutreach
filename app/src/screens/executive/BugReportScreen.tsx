@@ -1,20 +1,23 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Alert, Linking, ScrollView, Platform } from 'react-native';
+import { View, Text, TextInput, ScrollView, Platform, Linking } from 'react-native';
+import { Toast } from '@/components/ui/ToastManager';
 import { Box } from '@/components/ui/box';
 import { VStack } from '@/components/ui/vstack';
 import { Button, ButtonText, ButtonSpinner } from '@/components/ui/button';
 import { Bug, Info } from 'lucide-react-native';
 import { useAuthStore } from '../../stores/authStore';
 import * as Device from 'expo-device';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { ExecutiveStackParamList } from '../../types';
 
-export default function BugReportScreen({ navigation }: any) {
+export default function BugReportScreen({ navigation }: { navigation: NativeStackNavigationProp<ExecutiveStackParamList> }) {
   const { user } = useAuthStore();
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
     if (!description.trim()) {
-      Alert.alert('Missing Info', 'Please describe the bug before submitting.');
+      Toast.show({ title: 'Missing Info', message: 'Please describe the bug before submitting.', type: 'error' });
       return;
     }
 
@@ -50,7 +53,7 @@ Date: ${new Date().toLocaleString()}
           navigation.goBack();
         }, 500);
       } catch (error) {
-        Alert.alert('Error', 'No email client configured on this device. Please GChat donald.colin@kalvium.com');
+        Toast.show({ title: 'Error', message: 'No email client configured on this device. Please GChat donald.colin@kalvium.com', type: 'error' });
       }
     } finally {
       setIsSubmitting(false);

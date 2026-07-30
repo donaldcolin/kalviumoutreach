@@ -1,31 +1,4 @@
-
-interface CrmActivity {
-  lsqActivityId: string;
-  schoolName: string;
-  activityType: string;
-  typeOfWalkIn: string;
-  walkInStatus: string;
-  walkInDateTime: string;
-  notes: string;
-  refusedEntryReason: string;
-  statusFrontDesk: string;
-  statusPIC: string;
-  statusPrincipal: string;
-  picName: string;
-  picPhone: string;
-  principalName: string;
-  principalPhone: string;
-  lat: number | null;
-  lng: number | null;
-  livePhotoUrl: string;
-  proposalSentToSchool: string;
-  followUpDate: string;
-  boardOfSchool: string;
-  studentStrength: string;
-  executiveEmail: string;
-  lsqCreatedOn: string;
-}
-
+import type { CrmActivity } from '@kalvium-outreach/shared';
 interface CrmActivityCardProps {
   activity: CrmActivity;
   isExpanded: boolean;

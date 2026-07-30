@@ -7,7 +7,7 @@ export type LogLevel = 'info' | 'warn' | 'error';
 interface LogEntry {
   level: LogLevel;
   message: string;
-  metadata?: any;
+  metadata?: unknown;
   timestamp: Date;
 }
 
@@ -78,7 +78,7 @@ class RemoteLogger {
     }
   }
 
-  private pushLog(level: LogLevel, message: string, metadata?: any) {
+  private pushLog(level: LogLevel, message: string, metadata?: unknown) {
     // 1. Always console.log locally for debugging
     const logStr = `[${level.toUpperCase()}] ${message}`;
     if (level === 'error') console.error(logStr, metadata || '');
@@ -104,15 +104,15 @@ class RemoteLogger {
     this.flushLogs();
   }
 
-  public info(message: string, metadata?: any) {
+  public info(message: string, metadata?: unknown) {
     this.pushLog('info', message, metadata);
   }
 
-  public warn(message: string, metadata?: any) {
+  public warn(message: string, metadata?: unknown) {
     this.pushLog('warn', message, metadata);
   }
 
-  public error(message: string, metadata?: any) {
+  public error(message: string, metadata?: unknown) {
     this.pushLog('error', message, metadata);
   }
 }

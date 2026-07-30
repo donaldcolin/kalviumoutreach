@@ -1,26 +1,20 @@
-import { Calendar as CalendarIcon, ClipboardList, Plus, Map as MapIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, ClipboardList, Plus, Map as MapIcon, AlertTriangle } from 'lucide-react';
 import { useState } from 'react';
 import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import { AssignTaskModal } from './AssignTaskModal';
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  regionId?: string;
-}
+import type { User, CrmActivity } from '@kalvium-outreach/shared';
 
 interface AssociateHeaderProps {
   selectedAssociate: User;
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
-  dailyTrackStatus: 'active' | 'ended' | null;
+  dailyTrackStatus: 'active' | 'ended' | 'stale' | null;
   toggleTrackingStatus: () => void;
   timelineVisitsCount: number;
-  ongoingWalkIn?: any;
+  ongoingWalkIn?: CrmActivity;
   isFetchingLocation: boolean;
   handleFetchLocation: () => void;
 }
@@ -49,6 +43,20 @@ export function AssociateHeader({
           </div>
           <div className="flex items-center gap-3">
             {format(selectedDate, 'yyyyMMdd') === format(new Date(), 'yyyyMMdd') && (
+              dailyTrackStatus === 'stale' ? (
+                <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-700">
+                    App Closed
+                  </span>
+                  <button
+                    onClick={toggleTrackingStatus}
+                    className="ml-1 text-[11px] font-semibold text-amber-700 underline underline-offset-2 hover:text-amber-900 transition-colors"
+                  >
+                    Restart
+                  </button>
+                </div>
+              ) : (
               <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 px-3 py-1.5 rounded-xl">
                 <span className={`text-[11px] font-semibold uppercase tracking-wider ${dailyTrackStatus === 'active' ? 'text-green-600' : 'text-gray-500'}`}>
                   {dailyTrackStatus === 'active' ? 'Live' : 'Stopped'}
@@ -60,6 +68,7 @@ export function AssociateHeader({
                   <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${dailyTrackStatus === 'active' ? 'translate-x-4' : 'translate-x-0'}`} />
                 </button>
               </div>
+              )
             )}
             <Popover>
               <PopoverTrigger className="flex items-center justify-center p-2 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-gray-700 border border-gray-100 shadow-sm">

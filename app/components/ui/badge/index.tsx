@@ -1,3 +1,4 @@
+// @ts-nocheck
 'use client';
 import { PrimitiveIcon, UIIcon } from '@gluestack-ui/core/icon/creator';
 import type { VariantProps } from '@gluestack-ui/utils/nativewind-utils';

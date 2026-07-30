@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, ActivityIndicator, Platform, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, ScrollView, ActivityIndicator, Platform, Pressable, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { Toast } from '@/components/ui/ToastManager';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { VStack } from '@/components/ui/vstack';
@@ -156,11 +157,11 @@ export default function WalkInSessionScreen() {
 
   const handleSubmit = async () => {
     if (!leadId) {
-      Alert.alert('Error', 'Missing lead ID');
+      Toast.show({ title: 'Error', message: 'Missing lead ID', type: 'error' });
       return;
     }
     if (!user?.id || !user?.email) {
-      Alert.alert('Error', 'Missing user session');
+      Toast.show({ title: 'Error', message: 'Missing user session', type: 'error' });
       return;
     }
 
@@ -202,7 +203,7 @@ export default function WalkInSessionScreen() {
       hasSubmitted.current = true;
       navigation.goBack();
     } else {
-      Alert.alert('Error', 'Failed to push to LeadSquared. Please try again.');
+      Toast.show({ title: 'Error', message: 'Failed to push to LeadSquared. Please try again.', type: 'error' });
     }
   };
 

@@ -2,18 +2,19 @@ import React from 'react';
 import { View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { MapPin, Building2, Globe, Send, CheckCircle, Clock } from 'lucide-react-native';
+import type { Lead } from '../../types';
 
 interface LeadCardProps {
-  item: any;
+  item: Lead;
   type: 'my' | 'global';
   isOwnLead?: boolean;
   accessStatus?: 'none' | 'pending' | 'approved';
   requestingAccess?: boolean;
-  onRequestAccess?: (item: any) => void;
+  onRequestAccess?: (item: Lead) => void;
   onPress: (leadId: string, leadName: string) => void;
 }
 
-export function LeadCard({
+export const LeadCard = React.memo(function LeadCard({
   item,
   type,
   isOwnLead,
@@ -120,4 +121,12 @@ export function LeadCard({
       )}
     </View>
   );
-}
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.item.ProspectID === nextProps.item.ProspectID &&
+    prevProps.type === nextProps.type &&
+    prevProps.isOwnLead === nextProps.isOwnLead &&
+    prevProps.accessStatus === nextProps.accessStatus &&
+    prevProps.requestingAccess === nextProps.requestingAccess
+  );
+});
