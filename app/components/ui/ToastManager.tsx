@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { StyleSheet, View, Text, SafeAreaView, TouchableOpacity, Platform, Dimensions } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, Platform, Dimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -41,6 +42,7 @@ export const ToastManager = () => {
   const translateY = useSharedValue(-150);
   const opacity = useSharedValue(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const insets = useSafeAreaInsets();
 
   const hideToast = useCallback(() => {
     translateY.value = withTiming(-150, { duration: 300 });
@@ -104,7 +106,7 @@ export const ToastManager = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container} pointerEvents="box-none">
+    <View style={[styles.container, { paddingTop: insets.top }]} pointerEvents="box-none">
       <Animated.View style={[styles.toastWrapper, animatedStyle, { backgroundColor: bgColor, borderColor }]}>
         <View style={styles.contentRow}>
           <Icon size={22} color={iconColor} style={styles.icon} />
@@ -117,7 +119,7 @@ export const ToastManager = () => {
           </TouchableOpacity>
         </View>
       </Animated.View>
-    </SafeAreaView>
+    </View>
   );
 };
 

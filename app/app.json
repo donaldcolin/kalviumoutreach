@@ -68,7 +68,9 @@
           "backgroundRecording": true
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-font",
+      "expo-splash-screen"
     ],
     "extra": {
       "eas": {

@@ -32,7 +32,7 @@ import Animated, {
   withDelay,
 } from 'react-native-reanimated';
 import * as Location from 'expo-location';
-import { Audio } from 'expo-av';
+import { requestRecordingPermissionsAsync, getRecordingPermissionsAsync } from 'expo-audio';
 import messaging from '@react-native-firebase/messaging';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -150,7 +150,7 @@ export default function PermissionGateScreen({
     } catch {}
 
     try {
-      const audio = await Audio.getPermissionsAsync();
+      const audio = await getRecordingPermissionsAsync();
       if (audio.status === 'granted') updates.microphone = 'granted';
     } catch {}
 
@@ -226,7 +226,7 @@ export default function PermissionGateScreen({
     // 4. Microphone
     setCurrentStep(3);
     try {
-      const mic = await Audio.requestPermissionsAsync();
+      const mic = await requestRecordingPermissionsAsync();
       updatePermission('microphone', mic.status === 'granted' ? 'granted' : 'denied');
     } catch {
       updatePermission('microphone', 'denied');
