@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import firestore from '@react-native-firebase/firestore';
+import auth from '@react-native-firebase/auth';
 import type { CrmActivity } from '../types';
 
 interface CrmActivitiesState {
@@ -10,12 +11,17 @@ interface CrmActivitiesState {
 
   initialize: (email: string) => void;
   refresh: () => Promise<void>;
+  cleanup: () => void;
 }
 
 async function fetchActivities(email: string): Promise<CrmActivity[]> {
+  const uid = auth().currentUser?.uid;
+  if (!uid) return [];
+
   const snapshot = await firestore()
     .collection('crmActivities')
     .where('executiveEmail', '==', email)
+    .where('executiveId', '==', uid)
     .get();
 
   const acts = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as CrmActivity));
@@ -67,5 +73,9 @@ export const useCrmActivitiesStore = create<CrmActivitiesState>((set, get) => ({
       console.error('CrmActivities refresh error:', err);
       set({ isRefreshing: false });
     }
+  },
+
+  cleanup: () => {
+    set({ activities: [], _currentEmail: null });
   },
 }));

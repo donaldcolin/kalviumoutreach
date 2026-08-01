@@ -65,6 +65,33 @@ export function useWalkInSync(userId?: string, executiveEmail?: string) {
         syncedAt: firestore.FieldValue.serverTimestamp(),
       });
 
+      // 1.5 Auto-create standard Tasks (appointments) for future dates
+      if (extraData) {
+        const createAutoTask = async (dateStr: string, type: 'seminar' | 'follow-up', label: string) => {
+          if (!dateStr) return;
+          try {
+            await firestore().collection('appointments').add({
+              executiveId: userId,
+              schoolName: schoolName,
+              type: type,
+              date: dateStr,
+              status: 'pending',
+              assignedBy: 'Self',
+              lsqLeadId: schoolId,
+              notes: label,
+              createdAt: firestore.FieldValue.serverTimestamp()
+            });
+          } catch (e) {
+            logger.warn(`Failed to auto-create task for ${label}`, e instanceof Error ? e.message : String(e));
+          }
+        };
+
+        if (extraData.followUpDate) await createAutoTask(extraData.followUpDate, 'follow-up', 'General Follow-up');
+        if (extraData.picAppointmentDate) await createAutoTask(extraData.picAppointmentDate, 'follow-up', 'PIC Appointment');
+        if (extraData.principalAppointmentDate) await createAutoTask(extraData.principalAppointmentDate, 'follow-up', 'Principal Appointment');
+        if (extraData.seminarAppointmentDate) await createAutoTask(extraData.seminarAppointmentDate, 'seminar', 'Seminar');
+      }
+
       // 2. Queue push to LeadSquared
       await firestore().collection('pushQueue').add({
         action: 'CREATE_ACTIVITY',

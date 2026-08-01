@@ -1,37 +1,104 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ScrollView, View, RefreshControl } from 'react-native';
-import { HStack } from '@/components/ui/hstack';
-import { Heading } from '@/components/ui/heading';
+import { ClipboardCheck } from 'lucide-react-native';
 import { useAuthStore } from '../../stores/authStore';
-import { useEffect } from 'react';
 import { useTasksStore } from '../../stores/tasksStore';
-import { TaskTabs, TaskList } from '../../components/tasks';
+import { TaskTabs, TaskList, TaskSectionHeader, TasksHeader, TaskCard } from '../../components/tasks';
+import type { TaskTabValue } from '../../components/tasks/TaskTabs';
+import { VStack } from '@/components/ui/vstack';
+import { Text } from '@/components/ui/text';
 
 export default function TasksScreen() {
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'pending' | 'completed'>('pending');
-  const { pendingTasks, completedTasks, completeTask, initialize, refresh, isRefreshing } = useTasksStore();
-  const tasks = activeTab === 'pending' ? pendingTasks : completedTasks;
+  const [activeTab, setActiveTab] = useState<TaskTabValue>('today');
+  const {
+    overdueTasks,
+    todayTasks,
+    upcomingTasks,
+    completedTasks,
+    overdueCount,
+    todayCount,
+    upcomingCount,
+    completeTask,
+    initialize,
+    refresh,
+    isRefreshing,
+    cleanup,
+  } = useTasksStore();
 
   useEffect(() => {
     if (user?.id) initialize(user.id);
+    return () => {
+      // Don't cleanup on unmount — the real-time listener should persist
+      // across tab switches. Only cleanup on logout.
+    };
   }, [user?.id]);
+
+  const totalPending = overdueCount + todayCount + upcomingCount;
+  const hasAnyActive = totalPending > 0;
 
   return (
     <View className="flex-1 bg-background">
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 12, paddingBottom: 100 }}
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={refresh} colors={['#E11D48']} tintColor="#E11D48" />
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={refresh}
+            colors={['#E11D48']}
+            tintColor="#E11D48"
+          />
         }
       >
-        {/* Header Section */}
-        <HStack className="w-full justify-between items-center mb-6">
-          <Heading size="2xl" className="text-slate-900 font-bold tracking-tight">Tasks</Heading>
-        </HStack>
+        {/* Summary Header with Stats */}
+        <TasksHeader
+          overdueCount={overdueCount}
+          todayCount={todayCount}
+          upcomingCount={upcomingCount}
+        />
 
-        <TaskTabs activeTab={activeTab} setActiveTab={setActiveTab} />
-        <TaskList tasks={tasks} activeTab={activeTab} completeTask={completeTask} />
+        {/* ── Tabs Toggle ── */}
+        <TaskTabs
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          overdueCount={overdueCount}
+          todayCount={todayCount}
+          upcomingCount={upcomingCount}
+          completedCount={completedTasks.length}
+        />
+
+        {/* ── Content ── */}
+        {activeTab === 'overdue' && (
+          <TaskList
+            tasks={overdueTasks}
+            activeTab="overdue"
+            completeTask={completeTask}
+          />
+        )}
+
+        {activeTab === 'today' && (
+          <TaskList
+            tasks={todayTasks}
+            activeTab="today"
+            completeTask={completeTask}
+          />
+        )}
+
+        {activeTab === 'upcoming' && (
+          <TaskList
+            tasks={upcomingTasks}
+            activeTab="upcoming"
+            completeTask={completeTask}
+          />
+        )}
+
+        {activeTab === 'completed' && (
+          <TaskList
+            tasks={completedTasks}
+            activeTab="completed"
+            completeTask={completeTask}
+          />
+        )}
       </ScrollView>
     </View>
   );

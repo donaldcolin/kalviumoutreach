@@ -23,6 +23,7 @@ import { Text } from '@/components/ui/text';
 // (VisitFlowNavigator removed)
 
 import { useAuthStore } from '../stores/authStore';
+import { useTasksStore } from '../stores/tasksStore';
 import { Button, ButtonText } from '@/components/ui/button';
 
 // ─── Profile Placeholder ─────────────────────────────────────────────────────
@@ -126,6 +127,8 @@ const ExecutiveStack = createNativeStackNavigator();
 
 function ExecutiveTabs() {
   const insets = useSafeAreaInsets();
+  const { overdueCount, todayCount } = useTasksStore();
+  const pendingCount = overdueCount + todayCount;
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
@@ -190,6 +193,8 @@ function ExecutiveTabs() {
           component={TasksScreen}
           options={{
             tabBarLabel: 'Tasks',
+            tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
+            tabBarBadgeStyle: { backgroundColor: '#DC2626', color: '#FFFFFF', fontSize: 10 },
             tabBarIcon: ({ color, size }) => (
               <List size={size} color={color} strokeWidth={2} />
             ),

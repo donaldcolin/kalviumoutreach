@@ -196,6 +196,11 @@ export interface Task {
   type?: 'seminar' | 'follow-up';
   schoolName?: string;
   completedAt?: unknown;
+  assignedBy?: string;
+  createdAt?: unknown;
+  lsqLeadId?: string;
+  notes?: string;
+  snoozedUntil?: string;   // ISO date — task hidden from associate until this date
 }
 
 // ─── Pipeline Types ──────────────────────────────────────────────────────────

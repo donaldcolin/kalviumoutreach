@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './ui/sheet';
 import { Button } from './ui/button';
-import { MapPin, Clock, Info, CheckCircle, FileAudio, Image as ImageIcon, X, ArrowRight, User, Phone, FileText, Calendar as CalendarIcon, ExternalLink } from 'lucide-react';
+import { MapPin, Clock, Info, CheckCircle, FileAudio, Image as ImageIcon, X, User, Phone, FileText, Calendar as CalendarIcon, ExternalLink } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { STAGE_SHORT, STAGE_COLORS, getStageIndex } from '../lib/constants';
@@ -15,6 +15,7 @@ interface TimelineActivityDialogProps {
 export function TimelineActivityDialog({ open, onOpenChange, stop }: TimelineActivityDialogProps) {
   const [meetings, setMeetings] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [historicalVisits, setHistoricalVisits] = useState<any[]>([]);
 
   useEffect(() => {
     async function fetchMeetings() {
@@ -24,7 +25,7 @@ export function TimelineActivityDialog({ open, onOpenChange, stop }: TimelineAct
           const q = query(collection(db, 'meetings'), where('visitId', '==', stop.data.id));
           const snap = await getDocs(q);
           if (!snap.empty) {
-            setMeetings(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+            setMeetings(snap.docs.map(d => ({ id: d.id, ...(d.data() as Record<string, any>) })));
           } else {
             setMeetings([]);
           }
@@ -37,8 +38,74 @@ export function TimelineActivityDialog({ open, onOpenChange, stop }: TimelineAct
         setMeetings([]);
       }
     }
+    
+    async function fetchHistoricalVisits() {
+      if (open && stop?.type === 'crm' && stop.data) {
+        try {
+          let q;
+          if (stop.data.lsqLeadId) {
+            q = query(collection(db, 'crmActivities'), where('lsqLeadId', '==', stop.data.lsqLeadId));
+          } else if (stop.data.schoolName) {
+            // Fallback if no lead ID
+            q = query(
+              collection(db, 'crmActivities'), 
+              where('schoolName', '==', stop.data.schoolName),
+              where('executiveId', '==', stop.data.executiveId)
+            );
+          }
+          if (q) {
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+              const visits = snap.docs.map(d => ({ id: d.id, ...(d.data() as Record<string, any>) }));
+              // Sort chronologically (oldest first)
+              visits.sort((a, b) => {
+                const timeA = a.walkInDateTime ? new Date(a.walkInDateTime).getTime() : 0;
+                const timeB = b.walkInDateTime ? new Date(b.walkInDateTime).getTime() : 0;
+                return timeA - timeB;
+              });
+              setHistoricalVisits(visits);
+            } else {
+              setHistoricalVisits([stop.data]); // Fallback to current stop
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch historical visits:", error);
+          setHistoricalVisits([stop.data]); // Fallback
+        }
+      } else if (!open) {
+        setHistoricalVisits([]);
+      }
+    }
+
     fetchMeetings();
+    fetchHistoricalVisits();
   }, [open, stop]);
+
+  // Compute historical dates for each stage
+  const historicalDates = useMemo(() => {
+    const dates = new Map<number, string>();
+    historicalVisits.forEach(v => {
+      let maxStageIndex = getStageIndex(v.walkInStatus);
+      
+      // Also check if seminar was confirmed (Stage 4)
+      if (v.walkInStatus?.includes('Seminar Confirmed') || v.seminarAppointmentDate) {
+        maxStageIndex = Math.max(maxStageIndex, 4); 
+      }
+
+      const dateStr = v.walkInDateTime ? new Date(v.walkInDateTime).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '';
+      
+      if (dateStr) {
+        for (let i = 0; i <= maxStageIndex; i++) {
+          if (!dates.has(i)) {
+            dates.set(i, dateStr);
+          }
+        }
+      }
+    });
+    return dates;
+  }, [historicalVisits]);
+
+  const overallMaxStage = historicalDates.size > 0 ? Math.max(...Array.from(historicalDates.keys())) : -1;
 
   if (!stop) return null;
 
@@ -51,42 +118,72 @@ export function TimelineActivityDialog({ open, onOpenChange, stop }: TimelineAct
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-[425px]">
-        <SheetHeader>
-          <SheetTitle>Activity Details</SheetTitle>
+        <SheetHeader className="pb-4 border-b border-zinc-100">
+          <SheetTitle className="text-xl">Activity Details</SheetTitle>
           <SheetDescription>
-            {stop.type === 'request' ? 'Location request details.' : 'Visit and location details.'}
+            {stop.type === 'request' ? 'Location request details.' : 'Visit and historical progression.'}
           </SheetDescription>
         </SheetHeader>
-        <div className="py-2 px-6 space-y-6 max-h-[calc(100vh-180px)] overflow-y-auto pb-24">
+        <div className="py-4 px-6 space-y-6 max-h-[calc(100vh-140px)] overflow-y-auto pb-24 bg-zinc-50/50">
           
           {/* CRM Details */}
           {stop.type === 'crm' && stop.data && (
-            <div className="bg-white rounded-2xl p-5 border border-zinc-200 shadow-sm space-y-6">
-              {/* Stage Progress Bar */}
-              {stop.data.walkInStatus && (
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold mb-3">Visit Progress</p>
-                  <div className="flex items-center gap-1">
-                    {STAGE_SHORT.map((label, i) => (
-                      <div key={label} className="flex items-center gap-1 flex-1">
-                        <div className={`flex-1 h-2 rounded-full ${i <= getStageIndex(stop.data.walkInStatus) ? STAGE_COLORS[i] : 'bg-zinc-200'}`} />
-                        {i < STAGE_SHORT.length - 1 && <ArrowRight size={10} className="text-zinc-300 shrink-0" />}
-                      </div>
-                    ))}
+            <div className="space-y-4">
+              
+              {/* Stage Progress Bar (Historical) */}
+              {(overallMaxStage >= 0 || stop.data.walkInStatus) && (
+                <div className="bg-white rounded-2xl p-5 border border-zinc-200 shadow-sm relative overflow-hidden">
+                  <div className="flex items-center gap-2 mb-6">
+                    <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                      <Clock size={14} className="stroke-[2.5]" />
+                    </div>
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500">Historical Timeline</h3>
                   </div>
-                  <div className="flex justify-between mt-2">
-                    {STAGE_SHORT.map((label, i) => (
-                      <span key={label} className={`text-[9px] font-bold tracking-wider ${i <= getStageIndex(stop.data.walkInStatus) ? 'text-zinc-700' : 'text-zinc-400'}`}>{label}</span>
-                    ))}
+                  
+                  <div className="flex items-start justify-between relative mt-2 px-2">
+                    {STAGE_SHORT.map((label, i) => {
+                      const isReached = i <= overallMaxStage;
+                      const dateReached = historicalDates.get(i);
+                      const colorClass = STAGE_COLORS[i]; 
+
+                      return (
+                        <div key={label} className="flex flex-col items-center flex-1 relative z-10">
+                          {/* Line connector */}
+                          {i < STAGE_SHORT.length - 1 && (
+                            <div className={`absolute top-3 left-[50%] w-full h-[3px] -z-10 ${
+                              i < overallMaxStage ? colorClass : 'bg-zinc-100'
+                            }`} />
+                          )}
+
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border-2 transition-all duration-300 ${
+                            isReached 
+                              ? `${colorClass} border-transparent text-white shadow-sm scale-110` 
+                              : 'bg-white border-zinc-200 text-zinc-400'
+                          }`}>
+                            {isReached ? <CheckCircle size={14} strokeWidth={2.5} /> : i + 1}
+                          </div>
+                          
+                          <span className={`mt-3 text-[10px] font-bold tracking-wide transition-colors ${isReached ? 'text-zinc-800' : 'text-zinc-400'}`}>
+                            {label}
+                          </span>
+                          <span className="text-[9px] font-semibold text-zinc-500 mt-1 h-3 text-center">
+                            {dateReached || ''}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
 
               {/* Outcome */}
               {(stop.data.refusedEntryReason || stop.data.statusFrontDesk || stop.data.statusPIC || stop.data.statusPrincipal) && (
-                <div className="bg-zinc-50 p-4 rounded-xl border border-zinc-100">
-                  <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold mb-2">Outcome</p>
-                  <p className="text-sm text-zinc-900 font-medium">
+                <div className="bg-white rounded-2xl p-4 border border-zinc-200 shadow-sm">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <div className="w-2 h-2 rounded-full bg-amber-500" />
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Latest Outcome</p>
+                  </div>
+                  <p className="text-sm text-zinc-900 font-medium pl-3.5 border-l-2 border-zinc-100 py-1">
                     {getStageIndex(stop.data.walkInStatus) === 0 ? stop.data.refusedEntryReason :
                      getStageIndex(stop.data.walkInStatus) === 1 ? stop.data.statusFrontDesk :
                      getStageIndex(stop.data.walkInStatus) === 2 ? stop.data.statusPIC :
@@ -99,28 +196,28 @@ export function TimelineActivityDialog({ open, onOpenChange, stop }: TimelineAct
               {(stop.data.picName || stop.data.principalName) && (
                 <div className="grid grid-cols-2 gap-3">
                   {stop.data.picName && (
-                    <div className="bg-zinc-50 p-4 rounded-xl border border-zinc-100">
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <User size={12} className="text-zinc-400" />
-                        <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold">PIC</p>
+                    <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex items-center gap-1.5 mb-3">
+                        <User size={14} className="text-blue-500" />
+                        <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">PIC</p>
                       </div>
-                      <p className="text-sm font-semibold text-zinc-900 truncate">{stop.data.picName}</p>
+                      <p className="text-sm font-bold text-zinc-900 truncate">{stop.data.picName}</p>
                       {stop.data.picPhone && (
-                        <p className="text-xs text-zinc-500 mt-1 flex items-center gap-1.5">
+                        <p className="text-[11px] font-medium text-zinc-600 mt-1 flex items-center gap-1.5">
                           <Phone size={10} /> {stop.data.picPhone}
                         </p>
                       )}
                     </div>
                   )}
                   {stop.data.principalName && (
-                    <div className="bg-zinc-50 p-4 rounded-xl border border-zinc-100">
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <User size={12} className="text-zinc-400" />
-                        <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold">Principal</p>
+                    <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex items-center gap-1.5 mb-3">
+                        <User size={14} className="text-indigo-500" />
+                        <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Principal</p>
                       </div>
-                      <p className="text-sm font-semibold text-zinc-900 truncate">{stop.data.principalName}</p>
+                      <p className="text-sm font-bold text-zinc-900 truncate">{stop.data.principalName}</p>
                       {stop.data.principalPhone && (
-                        <p className="text-xs text-zinc-500 mt-1 flex items-center gap-1.5">
+                        <p className="text-[11px] font-medium text-zinc-600 mt-1 flex items-center gap-1.5">
                           <Phone size={10} /> {stop.data.principalPhone}
                         </p>
                       )}
@@ -131,12 +228,12 @@ export function TimelineActivityDialog({ open, onOpenChange, stop }: TimelineAct
 
               {/* Notes */}
               {stop.data.notes && (
-                <div className="bg-zinc-50 p-4 rounded-xl border border-zinc-100">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <FileText size={12} className="text-zinc-400" />
-                    <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold">Notes</p>
+                <div className="bg-white p-4 rounded-2xl border border-zinc-200 shadow-sm">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileText size={14} className="text-amber-500" />
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Notes</p>
                   </div>
-                  <p className="text-sm text-zinc-700 leading-relaxed">{stop.data.notes}</p>
+                  <p className="text-sm text-zinc-700 leading-relaxed bg-zinc-50 p-3 rounded-xl border border-zinc-100">{stop.data.notes}</p>
                 </div>
               )}
 
@@ -149,32 +246,32 @@ export function TimelineActivityDialog({ open, onOpenChange, stop }: TimelineAct
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors shadow-sm"
                   >
-                    <ExternalLink size={12} /> View Lead in LSQ
+                    <ExternalLink size={12} /> LSQ Lead
                   </a>
                 )}
                 {stop.data.boardOfSchool && (
-                  <span className="px-3 py-1.5 bg-zinc-100 text-zinc-700 text-[10px] font-bold uppercase tracking-wider rounded-lg">
+                  <span className="px-3 py-1.5 bg-white border border-zinc-200 text-zinc-700 text-[10px] font-bold uppercase tracking-wider rounded-lg shadow-sm">
                     {stop.data.boardOfSchool}
                   </span>
                 )}
                 {stop.data.studentStrength && (
-                  <span className="px-3 py-1.5 bg-zinc-100 text-zinc-700 text-[10px] font-bold uppercase tracking-wider rounded-lg">
+                  <span className="px-3 py-1.5 bg-white border border-zinc-200 text-zinc-700 text-[10px] font-bold uppercase tracking-wider rounded-lg shadow-sm">
                     {stop.data.studentStrength} Students
                   </span>
                 )}
                 {stop.data.proposalSentToSchool === 'Yes' && (
-                  <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-emerald-100">
+                  <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-emerald-200 shadow-sm">
                     Proposal Sent
                   </span>
                 )}
                 {stop.data.followUpDate && (
-                  <span className="px-3 py-1.5 bg-blue-50 text-blue-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-blue-100 flex items-center gap-1.5">
+                  <span className="px-3 py-1.5 bg-blue-50 text-blue-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-blue-200 flex items-center gap-1.5 shadow-sm">
                     <CalendarIcon size={12} /> Follow-up: {new Date(stop.data.followUpDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                   </span>
                 )}
                 {stop.data.isValidWalkIn !== undefined && (
-                  <span className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg border flex items-center gap-1.5 ${stop.data.isValidWalkIn ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
-                    <MapPin size={12} /> {stop.data.isValidWalkIn ? 'Valid Location' : 'Fake Location'} {stop.data.distanceMeters != null ? `(${stop.data.distanceMeters}m gap)` : ''}
+                  <span className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg border flex items-center gap-1.5 shadow-sm ${stop.data.isValidWalkIn ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                    <MapPin size={12} /> {stop.data.isValidWalkIn ? 'Valid Location' : 'Fake Location'} {stop.data.distanceMeters != null ? `(${stop.data.distanceMeters}m)` : ''}
                   </span>
                 )}
               </div>

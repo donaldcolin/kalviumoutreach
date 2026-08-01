@@ -12,5 +12,11 @@
     "dev:website": "npm run dev -w website",
     "dev:app": "npm run start -w app",
     "typecheck": "npm run build:shared && cd app && npx tsc --noEmit && cd ../website && npx tsc -b"
+  },
+  "version": "1.0.0",
+  "dependencies": {
+    "expo": "~57.0.7",
+    "react": "19.2.3",
+    "react-native": "0.86.0"
   }
 }

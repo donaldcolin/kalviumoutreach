@@ -6,7 +6,7 @@ import { Text } from '@/components/ui/text';
 
 export interface StartDayModalProps {
   isTrackingInitialized: boolean;
-  isTracking: boolean;
+  sessionStatus: 'none' | 'active' | 'ended' | 'stale';
   isStarting: boolean;
   startCoords: { lat: number; lng: number } | null;
   animatedButtonStyle: AnimatedStyle<ViewStyle>;
@@ -15,14 +15,14 @@ export interface StartDayModalProps {
 
 export function StartDayModal({
   isTrackingInitialized,
-  isTracking,
+  sessionStatus,
   isStarting,
   startCoords,
   animatedButtonStyle,
   onStartDay
 }: StartDayModalProps) {
   return (
-    <Modal visible={isTrackingInitialized && !isTracking} transparent animationType="fade">
+    <Modal visible={isTrackingInitialized && sessionStatus === 'none'} transparent animationType="fade">
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
         <View className="bg-white p-8 rounded-3xl w-full items-center border border-slate-100">
           <Text className="text-3xl font-bold mb-3 text-center text-slate-900 tracking-tight">Start Your Day</Text>

@@ -17,6 +17,7 @@ const STALE_SESSION_THRESHOLD_MS = 15 * 60 * 1000; // 15 minutes
 export function useOutreachTracking(userId: string | undefined) {
   const [isTracking, setIsTracking] = useState(false);
   const [isTrackingInitialized, setIsTrackingInitialized] = useState(false);
+  const [sessionStatus, setSessionStatus] = useState<'none' | 'active' | 'ended' | 'stale'>('none');
   const isTrackingRef = useRef(false);
   
   useEffect(() => {
@@ -26,6 +27,7 @@ export function useOutreachTracking(userId: string | undefined) {
   const [activeSchoolMatch, setActiveSchoolMatch] = useState<School | null>(null);
 
   const hasResumedRef = useRef(false);
+  const hasAutoStoppedRef = useRef(false);
 
   useEffect(() => {
     // Reset on userId change
@@ -36,7 +38,14 @@ export function useOutreachTracking(userId: string | undefined) {
       const today = format(new Date(), 'yyyyMMdd');
       unsubTrack = onDailyTrack(userId, today, async (track) => {
         setIsTrackingInitialized(true);
-        if (track?.status === 'active') {
+        if (!track) {
+          setSessionStatus('none');
+          setIsTracking(false);
+          return;
+        }
+        setSessionStatus(track.status as any);
+
+        if (track.status === 'active') {
           // ─── Stale Session Watchdog ────────────────────────────────────
           // If the session's lastPing is >15 minutes old and we're not
           // already tracking locally, the user likely force-closed the app.
@@ -70,9 +79,9 @@ export function useOutreachTracking(userId: string | undefined) {
               locationTracker.startTracking(false);
             });
           }
-        } else if (track?.status === 'ended') {
+        } else if (track.status === 'ended' || track.status === 'stale') {
           hasResumedRef.current = false;
-          if (isTrackingRef.current) {
+          if (isTrackingRef.current && track.status === 'ended') {
             Toast.show({ title: 'Tracking Stopped Remotely', message: 'Your Team Lead has stopped your tracking session.', type: 'info', duration: 5000 });
           }
           setIsTracking(false);
@@ -100,8 +109,11 @@ export function useOutreachTracking(userId: string | undefined) {
 
     // Check time immediately and then every minute
     const checkTime = () => {
-      if (new Date().getHours() >= 18) {
+      const hour = new Date().getHours();
+      // Only auto-stop once per app session.
+      if (hour >= 18 && !hasAutoStoppedRef.current) {
         console.log('[useOutreachTracking] 6 PM reached, auto-stopping day.');
+        hasAutoStoppedRef.current = true;
         endDay();
       }
     };
@@ -114,6 +126,11 @@ export function useOutreachTracking(userId: string | undefined) {
   const startDay = useCallback(async () => {
     if (!userId || isTracking) return;
     
+    // If user explicitly starts after 6 PM, bypass the auto-stop
+    if (new Date().getHours() >= 18) {
+      hasAutoStoppedRef.current = true;
+    }
+
     setIsTracking(true);
     await firestoreSync.startSession(userId);
     await locationTracker.startTracking();
@@ -122,6 +139,7 @@ export function useOutreachTracking(userId: string | undefined) {
   return {
     isTracking,
     isTrackingInitialized,
+    sessionStatus,
     startDay,
     endDay,
     activeSchoolMatch

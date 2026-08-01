@@ -6,14 +6,12 @@ import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Mic, Square } from 'lucide-react-native';
-
 import { useAuthStore } from '../../stores/authStore';
 import { useEffect } from 'react';
 import { useCrmActivitiesStore } from '../../stores/crmActivitiesStore';
 import { useMeetingRecordings } from '../../hooks/useMeetingRecordings';
 import { usePushToLs } from '../../hooks/usePushToLs';
 import { useMeetingAudioRecorder } from '../../hooks/useMeetingAudioRecorder';
-
 import { RecordingItem } from '../../components/meeting-notes/RecordingItem';
 import { PushToLsModal } from '../../components/meeting-notes/PushToLsModal';
 

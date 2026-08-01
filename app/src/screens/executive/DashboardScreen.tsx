@@ -17,7 +17,6 @@ import {
   DailyStatsCard,
   TrackingStatusIndicator,
   OngoingWalkInCard,
-  UpcomingTasksList,
   StartDayModal,
   ActivityListHeader,
   ActivityCardItem,
@@ -26,9 +25,9 @@ import {
 export default function DashboardScreen() {
   const { user } = useAuthStore();
   const navigation = useNavigation<any>();
-  const { isTracking, isTrackingInitialized, startDay, endDay, activeSchoolMatch } = useOutreachTracking(user?.id);
+  const { isTracking, isTrackingInitialized, sessionStatus, startDay, endDay, activeSchoolMatch } = useOutreachTracking(user?.id);
   const { activities: allActivities, initialize: initCrm, refresh: refreshCrm, isRefreshing: crmRefreshing } = useCrmActivitiesStore();
-  const { pendingTasks: appointments, completeTask, initialize: initTasks, refresh: refreshTasks, isRefreshing: tasksRefreshing } = useTasksStore();
+  const { pendingTasks: appointments, overdueCount, todayCount, completeTask, initialize: initTasks, refresh: refreshTasks, isRefreshing: tasksRefreshing } = useTasksStore();
 
   useEffect(() => {
     const task = InteractionManager.runAfterInteractions(() => {
@@ -195,7 +194,12 @@ export default function DashboardScreen() {
               visitCount={filteredActivities.length}
             />
 
-            <TrackingStatusIndicator isTracking={isTracking} onEndDay={endDay} />
+            <TrackingStatusIndicator 
+              isTracking={isTracking} 
+              sessionStatus={sessionStatus}
+              onEndDay={endDay} 
+              onStartDay={startDay}
+            />
 
             {ongoingWalkIn && (
               <OngoingWalkInCard
@@ -210,10 +214,6 @@ export default function DashboardScreen() {
               />
             )}
 
-            <UpcomingTasksList
-              tasks={appointments}
-              onCompleteTask={completeTask}
-            />
             <ActivityListHeader count={filteredActivities.length} />
           </>
         }
@@ -222,7 +222,7 @@ export default function DashboardScreen() {
 
       <StartDayModal
         isTrackingInitialized={isTrackingInitialized}
-        isTracking={isTracking}
+        sessionStatus={sessionStatus}
         isStarting={isStarting}
         startCoords={startCoords}
         animatedButtonStyle={animatedButtonStyle}

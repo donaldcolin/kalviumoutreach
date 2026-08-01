@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Outlet, Navigate } from 'react-router-dom';
-import { LayoutDashboard, LogOut, BarChart3, Building2, Terminal, UserCheck, Bug, Shield, Bell, Pin, PinOff } from 'lucide-react';
+import { LayoutDashboard, LogOut, BarChart3, Building2, Terminal, UserCheck, Bug, Shield, Bell, Pin, PinOff, ClipboardList } from 'lucide-react';
 import './App.css';
 import { useAuthStore } from './stores/authStore';
 import { Toaster } from '@/components/ui/toaster';

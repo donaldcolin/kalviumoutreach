@@ -5,8 +5,8 @@ import { useAuthStore } from '../stores/authStore';
 
 import { type SchoolPipelineEntry, getStageIndex } from '../components/pipeline/types';
 import { PipelineBoard } from '../components/pipeline/PipelineBoard';
-import { PipelineSeminars } from '../components/pipeline/PipelineSeminars';
 import { SchoolDetailSheet } from '../components/pipeline/SchoolDetailSheet';
+import TaskCenter from './TaskCenter';
 import { GlobalDataFilter } from '../components/GlobalDataFilter';
 import { Building2, KanbanSquare, ListTodo, Calendar, ExternalLink } from 'lucide-react';
 
@@ -159,12 +159,17 @@ export default function CRMHub() {
     Promise.all(targetTeamIds.map(email => 
       fetch(`${API_BASE_URL}/api/leads?email=${encodeURIComponent(email)}`)
         .then(res => res.json())
-        .catch(() => ({ success: false, leads: [] }))
+        .then(res => ({ ...res, email }))
+        .catch(() => ({ success: false, leads: [], email }))
     )).then(results => {
       let combinedLeads: any[] = [];
       results.forEach(res => {
         if (res.success && Array.isArray(res.leads)) {
-          combinedLeads = [...combinedLeads, ...res.leads];
+          const leadsWithEmail = res.leads.map(l => ({
+            ...l,
+            OwnerEmailAddress: l.OwnerEmailAddress || l.OwnerEmail || res.email
+          }));
+          combinedLeads = [...combinedLeads, ...leadsWithEmail];
         }
       });
       setApiLeads(combinedLeads);
@@ -185,7 +190,7 @@ export default function CRMHub() {
       const leadId = lead.ProspectID || '';
       if (!leadId) return;
       
-      const ownerEmail = lead.OwnerEmailAddress || lead.OwnerEmail || lead.EmailAddress;
+      const ownerEmail = lead.OwnerEmailAddress || lead.OwnerEmail;
       const assocUser = Object.values(users).find(u => u.email?.toLowerCase() === ownerEmail?.toLowerCase());
       
       schoolMap[schoolName || leadId] = {
@@ -374,21 +379,23 @@ export default function CRMHub() {
             </div>
           </div>
 
-          <GlobalDataFilter
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            dateFilter={dateFilter}
-            setDateFilter={setDateFilter}
-            associateFilter={associateFilter}
-            setAssociateFilter={setAssociateFilter}
-            taskTypeFilter={taskTypeFilter}
-            setTaskTypeFilter={setTaskTypeFilter as any}
-            executives={visibleExecutives}
-            managerFilter={managerFilter}
-            setManagerFilter={setManagerFilter}
-            managers={availableManagers}
-            userRole={user?.role}
-          />
+          {viewMode !== 'tasks' && (
+            <GlobalDataFilter
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              dateFilter={dateFilter}
+              setDateFilter={setDateFilter}
+              associateFilter={associateFilter}
+              setAssociateFilter={setAssociateFilter}
+              taskTypeFilter={taskTypeFilter}
+              setTaskTypeFilter={setTaskTypeFilter as any}
+              executives={visibleExecutives}
+              managerFilter={managerFilter}
+              setManagerFilter={setManagerFilter}
+              managers={availableManagers}
+              userRole={user?.role}
+            />
+          )}
         </div>
       </div>
 
@@ -413,17 +420,8 @@ export default function CRMHub() {
         )}
 
         {viewMode === 'tasks' && (
-          <div className="flex flex-1 overflow-x-auto custom-scrollbar relative min-h-0">
-            <PipelineSeminars
-              pipelineData={pipelineData}
-              setSelectedSchool={setSelectedSchool}
-              searchQuery={searchQuery}
-              dateFilter={dateFilter}
-              associateFilter={associateFilter}
-              taskTypeFilter={taskTypeFilter}
-              setAssociateFilter={setAssociateFilter}
-              setTaskTypeFilter={setTaskTypeFilter as any}
-            />
+          <div className="flex flex-1 overflow-hidden relative bg-white min-h-0">
+            <TaskCenter isEmbedded />
           </div>
         )}
 

@@ -228,12 +228,13 @@ export default function LeadDetailScreen() {
 
   // One-time fetch for activities by this lead
   const fetchActivities = React.useCallback(async () => {
-    if (!leadId) return;
+    if (!leadId || !user?.id) return;
     setLoading(true);
     try {
       const snapshot = await firestore()
         .collection('crmActivities')
         .where('lsqLeadId', '==', leadId)
+        .where('executiveId', '==', user.id)
         .get();
 
       const acts = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as Omit<CrmActivity, 'id'>) }));
@@ -248,7 +249,7 @@ export default function LeadDetailScreen() {
     } finally {
       setLoading(false);
     }
-  }, [leadId]);
+  }, [leadId, user?.id]);
 
   useEffect(() => {
     fetchActivities();

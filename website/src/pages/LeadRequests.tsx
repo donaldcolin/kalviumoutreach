@@ -219,70 +219,78 @@ export default function LeadRequests() {
             const approver = req.approvedBy ? Object.values(users).find(u => u.id === req.approvedBy) : null;
 
             return (
-              <div key={req.id} className="bg-card border border-border rounded-2xl p-4 shadow-card hover:shadow-card-hover transition-all group hover:-translate-y-0.5">
-                <div className="flex items-center justify-between">
-                  {/* Left: Info */}
+              <div key={req.id} className="bg-card border border-border rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                {/* Accent line on the left based on status */}
+                <div className={`absolute left-0 top-0 bottom-0 w-1 ${config.border.replace('border-', 'bg-')}`} />
+                
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 pl-2">
+                  {/* Lead Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-4">
-                      <h3 className="text-base font-semibold text-foreground tracking-tight truncate">{req.leadName || 'Unknown Lead'}</h3>
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider ${config.bg} ${config.text}`}>
+                    <div className="flex items-center gap-3 mb-1.5">
+                      <h3 className="text-lg font-bold text-foreground tracking-tight truncate">{req.leadName || 'Unknown Lead'}</h3>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${config.bg} ${config.text} border ${config.border}`}>
                         {config.label}
                       </span>
-                      <span className="text-xs text-muted-foreground font-medium ml-2">{formatDate(req.createdAt)}</span>
                     </div>
-                    
-                    <div className="flex items-center gap-6">
-                      <div className="flex items-center gap-2">
-                        <div className="h-6 w-6 rounded-full bg-secondary flex items-center justify-center text-[10px] font-semibold text-muted-foreground border border-border">
-                          {req.requestedByName ? req.requestedByName.substring(0,2).toUpperCase() : 'U'}
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Requested By</p>
-                          <p className="text-sm font-medium text-foreground truncate max-w-[150px]">{req.requestedByName}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <div className="h-6 w-6 rounded-full bg-secondary flex items-center justify-center text-[10px] font-semibold text-muted-foreground border border-border">
-                          {req.ownerEmail ? req.ownerEmail.substring(0,2).toUpperCase() : 'O'}
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Current Owner</p>
-                          <p className="text-sm font-medium text-foreground truncate max-w-[150px]">{req.ownerEmail}</p>
-                        </div>
-                      </div>
-                      
-                      {approver && (
-                        <div className="flex items-center gap-2 ml-auto">
-                          <div>
-                            <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider text-right">
-                              {req.status === 'approved' ? 'Approved By' : 'Rejected By'}
-                            </p>
-                            <p className="text-xs font-medium text-foreground text-right">{approver.name} · {formatDate(req.approvedAt)}</p>
-                          </div>
-                        </div>
-                      )}
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                      <Clock size={12} />
+                      {formatDate(req.createdAt)}
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-2 ml-6 shrink-0 justify-center">
-                    {req.status === 'pending' && user?.role === 'admin' && (
-                      <div className="flex gap-2">
+
+                  {/* Users Info Grid */}
+                  <div className="flex items-center gap-6 bg-secondary/50 px-5 py-3 rounded-xl border border-border/50">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
+                        {req.requestedByName ? req.requestedByName.substring(0,2).toUpperCase() : 'U'}
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-0.5">Requested By</p>
+                        <p className="text-sm font-semibold text-foreground">{req.requestedByName}</p>
+                      </div>
+                    </div>
+
+                    <div className="w-px h-8 bg-border" />
+
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-orange-500/10 text-orange-600 flex items-center justify-center font-bold text-xs">
+                        {req.ownerEmail ? req.ownerEmail.substring(0,2).toUpperCase() : 'O'}
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-0.5">Current Owner</p>
+                        <p className="text-sm font-semibold text-foreground truncate max-w-[150px]">{req.ownerEmail}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions / Approver */}
+                  <div className="flex items-center min-w-[140px] justify-end">
+                    {req.status === 'pending' && user?.role === 'admin' ? (
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleReject(req.id)}
                           disabled={processing === req.id}
-                          className="px-4 py-2 text-sm font-semibold text-danger bg-danger/10 hover:bg-danger/20 rounded-xl transition-colors disabled:opacity-50"
+                          className="px-4 py-2 text-sm font-bold text-destructive bg-destructive/10 hover:bg-destructive/20 rounded-xl transition-colors disabled:opacity-50"
                         >
                           Reject
                         </button>
                         <button
                           onClick={() => handleApprove(req.id)}
                           disabled={processing === req.id}
-                          className="px-4 py-2 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-xl transition-colors disabled:opacity-50 shadow-sm"
+                          className="px-4 py-2 text-sm font-bold text-primary-foreground bg-primary hover:bg-primary/90 rounded-xl transition-colors disabled:opacity-50 shadow-sm"
                         >
                           {processing === req.id ? 'Approving...' : 'Approve'}
                         </button>
                       </div>
-                    )}
+                    ) : approver ? (
+                      <div className="text-right">
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">
+                          {req.status === 'approved' ? 'Approved By' : 'Rejected By'}
+                        </p>
+                        <p className="text-sm font-bold text-foreground">{approver.name}</p>
+                        <p className="text-[10px] text-muted-foreground font-medium mt-0.5">{formatDate(req.approvedAt)}</p>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>

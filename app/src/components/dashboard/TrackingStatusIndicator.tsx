@@ -5,11 +5,36 @@ import { Square } from 'lucide-react-native';
 
 export interface TrackingStatusIndicatorProps {
   isTracking: boolean;
+  sessionStatus?: 'none' | 'active' | 'ended' | 'stale';
   onEndDay?: () => void;
+  onStartDay?: () => void;
 }
 
-export function TrackingStatusIndicator({ isTracking, onEndDay }: TrackingStatusIndicatorProps) {
-  if (!isTracking) return null; // Minimalist approach: hide when not tracking or show a neutral message
+export function TrackingStatusIndicator({ isTracking, sessionStatus, onEndDay, onStartDay }: TrackingStatusIndicatorProps) {
+  if (!isTracking) {
+    if (sessionStatus === 'ended' || sessionStatus === 'stale') {
+      return (
+        <View className="flex-row items-center justify-between bg-slate-50 border border-slate-200 rounded-xl p-3 mb-6 shadow-sm">
+          <View className="flex-row items-center">
+            <View className="w-2 h-2 rounded-full bg-slate-400 mr-3" />
+            <Text className="text-slate-500 text-xs tracking-wide">
+              Location tracking paused
+            </Text>
+          </View>
+          {onStartDay && (
+            <TouchableOpacity
+              onPress={onStartDay}
+              className="flex-row items-center bg-white border border-slate-300 rounded-lg px-3 py-1.5 shadow-sm"
+              activeOpacity={0.7}
+            >
+              <Text className="text-slate-600 text-xs font-semibold">Resume</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      );
+    }
+    return null;
+  }
 
   const handleEndDay = () => {
     Alert.alert(
