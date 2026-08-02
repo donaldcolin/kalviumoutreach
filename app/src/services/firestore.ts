@@ -40,7 +40,7 @@ export async function getAllSchools(): Promise<School[]> {
 
     // 3. Otherwise fetch from Firestore
     const snapshot = await schoolsRef().get();
-    const schools = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as School));
+    const schools = snapshot.docs.map((doc: any) => ({ ...doc.data(), id: doc.id } as School));
     
     // Save new snapshot to cache
     await AsyncStorage.setItem(SCHOOLS_CACHE_KEY, JSON.stringify({
@@ -134,9 +134,9 @@ export function onDailyTrack(
   const docId = trackDocId(executiveId, date);
   return dailyTracksRef()
     .doc(docId)
-    .onSnapshot((doc) => {
+    .onSnapshot((doc: any) => {
       callback(
-        doc.exists() ? ({ id: doc.id, ...doc.data() } as DailyTrack) : null,
+        doc.exists ? ({ ...doc.data(), id: doc.id } as DailyTrack) : null,
       );
     });
 }

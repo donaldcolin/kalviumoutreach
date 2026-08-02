@@ -72,7 +72,7 @@ function App() {
     setAppReady(true);
 
     // Handle FCM foreground messages
-    const unsubMessaging = messaging().onMessage(async remoteMessage => {
+    const unsubMessaging = messaging().onMessage(async (remoteMessage: any) => {
       console.log('Message handled in the foreground!', remoteMessage);
       if (remoteMessage.data?.type === 'LOCATION_PING_REQUEST') {
         try {

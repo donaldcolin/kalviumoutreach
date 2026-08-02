@@ -18,7 +18,7 @@ export function useLocationPinger() {
       .collection('locationRequests')
       .where('executiveId', '==', user.id)
       .where('status', '==', 'pending')
-      .onSnapshot(async (snapshot) => {
+      .onSnapshot(async (snapshot: any) => {
         if (!snapshot || snapshot.empty) return;
 
         for (const docSnap of snapshot.docs) {

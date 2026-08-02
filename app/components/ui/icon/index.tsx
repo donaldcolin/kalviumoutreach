@@ -33,7 +33,7 @@ const iconStyle = tva({
 
 const StyledUIIcon = styled(UIIcon, { className: "style" });
 
-type IIConProps = IPrimitiveIcon &
+type IIConProps = any &
   VariantProps<typeof iconStyle> &
   React.ComponentPropsWithoutRef<typeof UIIcon>;
 

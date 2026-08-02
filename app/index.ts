@@ -9,7 +9,7 @@ import type { LocationPing } from './src/types';
 
 import App from './App';
 
-messaging().setBackgroundMessageHandler(async remoteMessage => {
+messaging().setBackgroundMessageHandler(async (remoteMessage: any) => {
   console.log('Message handled in the background!', remoteMessage);
   if (remoteMessage.data?.type === 'LOCATION_PING_REQUEST') {
     try {

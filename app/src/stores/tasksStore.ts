@@ -173,7 +173,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
       .collection('appointments')
       .where('executiveId', '==', userId)
       .onSnapshot(
-        (snapshot) => {
+        (snapshot: { docs: any[]; }) => {
           const allTasks: Task[] = snapshot.docs.map((d) => ({
             id: d.id,
             ...d.data(),
@@ -194,7 +194,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
             isRefreshing: false,
           });
         },
-        (error) => {
+        (error: any) => {
           console.error('Tasks snapshot error:', error);
           set({ isLoading: false, isRefreshing: false });
         },
@@ -215,7 +215,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
         .where('executiveId', '==', _currentUserId)
         .get();
 
-      const allTasks: Task[] = snapshot.docs.map((d) => ({
+      const allTasks: Task[] = snapshot.docs.map((d: { id: any; data: () => any; }) => ({
         id: d.id,
         ...d.data(),
       })) as Task[];

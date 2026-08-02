@@ -23,7 +23,7 @@ export function useMeetingRecordings(userId: string | undefined) {
         .get();
       
       const recs: MeetingRecording[] = [];
-      snap.forEach((doc) => recs.push({ id: doc.id, ...doc.data() } as MeetingRecording));
+      snap.forEach((doc: { id: any; data: () => any; }) => recs.push({ ...doc.data(), id: doc.id } as MeetingRecording));
       setRecordings(recs);
     } catch (err) {
       console.warn('Failed to fetch meeting recordings:', err);

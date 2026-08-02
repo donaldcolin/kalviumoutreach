@@ -77,9 +77,9 @@ export async function getUserProfile(userId: string, forceRefresh = false): Prom
         // If cache is less than 24 hours old, use it instantly!
         if (Date.now() - cacheTime < 24 * 60 * 60 * 1000) {
           // Quietly re-fetch in the background to update cache for next time
-          firestore().collection('users').doc(userId).get().then(doc => {
-            if ((doc as any).exists) {
-              const profile = { id: doc.id, ...doc.data() } as User;
+          firestore().collection('users').doc(userId).get().then((doc: any) => {
+            if (doc.exists) {
+              const profile = { ...doc.data(), id: doc.id } as User;
               SecureStore.setItemAsync(SECURE_KEY_USER, JSON.stringify(profile));
               SecureStore.setItemAsync(SECURE_KEY_USER_TIME, Date.now().toString());
             }
@@ -92,7 +92,7 @@ export async function getUserProfile(userId: string, forceRefresh = false): Prom
 
     const doc = await firestore().collection('users').doc(userId).get();
     if (!doc.exists) return null;
-    const profile = { id: doc.id, ...doc.data() } as User;
+    const profile = { ...doc.data(), id: doc.id } as User;
     
     await SecureStore.setItemAsync(SECURE_KEY_USER, JSON.stringify(profile));
     await SecureStore.setItemAsync(SECURE_KEY_USER_TIME, Date.now().toString());
