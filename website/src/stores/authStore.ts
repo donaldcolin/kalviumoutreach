@@ -49,7 +49,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         }
 
         if (docSnap.exists()) {
-          const userData = docSnap.data() as User;
+          const userData = { ...docSnap.data(), id: docSnap.id } as User;
           set({ user: userData, isAuthenticated: true, isLoading: false });
 
           if (usersUnsub) usersUnsub();
@@ -68,7 +68,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           usersUnsub = onSnapshot(q, (snapshot) => {
             const users: Record<string, User> = {};
             snapshot.forEach(d => {
-              users[d.id] = d.data() as User;
+              users[d.id] = { ...d.data(), id: d.id } as User;
             });
             set({ users });
           }, (err) => {
