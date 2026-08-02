@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { auth, secondaryAuth, db } from '../firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, onSnapshot, query, where, documentId } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, onSnapshot } from 'firebase/firestore';
 
 import type { User, UserRole } from '@kalvium-outreach/shared';
 export type { User, UserRole };
@@ -26,64 +26,27 @@ export const useAuthStore = create<AuthState>((set) => ({
   error: null,
   
   initialize: () => {
-    let usersUnsub: (() => void) | null = null;
-
     onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Ensure Custom Claims are fresh
-        const tokenResult = await firebaseUser.getIdTokenResult();
-        if (!tokenResult.claims.role) {
-          await firebaseUser.getIdToken(true); // Force refresh
-        }
-
         const docRef = doc(db, 'users', firebaseUser.uid);
-        let docSnap;
-        try {
-          docSnap = await getDoc(docRef);
-        } catch (err: any) {
-          console.error("Firestore getDoc error on user profile:", err);
-          set({ user: null, isAuthenticated: false, isLoading: false, error: 'Permission denied fetching user profile.' });
-          if (usersUnsub) { usersUnsub(); usersUnsub = null; }
-          set({ users: {} });
-          return;
-        }
-
+        const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          const userData = { ...docSnap.data(), id: docSnap.id } as User;
-          set({ user: userData, isAuthenticated: true, isLoading: false });
-
-          if (usersUnsub) usersUnsub();
-
-          let q;
-          if (userData.role === 'admin') {
-            q = collection(db, 'users');
-          } else if (userData.role === 'regionalManager') {
-            q = query(collection(db, 'users'), where('regionId', '==', userData.regionId));
-          } else if (userData.role === 'teamLead') {
-            q = query(collection(db, 'users'), where('managerId', '==', userData.id));
-          } else {
-            q = query(collection(db, 'users'), where(documentId(), '==', userData.id));
-          }
-
-          usersUnsub = onSnapshot(q, (snapshot) => {
-            const users: Record<string, User> = {};
-            snapshot.forEach(d => {
-              users[d.id] = { ...d.data(), id: d.id } as User;
-            });
-            set({ users });
-          }, (err) => {
-            console.error("Firestore onSnapshot error on users collection:", err);
-          });
+          set({ user: { ...docSnap.data(), id: docSnap.id } as User, isAuthenticated: true, isLoading: false });
         } else {
           set({ user: null, isAuthenticated: false, isLoading: false, error: 'User profile not found.' });
-          if (usersUnsub) { usersUnsub(); usersUnsub = null; }
-          set({ users: {} });
         }
       } else {
         set({ user: null, isAuthenticated: false, isLoading: false });
-        if (usersUnsub) { usersUnsub(); usersUnsub = null; }
-        set({ users: {} });
       }
+    });
+
+    // Subscribe to all users
+    onSnapshot(collection(db, 'users'), (snapshot) => {
+      const users: Record<string, User> = {};
+      snapshot.forEach(d => {
+        users[d.id] = { ...d.data(), id: d.id } as User;
+      });
+      set({ users });
     });
   },
 
