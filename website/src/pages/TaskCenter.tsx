@@ -11,7 +11,7 @@ import { Calendar } from '../components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
 import { format } from 'date-fns';
 import { Calendar as CalendarPickerIcon } from 'lucide-react';
-import type { User } from '@kalvium-outreach/shared';
+
 
 type ViewMode = 'list' | 'cards' | 'calendar';
 

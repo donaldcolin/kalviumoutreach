@@ -5,27 +5,30 @@ import { MapPin, Clock, Info, CheckCircle, FileAudio, Image as ImageIcon, X, Use
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { STAGE_SHORT, STAGE_COLORS, getStageIndex } from '../lib/constants';
+import type { MeetingRecording, CrmActivity } from '@kalvium-outreach/shared';
+import type { TimelineEvent } from '../lib/timelineBuilder';
 
 interface TimelineActivityDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  stop: any;
+  stop: TimelineEvent | null;
 }
 
 export function TimelineActivityDialog({ open, onOpenChange, stop }: TimelineActivityDialogProps) {
-  const [meetings, setMeetings] = useState<any[]>([]);
+  const [meetings, setMeetings] = useState<MeetingRecording[]>([]);
   const [loading, setLoading] = useState(false);
-  const [historicalVisits, setHistoricalVisits] = useState<any[]>([]);
+  const [historicalVisits, setHistoricalVisits] = useState<CrmActivity[]>([]);
 
   useEffect(() => {
     async function fetchMeetings() {
-      if (open && stop?.type === 'visit' && stop.data?.id) {
+      if (open && stop?.data && 'id' in stop.data && (stop.type === 'visit' || stop.type === 'crm')) {
         setLoading(true);
         try {
-          const q = query(collection(db, 'meetings'), where('visitId', '==', stop.data.id));
+          const crmData = stop.data as CrmActivity;
+          const q = query(collection(db, 'meetings'), where('visitId', '==', crmData.id));
           const snap = await getDocs(q);
           if (!snap.empty) {
-            setMeetings(snap.docs.map(d => ({ id: d.id, ...(d.data() as Record<string, any>) })));
+            setMeetings(snap.docs.map(d => ({ id: d.id, ...(d.data() as Record<string, unknown>) } as MeetingRecording)));
           } else {
             setMeetings([]);
           }
@@ -43,20 +46,21 @@ export function TimelineActivityDialog({ open, onOpenChange, stop }: TimelineAct
       if (open && stop?.type === 'crm' && stop.data) {
         try {
           let q;
-          if (stop.data.lsqLeadId) {
-            q = query(collection(db, 'crmActivities'), where('lsqLeadId', '==', stop.data.lsqLeadId));
-          } else if (stop.data.schoolName) {
+          const crmData = stop.data as CrmActivity;
+          if (crmData.lsqLeadId) {
+            q = query(collection(db, 'crmActivities'), where('lsqLeadId', '==', crmData.lsqLeadId));
+          } else if (crmData.schoolName) {
             // Fallback if no lead ID
             q = query(
               collection(db, 'crmActivities'), 
-              where('schoolName', '==', stop.data.schoolName),
-              where('executiveId', '==', stop.data.executiveId)
+              where('schoolName', '==', crmData.schoolName),
+              where('executiveId', '==', crmData.executiveId)
             );
           }
           if (q) {
             const snap = await getDocs(q);
             if (!snap.empty) {
-              const visits = snap.docs.map(d => ({ id: d.id, ...(d.data() as Record<string, any>) }));
+              const visits = snap.docs.map(d => ({ id: d.id, ...(d.data() as Record<string, unknown>) } as CrmActivity));
               // Sort chronologically (oldest first)
               visits.sort((a, b) => {
                 const timeA = a.walkInDateTime ? new Date(a.walkInDateTime).getTime() : 0;
@@ -65,12 +69,12 @@ export function TimelineActivityDialog({ open, onOpenChange, stop }: TimelineAct
               });
               setHistoricalVisits(visits);
             } else {
-              setHistoricalVisits([stop.data]); // Fallback to current stop
+              setHistoricalVisits([stop.data as CrmActivity]); // Fallback to current stop
             }
           }
         } catch (error) {
           console.error("Failed to fetch historical visits:", error);
-          setHistoricalVisits([stop.data]); // Fallback
+          setHistoricalVisits([stop.data as CrmActivity]); // Fallback
         }
       } else if (!open) {
         setHistoricalVisits([]);
@@ -109,8 +113,8 @@ export function TimelineActivityDialog({ open, onOpenChange, stop }: TimelineAct
 
   if (!stop) return null;
 
-  // Fallback to check other potential photo fields just in case
-  const photoUrl = stop.data?.photoWatermarkedUrl || stop.data?.photoOriginalUrl || stop.data?.photoUrl || stop.data?.checkInPhotoUrl;
+  const dataCrm = stop.data as CrmActivity | undefined;
+  const photoUrl = dataCrm?.photoWatermarkedUrl || dataCrm?.photoOriginalUrl || dataCrm?.photoUrl || dataCrm?.checkInPhotoUrl;
   
   // Get all valid recording URLs from all meetings
   const audioUrls = meetings.map(m => m.recordingUrl).filter(url => !!url);
@@ -127,11 +131,11 @@ export function TimelineActivityDialog({ open, onOpenChange, stop }: TimelineAct
         <div className="py-4 px-6 space-y-6 max-h-[calc(100vh-140px)] overflow-y-auto pb-24 bg-zinc-50/50">
           
           {/* CRM Details */}
-          {stop.type === 'crm' && stop.data && (
+          {stop.type === 'crm' && dataCrm && (
             <div className="space-y-4">
               
               {/* Stage Progress Bar (Historical) */}
-              {(overallMaxStage >= 0 || stop.data.walkInStatus) && (
+              {(overallMaxStage >= 0 || dataCrm.walkInStatus) && (
                 <div className="bg-white rounded-2xl p-5 border border-zinc-200 shadow-sm relative overflow-hidden">
                   <div className="flex items-center gap-2 mb-6">
                     <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -177,48 +181,48 @@ export function TimelineActivityDialog({ open, onOpenChange, stop }: TimelineAct
               )}
 
               {/* Outcome */}
-              {(stop.data.refusedEntryReason || stop.data.statusFrontDesk || stop.data.statusPIC || stop.data.statusPrincipal) && (
+              {(dataCrm.refusedEntryReason || dataCrm.statusFrontDesk || dataCrm.statusPIC || dataCrm.statusPrincipal) && (
                 <div className="bg-white rounded-2xl p-4 border border-zinc-200 shadow-sm">
                   <div className="flex items-center gap-1.5 mb-2">
                     <div className="w-2 h-2 rounded-full bg-amber-500" />
                     <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Latest Outcome</p>
                   </div>
                   <p className="text-sm text-zinc-900 font-medium pl-3.5 border-l-2 border-zinc-100 py-1">
-                    {getStageIndex(stop.data.walkInStatus) === 0 ? stop.data.refusedEntryReason :
-                     getStageIndex(stop.data.walkInStatus) === 1 ? stop.data.statusFrontDesk :
-                     getStageIndex(stop.data.walkInStatus) === 2 ? stop.data.statusPIC :
-                     stop.data.statusPrincipal}
+                    {getStageIndex(dataCrm.walkInStatus || '') === 0 ? dataCrm.refusedEntryReason :
+                     getStageIndex(dataCrm.walkInStatus || '') === 1 ? dataCrm.statusFrontDesk :
+                     getStageIndex(dataCrm.walkInStatus || '') === 2 ? dataCrm.statusPIC :
+                     dataCrm.statusPrincipal}
                   </p>
                 </div>
               )}
 
               {/* Contact Info */}
-              {(stop.data.picName || stop.data.principalName) && (
+              {(dataCrm.picName || dataCrm.principalName) && (
                 <div className="grid grid-cols-2 gap-3">
-                  {stop.data.picName && (
+                  {dataCrm.picName && (
                     <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-sm hover:shadow-md transition-shadow">
                       <div className="flex items-center gap-1.5 mb-3">
                         <User size={14} className="text-blue-500" />
                         <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">PIC</p>
                       </div>
-                      <p className="text-sm font-bold text-zinc-900 truncate">{stop.data.picName}</p>
-                      {stop.data.picPhone && (
+                      <p className="text-sm font-bold text-zinc-900 truncate">{dataCrm.picName}</p>
+                      {dataCrm.picPhone && (
                         <p className="text-[11px] font-medium text-zinc-600 mt-1 flex items-center gap-1.5">
-                          <Phone size={10} /> {stop.data.picPhone}
+                          <Phone size={10} /> {dataCrm.picPhone}
                         </p>
                       )}
                     </div>
                   )}
-                  {stop.data.principalName && (
+                  {dataCrm.principalName && (
                     <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-sm hover:shadow-md transition-shadow">
                       <div className="flex items-center gap-1.5 mb-3">
                         <User size={14} className="text-indigo-500" />
                         <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Principal</p>
                       </div>
-                      <p className="text-sm font-bold text-zinc-900 truncate">{stop.data.principalName}</p>
-                      {stop.data.principalPhone && (
+                      <p className="text-sm font-bold text-zinc-900 truncate">{dataCrm.principalName}</p>
+                      {dataCrm.principalPhone && (
                         <p className="text-[11px] font-medium text-zinc-600 mt-1 flex items-center gap-1.5">
-                          <Phone size={10} /> {stop.data.principalPhone}
+                          <Phone size={10} /> {dataCrm.principalPhone}
                         </p>
                       )}
                     </div>
@@ -227,21 +231,21 @@ export function TimelineActivityDialog({ open, onOpenChange, stop }: TimelineAct
               )}
 
               {/* Notes */}
-              {stop.data.notes && (
+              {dataCrm.notes && (
                 <div className="bg-white p-4 rounded-2xl border border-zinc-200 shadow-sm">
                   <div className="flex items-center gap-2 mb-3">
                     <FileText size={14} className="text-amber-500" />
                     <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Notes</p>
                   </div>
-                  <p className="text-sm text-zinc-700 leading-relaxed bg-zinc-50 p-3 rounded-xl border border-zinc-100">{stop.data.notes}</p>
+                  <p className="text-sm text-zinc-700 leading-relaxed bg-zinc-50 p-3 rounded-xl border border-zinc-100">{dataCrm.notes}</p>
                 </div>
               )}
 
               {/* Metadata */}
               <div className="flex items-center gap-2 flex-wrap">
-                {stop.data.lsqLeadId && (
+                {dataCrm.lsqLeadId && (
                   <a
-                    href={`https://run.leadsquared.com/LeadManagement/LeadDetails?LeadID=${stop.data.lsqLeadId}`}
+                    href={`https://run.leadsquared.com/LeadManagement/LeadDetails?LeadID=${dataCrm.lsqLeadId}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors shadow-sm"
@@ -249,29 +253,29 @@ export function TimelineActivityDialog({ open, onOpenChange, stop }: TimelineAct
                     <ExternalLink size={12} /> LSQ Lead
                   </a>
                 )}
-                {stop.data.boardOfSchool && (
+                {dataCrm.boardOfSchool && (
                   <span className="px-3 py-1.5 bg-white border border-zinc-200 text-zinc-700 text-[10px] font-bold uppercase tracking-wider rounded-lg shadow-sm">
-                    {stop.data.boardOfSchool}
+                    {dataCrm.boardOfSchool}
                   </span>
                 )}
-                {stop.data.studentStrength && (
+                {dataCrm.studentStrength && (
                   <span className="px-3 py-1.5 bg-white border border-zinc-200 text-zinc-700 text-[10px] font-bold uppercase tracking-wider rounded-lg shadow-sm">
-                    {stop.data.studentStrength} Students
+                    {dataCrm.studentStrength} Students
                   </span>
                 )}
-                {stop.data.proposalSentToSchool === 'Yes' && (
+                {dataCrm.proposalSentToSchool === 'Yes' && (
                   <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-emerald-200 shadow-sm">
                     Proposal Sent
                   </span>
                 )}
-                {stop.data.followUpDate && (
+                {dataCrm.followUpDate && (
                   <span className="px-3 py-1.5 bg-blue-50 text-blue-700 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-blue-200 flex items-center gap-1.5 shadow-sm">
-                    <CalendarIcon size={12} /> Follow-up: {new Date(stop.data.followUpDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                    <CalendarIcon size={12} /> Follow-up: {new Date(dataCrm.followUpDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                   </span>
                 )}
-                {stop.data.isValidWalkIn !== undefined && (
-                  <span className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg border flex items-center gap-1.5 shadow-sm ${stop.data.isValidWalkIn ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-                    <MapPin size={12} /> {stop.data.isValidWalkIn ? 'Valid Location' : 'Fake Location'} {stop.data.distanceMeters != null ? `(${stop.data.distanceMeters}m)` : ''}
+                {dataCrm.isValidWalkIn !== undefined && (
+                  <span className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg border flex items-center gap-1.5 shadow-sm ${dataCrm.isValidWalkIn ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                    <MapPin size={12} /> {dataCrm.isValidWalkIn ? 'Valid Location' : 'Fake Location'} {dataCrm.distanceMeters != null ? `(${dataCrm.distanceMeters}m)` : ''}
                   </span>
                 )}
               </div>

@@ -55,15 +55,15 @@ export default function LeadsScreen() {
       .collection('leadAccessRequests')
       .where('requestedBy', '==', user.id)
       .onSnapshot(
-        (snap) => {
+        (snap: any[]) => {
           const map: Record<string, AccessRequest> = {};
-          snap.forEach((doc) => {
+          snap.forEach((doc: { data: () => any; id: any; }) => {
             const data = doc.data();
             map[data.leadId] = { id: doc.id, leadId: data.leadId, status: data.status };
           });
           setAccessRequests(map);
         },
-        (error) => {
+        (error: any) => {
           console.warn('Failed to fetch access requests:', error);
         }
       );

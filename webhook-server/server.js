@@ -50,3 +50,7 @@ export const processPushQueue = onDocumentCreated({ document: "pushQueue/{docId}
 // ─── Export: Location Requests Trigger ───────────────────────────────────────
 import { handleLocationRequest } from './locationRequests.js';
 export const processLocationRequest = onDocumentCreated({ document: "locationRequests/{docId}" }, handleLocationRequest);
+
+// ─── Export: User Claims Sync Trigger ────────────────────────────────────────
+import { syncUserClaims } from './claims.js';
+export const processUserClaims = syncUserClaims;

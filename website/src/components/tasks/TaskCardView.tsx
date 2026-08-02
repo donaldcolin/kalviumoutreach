@@ -29,7 +29,7 @@ const statusBadge = {
   completed: { label: 'Done', cls: 'bg-gray-50 text-gray-500', icon: CheckCircle2 },
 };
 
-export function TaskCardView({ tasks, users, executives, categorize, onSnooze, onPostpone, onPushToToday, onComplete, onDelete }: TaskCardViewProps) {
+export function TaskCardView({ tasks, executives, categorize, onSnooze, onPostpone, onPushToToday, onComplete, onDelete }: TaskCardViewProps) {
   // Group tasks by associate
   const grouped = new Map<string, Task[]>();
   tasks.forEach(t => {

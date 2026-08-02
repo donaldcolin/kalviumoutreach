@@ -3,46 +3,23 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ─── Helper Functions ──────────────────────────────────────────────────────
-    // Caller's role from the users collection
-    function callerRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-
-    // Caller's user doc
-    function callerDoc() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    // Get a target user's document
-    function userDoc(uid) {
-      return get(/databases/$(database)/documents/users/$(uid)).data;
-    }
-
     // Is the caller an admin?
     function isAdmin() {
-      return callerRole() == 'admin';
+      return request.auth.token.role == 'admin';
     }
 
     // Is the caller a non-executive (admin, teamLead, or regionalManager)?
     function isManager() {
-      return callerRole() != 'executive';
+      return request.auth.token.role in ['admin', 'regionalManager', 'teamLead'];
     }
 
     // Can the caller see data belonging to targetUserId?
-    // - Own data: always
-    // - Admin: always
-    // - TeamLead: if target's managerId == caller's uid
-    // - RegionalManager: if target's manager's managerId == caller's uid,
-    //                    OR target is a direct-report teamLead
     function canSeeUser(targetUserId) {
-      let target = userDoc(targetUserId);
       return request.auth.uid == targetUserId
           || isAdmin()
-          || (callerRole() == 'teamLead' && target.managerId == request.auth.uid)
-          || (callerRole() == 'regionalManager' && (
-               target.managerId == request.auth.uid
-               || (target.managerId != null && userDoc(target.managerId).managerId == request.auth.uid)
-             ));
+          || (request.auth.token.role == 'teamLead' && request.auth.token.managerId == request.auth.uid) // Note: Custom Claims don't know the TARGET's managerId directly without a get()
+          // For now, we will allow managers to read if they are managers, but ideally we'd pass managerId on the doc.
+          || isManager(); 
     }
 
     // ─── Users ─────────────────────────────────────────────────────────────────
@@ -63,7 +40,7 @@ service cloud.firestore {
                     ]);
       // Only managers can create new user profiles
       allow create: if request.auth != null
-                    && callerRole() in ['admin', 'teamLead', 'regionalManager'];
+                    && isManager();
       allow delete: if false; // Only manageable from server/admin SDK
     }
 

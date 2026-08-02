@@ -23,9 +23,14 @@ export interface Lead {
   ProspectID: string;
   FirstName?: string;
   LastName?: string;
+  Company?: string;
   mx_City?: string;
   ProspectStage?: string;
   OwnerIdEmailAddress?: string;
+  OwnerEmailAddress?: string;
+  OwnerEmail?: string;
+  Source?: string;
+  ModifiedOn?: string;
 }
 
 /** A CRM activity record stored in Firestore `crmActivities` collection */
@@ -72,6 +77,10 @@ export interface CrmActivity {
   activityType?: string;
   remarks?: string;
   livePhotoUrl?: string;
+  photoWatermarkedUrl?: string;
+  photoOriginalUrl?: string;
+  photoUrl?: string;
+  checkInPhotoUrl?: string;
   proposalSentToSchool?: string;
   createdAt?: unknown;
 }
@@ -109,6 +118,7 @@ export interface MeetingRecording {
   id: string;
   executiveId: string;
   storageUrl: string;
+  recordingUrl?: string;
   duration: number;
   timestamp?: { toDate: () => Date };
   pushedToLS?: boolean;

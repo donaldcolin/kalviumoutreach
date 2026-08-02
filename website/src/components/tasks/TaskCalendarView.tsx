@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths, getDay } from 'date-fns';
-import { ChevronLeft, ChevronRight, AlertCircle, CalendarCheck, Clock, X } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, getDay } from 'date-fns';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { TaskActionMenu } from './TaskActionMenu';
 import type { Task, User } from '@kalvium-outreach/shared';
 

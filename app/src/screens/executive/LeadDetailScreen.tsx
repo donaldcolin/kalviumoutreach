@@ -237,8 +237,8 @@ export default function LeadDetailScreen() {
         .where('executiveId', '==', user.id)
         .get();
 
-      const acts = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as Omit<CrmActivity, 'id'>) }));
-      acts.sort((a, b) => {
+      const acts = snapshot.docs.map((d: { id: any; data: () => Omit<CrmActivity, "id">; }) => ({ id: d.id, ...(d.data() as Omit<CrmActivity, 'id'>) }));
+      acts.sort((a: { walkInDateTime: any; lsqCreatedOn: any; }, b: { walkInDateTime: any; lsqCreatedOn: any; }) => {
         const ta = new Date(a.walkInDateTime || a.lsqCreatedOn || 0).getTime();
         const tb = new Date(b.walkInDateTime || b.lsqCreatedOn || 0).getTime();
         return tb - ta;

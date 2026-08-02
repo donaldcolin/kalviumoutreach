@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar, Clock, ArrowRight, Check, Trash2, MoreHorizontal, Pause } from 'lucide-react';
+import {  Clock, ArrowRight, Check, Trash2, MoreHorizontal, Pause } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar as CalendarPicker } from '../ui/calendar';
 import type { Task } from '@kalvium-outreach/shared';

@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuthStore } from '../stores/authStore';
-import { format } from 'date-fns';
+
 import type { Task } from '@kalvium-outreach/shared';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

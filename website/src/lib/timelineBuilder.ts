@@ -1,28 +1,36 @@
 import { calculateDistanceMeters } from './distance';
 import type { CrmActivity } from '@kalvium-outreach/shared';
+import type { RawPing } from './gpsUtils';
 
 export interface LocationRequest {
   status: string;
-  requestedAt?: any;
-  [key: string]: any;
+  requestedAt?: { toMillis?: () => number } | number;
+  [key: string]: unknown;
 }
 
-
-
-export interface RawPing {
-  ts: any;
-  [key: string]: any;
+export interface TimelineEvent {
+  time: string;
+  event: string;
+  type: 'request' | 'crm' | 'warning' | 'visit' | 'ping';
+  status?: string;
+  timestamp: number;
+  data?: CrmActivity | LocationRequest | RawPing;
+  lat?: number | null;
+  lng?: number | null;
+  details?: string;
+  isWarning?: boolean;
 }
 
 export function buildTimeline(
   selectedDateLocReqs: LocationRequest[],
   selectedDateCrmActivities: CrmActivity[],
   rawPings: RawPing[]
-) {
-  const merged: any[] = [];
+): TimelineEvent[] {
+  const merged: TimelineEvent[] = [];
 
   selectedDateLocReqs.forEach((r) => {
-    const ts = r.requestedAt?.toMillis ? r.requestedAt.toMillis() : r.requestedAt || Date.now();
+    const req = r.requestedAt;
+    const ts = (req && typeof req === 'object' && 'toMillis' in req && typeof req.toMillis === 'function') ? req.toMillis() : (typeof req === 'number' ? req : Date.now());
     const date = new Date(ts);
     const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     merged.push({
@@ -61,8 +69,8 @@ export function buildTimeline(
   for (let i = 1; i < rawPings.length; i++) {
     const prev = rawPings[i - 1];
     const curr = rawPings[i];
-    const prevTs = prev.ts?.toMillis ? prev.ts.toMillis() : prev.ts || 0;
-    const currTs = curr.ts?.toMillis ? curr.ts.toMillis() : curr.ts || 0;
+    const prevTs = prev.ts || 0;
+    const currTs = curr.ts || 0;
 
     const gapMs = currTs - prevTs;
     if (gapMs > 3600000) {
@@ -86,15 +94,15 @@ export function buildTimeline(
   merged.sort((a, b) => a.timestamp - b.timestamp);
 
   // Anti-Cheat: Impossible Travel & Short Duration
-  const finalTimeline: any[] = [];
+  const finalTimeline: TimelineEvent[] = [];
   let lastLoc: { lat: number; lng: number; timestamp: number } | null = null;
 
   merged.forEach((item) => {
     // 1. Short Duration Warning for CRM activities
     if (item.type === 'crm' && item.data) {
-      const a = item.data;
+      const a = item.data as CrmActivity;
       const walkInTs = a.walkInDateTime ? new Date(a.walkInDateTime).getTime() : 0;
-      const createdTs = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+      const createdTs = (a.createdAt as { toMillis?: () => number })?.toMillis ? (a.createdAt as { toMillis: () => number }).toMillis() : 0;
       if (walkInTs > 0 && createdTs > 0) {
         const durationMs = createdTs - walkInTs;
         if (
