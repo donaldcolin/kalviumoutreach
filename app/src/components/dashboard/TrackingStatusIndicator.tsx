@@ -55,16 +55,6 @@ export function TrackingStatusIndicator({ isTracking, sessionStatus, onEndDay, o
           Location tracking active
         </Text>
       </View>
-      {onEndDay && (
-        <TouchableOpacity
-          onPress={handleEndDay}
-          className="flex-row items-center bg-gray-100 rounded-lg px-3 py-1.5"
-          activeOpacity={0.7}
-        >
-          <Square size={12} color="#6B7280" strokeWidth={2.5} />
-          <Text className="text-gray-500 text-xs font-semibold ml-1.5">End Day</Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 }

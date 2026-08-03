@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { ScrollView, View, RefreshControl } from 'react-native';
-import { ClipboardCheck } from 'lucide-react-native';
 import { useAuthStore } from '../../stores/authStore';
 import { useTasksStore } from '../../stores/tasksStore';
-import { TaskTabs, TaskList, TaskSectionHeader, TasksHeader, TaskCard } from '../../components/tasks';
+import { TaskTabs, TaskList } from '../../components/tasks';
 import type { TaskTabValue } from '../../components/tasks/TaskTabs';
-import { VStack } from '@/components/ui/vstack';
-import { Text } from '@/components/ui/text';
 
 export default function TasksScreen() {
   const { user } = useAuthStore();
@@ -51,11 +48,8 @@ export default function TasksScreen() {
         }
       >
         {/* Summary Header with Stats */}
-        <TasksHeader
-          overdueCount={overdueCount}
-          todayCount={todayCount}
-          upcomingCount={upcomingCount}
-        />
+
+        {/* Header removed as requested */}
 
         {/* ── Tabs Toggle ── */}
         <TaskTabs

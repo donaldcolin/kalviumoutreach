@@ -138,6 +138,9 @@ export function onDailyTrack(
       callback(
         doc.exists ? ({ ...doc.data(), id: doc.id } as DailyTrack) : null,
       );
+    }, (error: any) => {
+      console.warn('onDailyTrack permission error:', error);
+      callback(null); // Fallback so UI doesn't hang
     });
 }
 

@@ -36,7 +36,8 @@ service cloud.firestore {
                       'lastKnownLocation.lat',
                       'lastKnownLocation.lng',
                       'lastKnownLocation.ts',
-                      'lastKnownLocation.updatedAt'
+                      'lastKnownLocation.updatedAt',
+                      'fcmToken'
                     ]);
       // Only managers can create new user profiles
       allow create: if request.auth != null

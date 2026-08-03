@@ -43,7 +43,7 @@ export function useOutreachTracking(userId: string | undefined) {
           setIsTracking(false);
           return;
         }
-        setSessionStatus(track.status as any);
+        setSessionStatus((track.status || 'none') as any);
 
         if (track.status === 'active') {
           // ─── Stale Session Watchdog ────────────────────────────────────
@@ -136,6 +136,8 @@ export function useOutreachTracking(userId: string | undefined) {
     await locationTracker.startTracking();
   }, [userId, isTracking]);
 
+  console.log('[useOutreachTracking] state:', { isTracking, isTrackingInitialized, sessionStatus, activeSchoolMatch });
+  
   return {
     isTracking,
     isTrackingInitialized,
