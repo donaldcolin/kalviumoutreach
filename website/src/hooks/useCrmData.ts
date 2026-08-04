@@ -34,8 +34,7 @@ export function useCrmData(user: User | null, users: Record<string, User>) {
     return [];
   }, [user, users]);
 
-  const allUsers = useMemo(() => Object.values(users), [users]);
-  
+
   const visibleExecutives = useMemo(() => {
     let executives = Object.values(users).filter(u => u.role === 'executive');
     
