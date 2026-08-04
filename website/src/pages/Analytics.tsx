@@ -18,41 +18,22 @@ export default function Analytics() {
 
   // Compute available managers based on RBAC
   const availableManagers = useMemo(() => {
-    if (!user) return [];
-    const allUsers = Object.values(users);
-    if (user.role === 'admin') return allUsers.filter(u => u.role === 'teamLead');
-    if (user.role === 'regionalManager') return allUsers.filter(u => u.role === 'teamLead' && u.managerId === user.id);
-    return [];
-  }, [user, users]);
+    return Object.values(users).filter(u => u.role === 'teamLead');
+  }, [users]);
 
-  // Get visible users based on RBAC hierarchy and managerFilter
   const visibleUsers = useMemo(() => {
-    if (!user) return [];
-    const allUsers = Object.values(users);
-    let vUsers: any[] = [];
+    let vUsers = Object.values(users).filter(u => u.role === 'executive');
     
-    if (user.role === 'admin' || user.role === 'regionalManager') {
-      if (managerFilter !== 'all') {
-        vUsers = allUsers.filter(u => u.role === 'executive' && u.managerId === managerFilter);
-      } else {
-        if (user.role === 'admin') {
-          vUsers = allUsers.filter(u => u.role === 'executive');
-        } else {
-          const myManagerIds = new Set(availableManagers.map(m => m.id));
-          vUsers = allUsers.filter(u => u.role === 'executive' && u.managerId && myManagerIds.has(u.managerId));
-        }
-      }
-    } else if (user.role === 'teamLead') {
-      vUsers = allUsers.filter(u => u.role === 'executive' && u.managerId === user.id);
+    if (managerFilter !== 'all') {
+      vUsers = vUsers.filter(u => u.managerId === managerFilter);
     }
     
-    // Further filter by associate if set
     if (associateFilter !== 'all') {
       vUsers = vUsers.filter(u => u.email?.toLowerCase() === associateFilter);
     }
     
     return vUsers;
-  }, [users, user, managerFilter, availableManagers, associateFilter]);
+  }, [users, managerFilter, associateFilter]);
 
   const visibleEmails = useMemo(() => {
     return new Set(visibleUsers.map((u: any) => u.email?.toLowerCase()).filter(Boolean));

@@ -36,27 +36,15 @@ export function useCrmData(user: User | null, users: Record<string, User>) {
 
   const allUsers = useMemo(() => Object.values(users), [users]);
   
-  // Compute visible executives based on filters
   const visibleExecutives = useMemo(() => {
-    if (!user) return [];
-    let executives: User[] = [];
+    let executives = Object.values(users).filter(u => u.role === 'executive');
     
-    if (user.role === 'admin' || user.role === 'regionalManager') {
-      if (managerFilter !== 'all') {
-        executives = allUsers.filter(u => u.role === 'executive' && u.managerId === managerFilter);
-      } else {
-        if (user.role === 'admin') {
-          executives = allUsers.filter(u => u.role === 'executive');
-        } else {
-          const myManagerIds = new Set(availableManagers.map(m => m.id));
-          executives = allUsers.filter(u => u.role === 'executive' && u.managerId && myManagerIds.has(u.managerId));
-        }
-      }
-    } else if (user.role === 'teamLead') {
-      executives = allUsers.filter(u => u.managerId === user.id);
+    if (managerFilter !== 'all') {
+      executives = executives.filter(u => u.managerId === managerFilter);
     }
+    
     return executives;
-  }, [user, allUsers, managerFilter, availableManagers]);
+  }, [users, managerFilter]);
 
   // If a specific associate is chosen, filter down to just them
   const targetTeamIds = useMemo(() => {

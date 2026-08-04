@@ -21,7 +21,6 @@ async function fetchActivities(email: string): Promise<CrmActivity[]> {
   const snapshot = await firestore()
     .collection('crmActivities')
     .where('executiveEmail', '==', email)
-    .where('executiveId', '==', uid)
     .get();
 
   const acts = snapshot.docs.map((d: { id: any; data: () => any; }) => ({ ...d.data(), id: d.id } as CrmActivity));

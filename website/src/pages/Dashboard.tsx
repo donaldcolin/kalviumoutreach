@@ -47,25 +47,8 @@ export default function Dashboard() {
   }, [todayStart]);
 
   const visibleUsers = useMemo(() => {
-    const allUsers = Object.values(users);
-    
-    if (user?.role === 'admin') {
-      return allUsers; 
-    }
-    
-    if (user?.role === 'regionalManager') {
-      const myManagers = allUsers.filter(u => u.role === 'teamLead' && u.managerId === user.id);
-      const myManagerIds = new Set(myManagers.map(m => m.id));
-      const myExecutives = allUsers.filter(u => u.role === 'executive' && u.managerId && myManagerIds.has(u.managerId));
-      return [...myManagers, ...myExecutives, user]; // Include the AGM themselves
-    }
-    
-    if (user?.role === 'teamLead') {
-      return allUsers.filter(u => u.managerId === user.id || u.id === user.id); // Include the Manager themselves
-    }
-    
-    return [];
-  }, [user, users]);
+    return Object.values(users);
+  }, [users]);
 
   const {
     ongoingWalkIns,
