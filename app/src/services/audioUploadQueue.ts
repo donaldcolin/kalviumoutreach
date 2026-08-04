@@ -73,6 +73,9 @@ export const processAudioQueue = async () => {
     const failedItems: AudioQueueItem[] = [];
 
     for (const item of queue) {
+      // Yield to the UI thread so the app doesn't freeze between items
+      await new Promise(resolve => setTimeout(resolve, 50));
+
       try {
         const url = await uploadToCloudinary(item.uri, `note_${Date.now()}`);
 

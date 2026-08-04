@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuthStore } from '../stores/authStore';
 import { AnalyticsTab } from '../components/AnalyticsTab';
@@ -64,10 +64,14 @@ export default function Analytics() {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const sevenDaysAgoTs = sevenDaysAgo.getTime();
     
-    // CRM Activities don't have a standardized numeric timestamp index like visits did, 
-    // but they do have lsqCreatedOn and walkInDateTime. 
-    // We'll fetch all and filter in memory since we don't have a composite index.
-    const q7 = collection(db, 'crmActivities');
+    // We will use 'syncedAt' or 'lsqCreatedOn' to limit the fetch. 
+    // Since 'syncedAt' is a Firebase Timestamp, we should use 'lsqCreatedOn' (ISO string) 
+    // as it covers both app-created and LSQ-synced records consistently.
+    const sevenDaysAgoIsoString = sevenDaysAgo.toISOString();
+    const q7 = query(
+      collection(db, 'crmActivities'),
+      where('lsqCreatedOn', '>=', sevenDaysAgoIsoString)
+    );
     
     const unsub7 = onSnapshot(q7, (snapshot) => {
       const activities = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }));

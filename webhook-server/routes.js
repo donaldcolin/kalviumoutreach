@@ -4,7 +4,7 @@
  */
 import express from 'express';
 import cors from 'cors';
-import { db, FieldValue } from './config.js';
+import { db, auth, FieldValue } from './config.js';
 import { lsqFetch } from './lsq.js';
 import { syncActivities, lastSyncResult } from './sync.js';
 
@@ -60,6 +60,53 @@ app.get('/api/sync-now', (req, res) => {
 
 app.get('/api/last-sync', (req, res) => {
   res.json(lastSyncResult);
+});
+
+// ─── Create User ────────────────────────────────────────────────────────────
+
+app.post('/api/create-user', async (req, res) => {
+  try {
+    const { email, password, role, name, phone, regionId, managerId, seniorManagerId } = req.body;
+    
+    if (!email || !password || !role) {
+      return res.status(400).json({ error: 'Email, password, and role are required' });
+    }
+
+    // 1. Create user in Firebase Auth
+    const userRecord = await auth.createUser({
+      email,
+      password,
+      displayName: name,
+    });
+
+    // 2. Set Custom Claims based on role
+    // This allows Firestore rules to enforce RBAC without reading the users collection
+    await auth.setCustomUserClaims(userRecord.uid, { role });
+
+    // 3. Save profile to Firestore
+    const userDoc = {
+      email,
+      role,
+      name: name || '',
+      phone: phone || '',
+      regionId: regionId || null,
+      managerId: managerId || null,
+      seniorManagerId: seniorManagerId || null,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+
+    await db.collection('users').doc(userRecord.uid).set(userDoc);
+
+    res.json({
+      success: true,
+      uid: userRecord.uid,
+      message: 'User created successfully'
+    });
+  } catch (err) {
+    console.error('Failed to create user:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ─── Leads Search ───────────────────────────────────────────────────────────

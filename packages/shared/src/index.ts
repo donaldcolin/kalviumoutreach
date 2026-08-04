@@ -6,7 +6,7 @@
 
 // ─── Enums & Literal Types ───────────────────────────────────────────────────
 
-export type UserRole = 'executive' | 'teamLead' | 'regionalManager' | 'admin';
+export type UserRole = 'executive' | 'teamLead' | 'seniorManager' | 'regionalManager' | 'admin';
 
 export type StopClassification = 'school' | 'teashop' | 'park' | 'break' | 'unclassified';
 
@@ -137,7 +137,9 @@ export interface User {
   role: UserRole;
   employeeId?: string;
   regionId: string;
+  managedRegions?: string[]; // for seniorManager
   managerId?: string;
+  seniorManagerId?: string; // used to link executives under a teamLead to the overarching seniorManager
   active: boolean;
 }
 

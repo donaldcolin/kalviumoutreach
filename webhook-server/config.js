@@ -6,6 +6,7 @@ import fs from 'fs';
 import fetch from 'node-fetch';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
 import dotenv from 'dotenv';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -65,6 +66,7 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT) {
 }
 
 export const db = getFirestore(fbApp);
+export const auth = getAuth(fbApp);
 
 // Re-export FieldValue for convenience
 export { FieldValue, fetch };

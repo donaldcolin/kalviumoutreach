@@ -49,12 +49,16 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     // Process on mount
-    processAudioQueue();
+    InteractionManager.runAfterInteractions(() => {
+      processAudioQueue();
+    });
 
     // Process on app resume
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (nextAppState === 'active') {
-        processAudioQueue();
+        InteractionManager.runAfterInteractions(() => {
+          processAudioQueue();
+        });
       }
     });
 
@@ -70,8 +74,11 @@ export default function DashboardScreen() {
       refreshCrm(),
       refreshTasks(),
       user?.id ? loadOngoing(user.id) : Promise.resolve(),
-      processAudioQueue(),
     ]);
+    // Process audio queue without blocking the refresh spinner
+    InteractionManager.runAfterInteractions(() => {
+      processAudioQueue();
+    });
   }, [user?.id]);
 
   const [selectedDate, setSelectedDate] = React.useState(new Date());

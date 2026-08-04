@@ -46,8 +46,12 @@ export default function UserManagement() {
       return allUsers.filter(u => u.role === 'teamLead');
     }
     if (newUser.role === 'teamLead') {
+      return allUsers.filter(u => u.role === 'seniorManager');
+    }
+    if (newUser.role === 'seniorManager') {
       return allUsers.filter(u => u.role === 'regionalManager');
     }
+    // Admin and RegionalManager do not report to anyone
     return [];
   }, [allUsers, newUser.role]);
 
@@ -105,15 +109,23 @@ export default function UserManagement() {
       
       if (newUser.managerId) {
         userToCreate.managerId = newUser.managerId;
+        
+        // Compute seniorManagerId for executives reporting to team leads
+        if (newUser.role === 'executive') {
+           const selectedManager = users[newUser.managerId];
+           if (selectedManager?.role === 'teamLead') {
+             userToCreate.seniorManagerId = selectedManager.managerId;
+           }
+        }
+        
+        if (newUser.role === 'teamLead') {
+           userToCreate.seniorManagerId = newUser.managerId;
+        }
       }
 
       // Ensure managerId is selected if required
-      if (newUser.role === 'executive' && !newUser.managerId) {
-        toast({ title: 'Validation Error', description: 'Executives must have a Team Lead assigned.', variant: 'destructive' });
-        return;
-      }
-      if (newUser.role === 'teamLead' && !newUser.managerId) {
-        toast({ title: 'Validation Error', description: 'Team Leads must have an AGM assigned.', variant: 'destructive' });
+      if (newUser.role !== 'admin' && newUser.role !== 'regionalManager' && !newUser.managerId) {
+        toast({ title: 'Validation Error', description: 'A manager must be assigned for this role.', variant: 'destructive' });
         return;
       }
 
@@ -130,6 +142,7 @@ export default function UserManagement() {
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'admin': return 'bg-purple-100 text-purple-700 border-purple-200';
+      case 'seniorManager': return 'bg-pink-100 text-pink-700 border-pink-200';
       case 'regionalManager': return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'teamLead': return 'bg-green-100 text-green-700 border-green-200';
       case 'executive': return 'bg-gray-100 text-gray-700 border-gray-200';
@@ -139,6 +152,7 @@ export default function UserManagement() {
 
   const getRoleLabel = (role: string) => {
     switch (role) {
+      case 'seniorManager': return 'Senior Manager';
       case 'regionalManager': return 'AGM';
       case 'teamLead': return 'Manager';
       case 'executive': return 'Associate';
@@ -237,15 +251,18 @@ export default function UserManagement() {
                     >
                       <option value="executive">Associate (Executive)</option>
                       <option value="teamLead">Manager (Team Lead)</option>
+                      <option value="seniorManager">Senior Manager</option>
                       <option value="regionalManager">AGM (Regional Manager)</option>
                       <option value="admin">Admin</option>
                     </select>
                   </div>
 
-                  {(newUser.role === 'executive' || newUser.role === 'teamLead') && (
+                  {(newUser.role !== 'admin' && newUser.role !== 'regionalManager') && (
                     <div className="space-y-1.5 col-span-2">
                       <label className="text-xs font-bold uppercase tracking-wider text-gray-500">
-                        Reports To ({newUser.role === 'executive' ? 'Manager' : 'AGM'})
+                        Reports To ({newUser.role === 'executive' ? 'Manager' : 
+                                    newUser.role === 'teamLead' ? 'Senior Manager' :
+                                    newUser.role === 'seniorManager' ? 'AGM' : ''})
                       </label>
                       <select
                         required
@@ -253,7 +270,7 @@ export default function UserManagement() {
                         value={newUser.managerId}
                         onChange={(e) => setNewUser({ ...newUser, managerId: e.target.value })}
                       >
-                        <option value="" disabled>Select a {newUser.role === 'executive' ? 'Manager' : 'AGM'}</option>
+                        <option value="" disabled>Select a Manager</option>
                         {availableManagers.map(m => (
                           <option key={m.id} value={m.id}>{m.name} ({m.regionId})</option>
                         ))}

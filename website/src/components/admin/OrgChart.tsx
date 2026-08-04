@@ -25,7 +25,7 @@ export function OrgChart({ data }: OrgChartProps) {
         minScale={0.1}
         maxScale={4}
         centerOnInit={true}
-        wheel={{ step: 0.1 }}
+        wheel={{ step: 0.02 }}
       >
         {({ zoomIn, zoomOut, resetTransform }) => (
           <>

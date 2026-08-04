@@ -58,58 +58,11 @@ export async function syncActivities(hours = SYNC_LOOKBACK_MINUTES / 60) {
       let batch = Array.isArray(data) ? data : (data.List || data.ProspectActivities || []);
       console.log(`   📦 Fetched ${batch.length} activities from bulk API.`);
 
-      // ── Deduplicated per-lead fetch (fixes N+1 anti-pattern) ──────────
-      // The bulk API strips Latitude, Longitude, and Address fields.
-      // Instead of fetching once PER ACTIVITY, group by lead and fetch once PER LEAD.
-      const leadIdSet = [...new Set(batch.map(a => a.RelatedProspectId).filter(Boolean))];
-      console.log(`   🔗 Fetching full details for ${leadIdSet.length} unique leads (from ${batch.length} activities)...`);
-
-      // Cache: leadId → Map<activityId, fullActivity>
-      const leadActivityCache = {};
-
-      // Fetch with limited concurrency (3 at a time) to avoid rate limiting
-      const CONCURRENCY = 3;
-      for (let c = 0; c < leadIdSet.length; c += CONCURRENCY) {
-        const chunk = leadIdSet.slice(c, c + CONCURRENCY);
-        await Promise.allSettled(chunk.map(async (leadId) => {
-          try {
-            const fullRes = await fetch(`${LSQ_HOST}/v2/ProspectActivity.svc/Retrieve?accessKey=${ACCESS_KEY}&secretKey=${SECRET_KEY}&leadId=${leadId}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                Parameter: { ActivityEvent: 232 },
-                Paging: { Offset: 0, RowCount: 50 }
-              })
-            });
-            const fullData = await fullRes.json();
-            const fullList = fullData.ProspectActivities || [];
-            const map = {};
-            for (const act of fullList) {
-              const id = act.Id || act.ActivityId;
-              if (id) map[id] = act;
-            }
-            leadActivityCache[leadId] = map;
-          } catch (e) {
-            console.warn(`   ⚠️ Failed to fetch full activities for lead ${leadId}`, e.message);
-            leadActivityCache[leadId] = {};
-          }
-        }));
-      }
-
-      // Match full details back to each slim activity
+      // ── Extract Lat/Lng directly from bulk response ──────────
+      // We now inject Lat/Lng into mx_Custom_34 during CREATE_ACTIVITY, so it's included here.
       for (const slimAct of batch) {
-        const leadId = slimAct.RelatedProspectId;
-        const actId = slimAct.ProspectActivityId;
-        const cache = leadActivityCache[leadId] || {};
-        const fullAct = cache[actId];
-
-        if (fullAct) {
-          slimAct.Latitude = fullAct.Latitude;
-          slimAct.Longitude = fullAct.Longitude;
-          slimAct.Address = fullAct.Address;
-          if (fullAct.ActivityFields) {
-            slimAct.mx_Custom_34 = fullAct.ActivityFields.mx_Custom_34;
-          }
+        if (slimAct.ActivityFields && slimAct.ActivityFields.mx_Custom_34) {
+          slimAct.mx_Custom_34 = slimAct.ActivityFields.mx_Custom_34;
         }
         allActivities.push(slimAct);
       }
@@ -236,15 +189,15 @@ export async function syncActivities(hours = SYNC_LOOKBACK_MINUTES / 60) {
               .get();
             
             if (!appCreatedSnap.empty) {
-              // Check if any of these are within 12 hours of the LSQ activity
-              // (Expanded from 5 mins to handle offline queuing delays)
+              // Check if any of these are within 1 hour of the LSQ activity
+              // (Tightened from 12 hours to 1 hour to prevent merging distinct morning/afternoon visits)
               const lsqTime = new Date(raw.ModifiedOn || raw.CreatedOn || raw.ActivityDateTime || 0).getTime();
               for (const appDoc of appCreatedSnap.docs) {
                 if (claimedLocalDocs.has(appDoc.id)) continue;
                 
                 const appData = appDoc.data();
                 const appTime = new Date(appData.walkInDateTime || 0).getTime();
-                if (Math.abs(lsqTime - appTime) < 12 * 60 * 60 * 1000) {
+                if (Math.abs(lsqTime - appTime) < 60 * 60 * 1000) {
                   docRef = appDoc.ref;
                   claimedLocalDocs.add(appDoc.id);
                   // Link the app doc to the LSQ activity ID for future syncs

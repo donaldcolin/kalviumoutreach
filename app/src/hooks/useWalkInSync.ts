@@ -92,6 +92,14 @@ export function useWalkInSync(userId?: string, executiveEmail?: string) {
         if (extraData.seminarAppointmentDate) await createAutoTask(extraData.seminarAppointmentDate, 'seminar', 'Seminar');
       }
 
+      let finalActivityData = [...(activityData || [])];
+      if (locationPayload?.startLocation) {
+        finalActivityData.push({
+          SchemaName: 'mx_Custom_34',
+          Value: `${locationPayload.startLocation.lat},${locationPayload.startLocation.lng}`
+        });
+      }
+
       // 2. Queue push to LeadSquared
       await firestore().collection('pushQueue').add({
         action: 'CREATE_ACTIVITY',
@@ -99,7 +107,7 @@ export function useWalkInSync(userId?: string, executiveEmail?: string) {
         leadId: schoolId,
         executiveId: userId,
         notes: compositeNotes,
-        activityData: activityData || [],
+        activityData: finalActivityData,
         ...(locationPayload || {}),
         status: 'pending',
         createdAt: firestore.FieldValue.serverTimestamp(),
