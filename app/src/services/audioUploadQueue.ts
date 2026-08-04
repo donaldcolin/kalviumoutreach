@@ -24,7 +24,7 @@ export const enqueueMeetingAudio = async (uri: string, durationMillis: number, u
     });
     
     await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
-    logger.info('Queued meeting audio for Wi-Fi upload');
+    logger.info('Queued meeting audio for internet upload');
   } catch (err) {
     logger.error('Failed to enqueue meeting audio:', String(err));
   }
@@ -44,7 +44,7 @@ export const enqueueWalkInAudio = async (uri: string, activityId: string, userId
     });
     
     await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
-    logger.info('Queued walk-in audio for Wi-Fi upload');
+    logger.info('Queued walk-in audio for internet upload');
   } catch (err) {
     logger.error('Failed to enqueue walk-in audio:', String(err));
   }
@@ -57,8 +57,8 @@ export const processAudioQueue = async () => {
   
   try {
     const net = await Network.getNetworkStateAsync();
-    if (net.type !== Network.NetworkStateType.WIFI || !net.isConnected) {
-      return; // Only upload on Wi-Fi
+    if (!net.isConnected) {
+      return; // Only upload when connected
     }
 
     const queueStr = await AsyncStorage.getItem(QUEUE_KEY);
@@ -68,7 +68,7 @@ export const processAudioQueue = async () => {
     if (queue.length === 0) return;
 
     isProcessing = true;
-    logger.info(`Processing ${queue.length} queued audio uploads over Wi-Fi...`);
+    logger.info(`Processing ${queue.length} queued audio uploads over internet...`);
 
     const failedItems: AudioQueueItem[] = [];
 
@@ -93,7 +93,7 @@ export const processAudioQueue = async () => {
           
           if (doc.exists()) {
             const currentNotes = doc.data()?.notes || '';
-            const newNotes = currentNotes.replace('[Pending Wi-Fi Upload]', url) + (currentNotes.includes('[Pending Wi-Fi Upload]') ? '' : `\n\nRecording: ${url}`);
+            const newNotes = currentNotes.replace('[Pending Internet Upload]', url) + (currentNotes.includes('[Pending Internet Upload]') ? '' : `\n\nRecording: ${url}`);
             
             await activityRef.update({
               recordingUrl: url,

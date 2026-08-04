@@ -33,7 +33,7 @@ export function useMeetingAudioRecorder(userId: string | undefined) {
     setIsUploading(true);
     try {
       const net = await Network.getNetworkStateAsync();
-      if (net.type === Network.NetworkStateType.WIFI) {
+      if (net.isConnected) {
         const url = await uploadToCloudinary(uri, `note_${Date.now()}`);
 
         await firestore().collection('meetingRecordings').add({
@@ -44,7 +44,7 @@ export function useMeetingAudioRecorder(userId: string | undefined) {
         });
       } else {
         await enqueueMeetingAudio(uri, durationMillis, userId);
-        Toast.show({ title: 'Saved Locally', message: 'Audio note will upload automatically when connected to Wi-Fi.', type: 'info' });
+        Toast.show({ title: 'Saved Locally', message: 'Audio note will upload automatically when connected to the internet.', type: 'info' });
       }
     } catch (err) {
       console.error('Upload failed:', err);

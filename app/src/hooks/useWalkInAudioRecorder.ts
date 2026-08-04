@@ -30,12 +30,12 @@ export function useWalkInAudioRecorder() {
     setIsUploading(true);
     try {
       const net = await Network.getNetworkStateAsync();
-      if (net.type === Network.NetworkStateType.WIFI) {
+      if (net.isConnected) {
         const url = await uploadToCloudinary(uri, `walkin_note_${Date.now()}`);
         setRecordingUrl(url);
       } else {
         setRecordingUrl(uri);
-        Toast.show({ title: 'Saved Locally', message: 'Audio will upload automatically when connected to Wi-Fi.', type: 'info' });
+        Toast.show({ title: 'Saved Locally', message: 'Audio will upload automatically when connected to the internet.', type: 'info' });
       }
     } catch (err) {
       console.error('Upload failed:', err);

@@ -39,7 +39,7 @@ export function useWalkInSync(userId?: string, executiveEmail?: string) {
       if (storageUrl && !isLocalUri) {
         parts.push(`Recording: ${storageUrl}`);
       } else if (isLocalUri) {
-        parts.push(`Recording: [Pending Wi-Fi Upload]`);
+        parts.push(`Recording: [Pending Internet Upload]`);
       }
       // Always include attribution at the end
       parts.push(`Walk-in by ${executiveEmail}`);
