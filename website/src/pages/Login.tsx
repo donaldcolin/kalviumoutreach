@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { Input } from '../components/ui/input';
 import greekManImg from '../assets/greek man.png';
 
@@ -9,6 +9,7 @@ export default function Login() {
   const { login, isAuthenticated, isLoading, error } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,17 +56,25 @@ export default function Login() {
                 />
               </div>
 
-              <div>
+              <div className="relative">
                 <Input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
-                  className="h-14 bg-white border-gray-200 focus-visible:ring-1 focus-visible:ring-gray-300 focus-visible:border-gray-400 transition-all duration-300 placeholder:text-gray-400 rounded-xl px-5 text-[15px] shadow-sm hover:border-gray-300"
+                  className="h-14 bg-white border-gray-200 focus-visible:ring-1 focus-visible:ring-gray-300 focus-visible:border-gray-400 transition-all duration-300 placeholder:text-gray-400 rounded-xl px-5 pr-12 text-[15px] shadow-sm hover:border-gray-300"
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isLoading}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
 
               <button
