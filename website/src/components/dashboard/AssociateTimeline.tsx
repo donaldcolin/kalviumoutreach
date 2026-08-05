@@ -23,9 +23,9 @@ export function AssociateTimeline({
   setMapZoom
 }: AssociateTimelineProps) {
   return (
-    <div className="w-[280px] flex flex-col bg-white border border-gray-100 shadow-sm rounded-xl">
+    <div className="w-[320px] shrink-0 flex flex-col bg-white border border-gray-100 shadow-sm rounded-[20px]">
       <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-        <h3 className="text-sm font-semibold tracking-tight text-gray-900">Activity on {format(selectedDate, "MMM d")}</h3>
+        <h3 className="text-sm font-bold tracking-tight text-gray-900 uppercase">Activity on {format(selectedDate, "MMM d")}</h3>
         <Clock size={14} className="text-gray-400" />
       </div>
       <div className="flex-1 p-6 overflow-y-auto">
@@ -33,21 +33,25 @@ export function AssociateTimeline({
           {timeline.map((stop, idx) => {
             if (stop.isWarning) {
               return (
-                <div key={idx} className="relative pl-6 group my-4">
-                  <span className="absolute -left-[5px] top-1.5 w-2.5 h-2.5 bg-red-500 rounded-full z-10 shadow-[0_0_8px_rgba(239,68,68,0.6)] animate-pulse" />
-                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 shadow-sm">
-                    <p className="text-xs font-bold text-red-700 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                <div key={idx} className="relative pl-8 group my-4">
+                  <div className="absolute -left-[9px] top-1.5 w-4 h-4 bg-red-100 rounded-full z-0 flex items-center justify-center">
+                    <span className="w-2 h-2 bg-red-500 rounded-full z-10 shadow-[0_0_8px_rgba(239,68,68,0.6)] animate-pulse" />
+                  </div>
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 shadow-sm transition-all duration-300 hover:shadow-md hover:border-red-300">
+                    <p className="text-[11px] font-bold text-red-700 uppercase tracking-wider mb-1 flex items-center gap-1.5">
                       🚨 {stop.event}
                     </p>
-                    <p className="text-sm font-medium text-red-900">{stop.details}</p>
+                    <p className="text-[13px] font-semibold text-red-900 leading-tight">{stop.details}</p>
                   </div>
                 </div>
               );
             }
             if (stop.type === 'crm') {
               return (
-                <div key={idx} className="relative pl-6 group">
-                  <span className="absolute -left-[5px] top-1.5 w-2.5 h-2.5 bg-white border-2 border-emerald-500 rounded-full z-10 transition-colors group-hover:bg-emerald-500" />
+                <div key={idx} className="relative pl-8 group my-4">
+                  <div className="absolute -left-[9px] top-4 w-4 h-4 bg-emerald-100 rounded-full z-0 flex items-center justify-center transition-transform group-hover:scale-125 duration-300">
+                    <span className="w-2 h-2 bg-emerald-500 rounded-full z-10" />
+                  </div>
                   <CrmActivityCard
                     activity={stop.data}
                     isExpanded={expandedActivityIdx === idx}
@@ -64,29 +68,26 @@ export function AssociateTimeline({
             return (
               <div
                 key={idx}
-                className="relative pl-6 group cursor-pointer"
+                className="relative pl-8 group cursor-pointer my-4"
                 onClick={() => {
                   if (stop.lat && stop.lng) {
                     setMapCenter([stop.lat, stop.lng]);
                     setMapZoom(16);
                   }
+                  setSelectedActivity(stop);
                 }}
               >
-                <span className={`absolute -left-[5px] top-1.5 w-2.5 h-2.5 bg-white border-2 transition-colors rounded-full ${stop.type === 'ping' ? 'border-blue-500 group-hover:bg-blue-500' : stop.type === 'request' ? 'border-orange-500 group-hover:bg-orange-500' : 'border-gray-900 group-hover:bg-gray-900'}`} />
-                <p className="text-sm font-medium text-gray-900 leading-tight group-hover:text-black transition-colors text-left">
-                  {stop.event}
-                </p>
-                <div className="flex items-center justify-between mt-1.5">
-                  <p className="text-[11px] font-medium text-gray-500 tracking-wider text-left">{stop.time}</p>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedActivity(stop);
-                    }}
-                    className="text-[10px] uppercase tracking-wider font-bold text-gray-500 hover:text-gray-900 transition-colors bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded"
-                  >
-                    More Details
-                  </button>
+                <div className={`absolute -left-[9px] top-4 w-4 h-4 rounded-full z-0 flex items-center justify-center transition-transform group-hover:scale-125 duration-300 ${stop.type === 'ping' ? 'bg-blue-100' : stop.type === 'request' ? 'bg-orange-100' : 'bg-gray-100'}`}>
+                  <span className={`w-2 h-2 rounded-full z-10 ${stop.type === 'ping' ? 'bg-blue-500' : stop.type === 'request' ? 'bg-orange-500' : 'bg-gray-500'}`} />
+                </div>
+                
+                <div className="bg-white border border-gray-100 rounded-xl p-3 transition-all duration-300 hover:shadow-sm hover:border-gray-200 hover:-translate-y-[1px] text-left">
+                  <p className="text-[13px] font-bold text-gray-900 leading-tight transition-colors">
+                    {stop.event}
+                  </p>
+                  <p className="text-[11px] font-semibold text-gray-400 tracking-wider uppercase mt-1">
+                    {stop.time}
+                  </p>
                 </div>
               </div>
             );

@@ -1,4 +1,4 @@
-import { User, Phone, FileText, Calendar, Building2 } from 'lucide-react';
+import { User, Phone, FileText, Calendar, Building2, ExternalLink } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../ui/sheet';
 import { ScrollArea } from '../ui/scroll-area';
 import { type SchoolPipelineEntry, STAGES, getStageIndex } from './types';
@@ -32,9 +32,22 @@ export function SchoolDetailSheet({ selectedSchool, setSelectedSchool, schoolAct
                   </span>
                 </div>
                 <SheetTitle className="text-xl font-bold tracking-tight text-gray-900 leading-tight pr-6">{selectedSchool.schoolName}</SheetTitle>
-                <div className="flex items-center gap-2 mt-2.5 text-gray-500">
-                  <User size={14} />
-                  <p className="text-xs font-medium">{selectedSchool.executiveName}</p>
+                <div className="flex items-center justify-between mt-2.5">
+                  <div className="flex items-center gap-2 text-gray-500">
+                    <User size={14} />
+                    <p className="text-xs font-medium">{selectedSchool.executiveName}</p>
+                  </div>
+                  {selectedSchool.lsqLeadId && (
+                    <a 
+                      href={`https://run.leadsquared.com/LeadManagement/LeadDetails?LeadId=${selectedSchool.lsqLeadId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 hover:bg-black text-white text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors shadow-sm"
+                    >
+                      View in LSQ
+                      <ExternalLink size={12} />
+                    </a>
+                  )}
                 </div>
               </div>
             </SheetHeader>

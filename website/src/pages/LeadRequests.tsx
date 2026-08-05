@@ -37,35 +37,20 @@ export default function LeadRequests() {
   // Compute available managers based on RBAC
   const availableManagers = useMemo(() => {
     if (!user) return [];
-    const allUsers = Object.values(users);
-    if (user.role === 'admin') return allUsers.filter(u => u.role === 'teamLead');
-    if (user.role === 'regionalManager') return allUsers.filter(u => u.role === 'teamLead' && u.managerId === user.id);
-    return [];
+    return Object.values(users).filter(u => u.role === 'teamLead');
   }, [user, users]);
 
   // Get visible users based on RBAC hierarchy and Manager Filter
   const visibleEmails = useMemo(() => {
     if (!user) return new Set();
-    const allUsers = Object.values(users);
-    let visibleUsers: any[] = [];
+    let visibleUsers = Object.values(users);
     
-    if (user.role === 'admin' || user.role === 'regionalManager') {
-      if (managerFilter !== 'all') {
-        visibleUsers = allUsers.filter(u => u.role === 'executive' && u.managerId === managerFilter);
-      } else {
-        if (user.role === 'admin') {
-          visibleUsers = allUsers;
-        } else {
-          const myManagerIds = new Set(availableManagers.map(m => m.id));
-          const myExecutives = allUsers.filter(u => u.role === 'executive' && u.managerId && myManagerIds.has(u.managerId));
-          visibleUsers = [...availableManagers, ...myExecutives, user];
-        }
-      }
-    } else if (user.role === 'teamLead') {
-      visibleUsers = allUsers.filter(u => u.managerId === user.id || u.id === user.id);
+    if (managerFilter !== 'all') {
+      visibleUsers = visibleUsers.filter(u => u.managerId === managerFilter || u.id === managerFilter);
     }
+    
     return new Set(visibleUsers.map(u => u.email?.toLowerCase()).filter(Boolean));
-  }, [users, user, managerFilter, availableManagers]);
+  }, [users, user, managerFilter]);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'leadAccessRequests'), (snap) => {

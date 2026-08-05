@@ -11,7 +11,7 @@ import { GlobalStats } from '../components/dashboard/GlobalStats';
 import { AssociateHeader } from '../components/dashboard/AssociateHeader';
 import { AssociateMap } from '../components/dashboard/AssociateMap';
 import { AssociateTimeline } from '../components/dashboard/AssociateTimeline';
-import { Map as MapIcon, } from 'lucide-react';
+import { Map as MapIcon, Loader2 } from 'lucide-react';
 import { useDashboardData } from '../hooks/useDashboardData';
 
 export default function Dashboard() {
@@ -53,6 +53,7 @@ export default function Dashboard() {
   const {
     ongoingWalkIns,
     teamTrackingStatus,
+    isStatsLoading,
     dailyTrackStatus,
     route,
     rawPings,
@@ -60,6 +61,7 @@ export default function Dashboard() {
     selectedDateLocReqs,
     selectedDateCrmActivities,
     isFetchingLocation,
+    isAssociateLoading,
     handleFetchLocation,
     toggleTrackingStatus,
   } = useDashboardData(
@@ -96,7 +98,7 @@ export default function Dashboard() {
   const routeStartLng = route.length > 0 ? route[0][1] : null;
 
   useEffect(() => {
-    if (routeStartLat !== null && routeStartLng !== null) {
+    if (typeof routeStartLat === 'number' && typeof routeStartLng === 'number' && !isNaN(routeStartLat) && !isNaN(routeStartLng)) {
       setMapCenter([routeStartLat, routeStartLng]);
       setMapZoom(14);
     }
@@ -147,6 +149,7 @@ export default function Dashboard() {
         managers={availableManagers}
         selectedManagerId={selectedManagerId}
         setSelectedManagerId={setSelectedManagerId}
+        isLoading={isStatsLoading}
       />
 
       <div className="flex-1 flex flex-col h-full gap-6 overflow-hidden">
@@ -154,6 +157,7 @@ export default function Dashboard() {
           <GlobalStats
             totalAssociates={totalAssociates}
             activeWalkIns={Object.keys(ongoingWalkIns).length}
+            isLoading={isStatsLoading}
           />
         ) : (
           <AssociateHeader 
@@ -176,6 +180,11 @@ export default function Dashboard() {
               title="Select an associate"
               description="Choose a team member from the sidebar to view their real-time location and activity timeline."
             />
+          </div>
+        ) : isAssociateLoading ? (
+          <div className="flex-1 flex flex-col items-center justify-center bg-gray-50/50 rounded-xl border border-gray-100">
+            <Loader2 className="h-10 w-10 animate-spin text-red-500 mb-4" />
+            <p className="text-sm font-medium text-gray-500">Loading tracking data...</p>
           </div>
         ) : (
           <div className="flex-1 flex gap-6 overflow-hidden animate-in fade-in duration-700">

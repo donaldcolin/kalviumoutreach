@@ -17,8 +17,17 @@ const CRMHub = lazy(() => import('./pages/CRMHub'));
 const UserManagement = lazy(() => import('./pages/admin/UserManagement'));
 
 const PageLoader = () => (
-  <div className="flex h-screen items-center justify-center text-primary font-medium bg-background">
-    Loading...
+  <div className="flex h-screen w-full flex-col items-center justify-center bg-background">
+    <div className="relative flex flex-col items-center gap-6">
+      <div className="relative flex items-center justify-center">
+        <img src="/LOGOsmall.png" alt="Kalvium" className="h-10 w-10 object-contain animate-pulse" />
+        <div className="absolute border-[3px] border-primary/20 border-t-primary rounded-full animate-spin h-16 w-16 opacity-80" />
+      </div>
+      <div className="flex flex-col items-center gap-1.5 mt-2">
+        <p className="text-primary font-bold tracking-widest text-[10px] uppercase">Loading Workspace</p>
+        <p className="text-muted-foreground text-[10px] uppercase tracking-wider">Establishing secure connection...</p>
+      </div>
+    </div>
   </div>
 );
 

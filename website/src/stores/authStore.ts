@@ -41,23 +41,39 @@ export const useAuthStore = create<AuthState>((set) => ({
               collection(db, 'users'), 
               where('managerId', '==', userProfile.id)
             ) as any;
-          } else if (userProfile.role === 'seniorManager') {
-            usersQuery = query(
-              collection(db, 'users'), 
-              or(where('managerId', '==', userProfile.id), where('seniorManagerId', '==', userProfile.id))
-            ) as any;
           }
-          // Admins and Regional Managers (AGMs) fetch all users
+          // Admins, Regional Managers (AGMs), and Senior Managers fetch all users first
+          // Senior Managers will filter them locally to avoid missing seniorManagerId index issues.
 
           onSnapshot(usersQuery, (snapshot) => {
             const users: Record<string, User> = {};
             // Make sure the logged-in user is always in the map
             users[userProfile.id] = userProfile;
             
-            snapshot.forEach(d => {
-              users[d.id] = { ...d.data(), id: d.id } as User;
-            });
+            const fetchedUsers = snapshot.docs.map(d => ({ ...d.data(), id: d.id } as User));
+            console.log(`[authStore] Fetched ${fetchedUsers.length} users from Firestore (role: ${userProfile.role})`);
+            
+            if (userProfile.role === 'seniorManager') {
+              // Find my teamLeads
+              const myTeamLeads = fetchedUsers.filter(u => u.managerId === userProfile.id);
+              const myTeamLeadIds = new Set(myTeamLeads.map(t => t.id));
+              console.log(`[authStore] Found ${myTeamLeads.length} teamLeads, teamLeadIds:`, [...myTeamLeadIds]);
+              
+              fetchedUsers.forEach(u => {
+                if (u.managerId === userProfile.id || (u.managerId && myTeamLeadIds.has(u.managerId))) {
+                  users[u.id] = u;
+                }
+              });
+              console.log(`[authStore] Final users map has ${Object.keys(users).length} entries`);
+            } else {
+              fetchedUsers.forEach(u => {
+                users[u.id] = u;
+              });
+            }
+            
             set({ users });
+          }, (error) => {
+            console.error('[authStore] onSnapshot error:', error);
           });
         } else {
           set({ user: null, isAuthenticated: false, isLoading: false, error: 'User profile not found.' });

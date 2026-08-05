@@ -8,9 +8,9 @@ service cloud.firestore {
       return request.auth.token.role == 'admin';
     }
 
-    // Is the caller a non-executive (admin, teamLead, or regionalManager)?
+    // Is the caller a non-executive (admin, teamLead, seniorManager, or regionalManager)?
     function isManager() {
-      return request.auth.token.role in ['admin', 'regionalManager', 'teamLead'];
+      return request.auth.token.role in ['admin', 'regionalManager', 'seniorManager', 'teamLead'];
     }
 
     // Can the caller see data belonging to targetUserId?

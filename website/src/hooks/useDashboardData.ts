@@ -24,6 +24,7 @@ export function useDashboardData(
   const [rawPings, setRawPings] = useState<RawPing[]>([]);
   const rawPingsRef = useRef<Map<string, RawPing>>(new Map());
   const [routeCacheKey, setRouteCacheKey] = useState<string>('');
+  const [isAssociateLoading, setIsAssociateLoading] = useState(false);
   
   interface LocationRequest {
     id: string;
@@ -42,6 +43,7 @@ export function useDashboardData(
 
   // Live Walk-Ins State
   const [ongoingWalkIns, setOngoingWalkIns] = useState<Record<string, CrmActivity>>({});
+  const [isStatsLoading, setIsStatsLoading] = useState(true);
 
   // Team Tracking Status
   const [teamTrackingStatus, setTeamTrackingStatus] = useState<Record<string, 'active' | 'ended' | 'stale'>>({});
@@ -91,12 +93,14 @@ export function useDashboardData(
 
       } catch (error) {
         console.error("Failed to fetch dashboard stats:", error);
+      } finally {
+        setIsStatsLoading(false);
       }
     };
 
     fetchDashboardStats();
     
-    // Optional: Auto-refresh every 5 minutes (300000ms) to keep the dashboard reasonably fresh
+    // Auto-refresh every 5 minutes
     const interval = setInterval(fetchDashboardStats, 300000);
     return () => clearInterval(interval);
 
@@ -109,8 +113,11 @@ export function useDashboardData(
       setRawPings([]);
       setSelectedDateLocReqs([]);
       setSelectedDateCrmActivities([]);
+      setIsAssociateLoading(false);
       return;
     }
+
+    setIsAssociateLoading(true);
 
     setRoute([]);
     setRawPings([]);
@@ -136,9 +143,21 @@ export function useDashboardData(
       }
     });
 
+    let locationsLoaded = false;
+    let crmLoaded = false;
+    const checkLoadingDone = () => {
+      if (locationsLoaded && crmLoaded) {
+        setIsAssociateLoading(false);
+      }
+    };
+
     const unsubLocations = onSnapshot(
       query(collection(db, 'dailyTracks', trackDocId, 'locations'), orderBy('ts', 'asc')),
       (snapshot) => {
+        if (!locationsLoaded) {
+          locationsLoaded = true;
+          checkLoadingDone();
+        }
         let changed = false;
         snapshot.docChanges().forEach(change => {
           if (change.type === 'removed') {
@@ -196,6 +215,10 @@ export function useDashboardData(
     if (assocEmail) {
       const qCrm = query(collection(db, 'crmActivities'), where('executiveEmail', '==', assocEmail));
       unsubCrm = onSnapshot(qCrm, (snapshot) => {
+        if (!crmLoaded) {
+          crmLoaded = true;
+          checkLoadingDone();
+        }
         const activities = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as CrmActivity));
         const filtered = activities.filter(a => {
           const dt = a.walkInDateTime || a.lsqCreatedOn;
@@ -205,6 +228,9 @@ export function useDashboardData(
         });
         setSelectedDateCrmActivities(filtered);
       });
+    } else {
+      crmLoaded = true;
+      checkLoadingDone();
     }
 
     const qTasks = query(
@@ -255,6 +281,7 @@ export function useDashboardData(
   return {
     ongoingWalkIns,
     teamTrackingStatus,
+    isStatsLoading,
     dailyTrackStatus,
     dailyTrackId,
     route,
@@ -264,6 +291,7 @@ export function useDashboardData(
     selectedDateCrmActivities,
     selectedAssociateTasks,
     isFetchingLocation,
+    isAssociateLoading,
     handleFetchLocation,
     toggleTrackingStatus,
   };

@@ -2,9 +2,8 @@ import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { Loader2 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import greekManImg from '../assets/greek man.png';
 
 export default function Login() {
   const { login, isAuthenticated, isLoading, error } = useAuthStore();
@@ -21,70 +20,107 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-transparent relative">
-      <Card className="w-full max-w-md border border-border shadow-sm bg-card animate-in fade-in zoom-in-95 duration-500 rounded-3xl p-4">
-        <CardHeader className="space-y-2 pb-8 pt-4 text-center">
-          <img src="/LOGO.png" alt="Kalvium" className="h-12 mx-auto mb-2 object-contain" />
-          <CardTitle className="text-3xl font-bold tracking-tight text-foreground">Sign In</CardTitle>
-        </CardHeader>
+    <div className="min-h-screen flex w-full bg-white selection:bg-red-500 selection:text-white font-sans">
 
-        <CardContent className="pb-4">
-          {error && (
-            <div className="bg-destructive/10 border border-destructive/20 text-destructive p-3 rounded-xl mb-6 text-sm font-medium">
-              {error}
-            </div>
-          )}
+      {/* Left Column - Form */}
+      <div className="w-full lg:w-1/2 flex flex-col relative z-10 bg-white">
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground" htmlFor="email">
-                Email Address
-              </label>
-              <Input
-                id="email"
-                type="email"
-                required
-                className="h-12 bg-background border-border focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground/50 rounded-xl px-4"
-                placeholder="Eg. admin@kalvium.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+        {/* Logo - Top Left */}
+        <div className="absolute top-0 left-0 p-8 md:p-12 z-20 animate-in fade-in slide-in-from-top-4 duration-700">
+          <img src="/LOGO.png" alt="Kalvium" className="h-8 md:h-10 object-contain" />
+        </div>
+
+        {/* Login Form Container - Centered */}
+        <div className="flex-1 flex flex-col justify-center px-8 md:px-16 lg:px-24">
+          <div className="w-full max-w-[420px] mx-auto animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150 fill-mode-both">
+
+            {error && (
+              <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl mb-8 text-sm flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" />
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleLogin} className="space-y-5">
+              <div>
+                <Input
+                  id="email"
+                  type="email"
+                  required
+                  className="h-14 bg-white border-gray-200 focus-visible:ring-1 focus-visible:ring-gray-300 focus-visible:border-gray-400 transition-all duration-300 placeholder:text-gray-400 rounded-xl px-5 text-[15px] shadow-sm hover:border-gray-300"
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div>
+                <Input
+                  id="password"
+                  type="password"
+                  required
+                  className="h-14 bg-white border-gray-200 focus-visible:ring-1 focus-visible:ring-gray-300 focus-visible:border-gray-400 transition-all duration-300 placeholder:text-gray-400 rounded-xl px-5 text-[15px] shadow-sm hover:border-gray-300"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+
+              <button
+                type="submit"
                 disabled={isLoading}
-              />
-            </div>
+                className="w-full h-14 mt-6 flex items-center justify-center gap-2 text-[15px] font-medium rounded-xl bg-[#1c1c1c] text-white hover:bg-black transition-all duration-300 shadow-sm disabled:opacity-70 disabled:cursor-not-allowed group active:scale-[0.99]"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                    <span>Authenticating...</span>
+                  </>
+                ) : (
+                  <span>Login</span>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground" htmlFor="password">
-                Password
-              </label>
-              <Input
-                id="password"
-                type="password"
-                required
-                className="h-12 bg-background border-border focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground/50 rounded-xl px-4"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
+        {/* Footer Text - Bottom Left */}
+        <div className="p-8 md:p-12 lg:px-24 pb-12 relative z-10 animate-in fade-in duration-1000 delay-300 fill-mode-both mt-auto">
+          <div className="max-w-[420px] mx-auto">
+            <h3 className="text-[15px] font-bold text-gray-900 mb-2 italic tracking-tight">Empowering Futures</h3>
+            <p className="text-[13px] text-gray-500 leading-relaxed max-w-[320px]">
+              Find the best Computer Science colleges matching your potential. Powered by real TNEA data.
+            </p>
+          </div>
+        </div>
 
-            <Button
-              type="submit"
-              className="w-full h-12 mt-4 text-sm font-semibold rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Authenticating...
-                </>
-              ) : (
-                'Continue'
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+      </div>
+
+      {/* Right Column - Image */}
+      <div className="hidden lg:block lg:w-1/2 relative bg-[#F4F4F5] overflow-hidden">
+        {/* The Greek Man Image */}
+        <div className="absolute inset-0 w-full h-full flex items-center justify-center">
+          <img
+            src={greekManImg}
+            alt="Classical statue with laptop"
+            className="w-full h-full object-cover object-[center_30%] animate-in fade-in zoom-in-[1.02] duration-1000 ease-out"
+          />
+          {/* Refined gradient overlay for dramatic lighting and text readability */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+        </div>
+
+        {/* Quote */}
+        <div className="absolute bottom-12 left-0 right-0 px-12 md:px-16 text-center animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500 fill-mode-both">
+          <div className="max-w-xl mx-auto flex flex-col gap-2">
+            <p className="text-white/95 text-[22px] font-medium tracking-wide drop-shadow-md leading-relaxed">
+              "The roots of education are bitter, but the fruit is sweet" — Aristotle
+            </p>
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 }

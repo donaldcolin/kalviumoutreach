@@ -19,6 +19,7 @@ interface ActivityEvent {
 export default function ActivityFeed() {
   const { user, users } = useAuthStore();
   const [events, setEvents] = useState<ActivityEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Time boundaries for today
   const [todayStart, setTodayStart] = useState(() => new Date().setHours(0, 0, 0, 0));
@@ -47,6 +48,14 @@ export default function ActivityFeed() {
 
     let trackEvents: ActivityEvent[] = [];
     let visitEvents: ActivityEvent[] = [];
+    let tracksLoaded = false;
+    let visitsLoaded = false;
+
+    const checkLoading = () => {
+      if (tracksLoaded && visitsLoaded) {
+        setIsLoading(false);
+      }
+    };
 
     // 1. Subscribe to Daily Tracks for start/stop/stale
     const qTracks = query(
@@ -108,6 +117,8 @@ export default function ActivityFeed() {
       
       trackEvents = newTrackEvents;
       combineAndSort(trackEvents, visitEvents);
+      tracksLoaded = true;
+      checkLoading();
     });
 
     // 2. Subscribe to Visits for check-ins, breaks, etc.
@@ -148,6 +159,8 @@ export default function ActivityFeed() {
 
       visitEvents = newVisitEvents;
       combineAndSort(trackEvents, visitEvents);
+      visitsLoaded = true;
+      checkLoading();
     });
 
     const combineAndSort = (tEvents: ActivityEvent[], vEvents: ActivityEvent[]) => {
@@ -176,12 +189,12 @@ export default function ActivityFeed() {
 
   const getEventBg = (type: ActivityEvent['type']) => {
     switch (type) {
-      case 'start': return 'bg-green-100 border-green-200';
-      case 'stop': return 'bg-gray-100 border-gray-200';
-      case 'stale': return 'bg-amber-100 border-amber-200';
-      case 'school': return 'bg-blue-100 border-blue-200';
-      case 'break': return 'bg-orange-100 border-orange-200';
-      case 'unclassified': return 'bg-purple-100 border-purple-200';
+      case 'start': return 'bg-green-50 border-green-200';
+      case 'stop': return 'bg-gray-50 border-gray-200';
+      case 'stale': return 'bg-amber-50 border-amber-200';
+      case 'school': return 'bg-blue-50 border-blue-200';
+      case 'break': return 'bg-orange-50 border-orange-200';
+      case 'unclassified': return 'bg-purple-50 border-purple-200';
     }
   };
 
@@ -194,12 +207,26 @@ export default function ActivityFeed() {
         </div>
       </div>
 
-      <div className="flex-1 bg-white border border-gray-100 shadow-sm rounded-xl overflow-hidden flex flex-col">
-        {events.length === 0 ? (
+      <div className="flex-1 bg-white border border-gray-100 shadow-sm rounded-[20px] overflow-hidden flex flex-col transition-all duration-300 hover:shadow-md hover:border-gray-200">
+        {isLoading ? (
+          <div className="flex-1 p-6 flex flex-col gap-8">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="flex gap-4 animate-pulse">
+                <div className="w-12 h-12 rounded-full bg-gray-100 shrink-0 border border-gray-200" />
+                <div className="flex-1 space-y-3 py-1">
+                  <div className="h-4 bg-gray-100 rounded w-1/4" />
+                  <div className="h-3 bg-gray-100 rounded w-2/4" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : events.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-gray-500">
-            <MapPin className="w-12 h-12 text-gray-200 mb-4" />
-            <p className="text-lg font-medium">No activity yet today</p>
-            <p className="text-sm">Team check-ins and tracking updates will appear here.</p>
+            <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mb-4 border border-gray-100">
+              <MapPin className="w-8 h-8 text-gray-300" />
+            </div>
+            <p className="text-lg font-bold text-gray-900">No activity yet today</p>
+            <p className="text-sm mt-1">Team check-ins and tracking updates will appear here.</p>
           </div>
         ) : (
           <ScrollArea className="flex-1 p-6">
@@ -209,35 +236,34 @@ export default function ActivityFeed() {
                 if (!assoc) return null;
 
                 return (
-                  <div key={event.id} className={`relative pl-8 ${i !== events.length - 1 ? 'mb-8' : ''}`}>
-                    <div className={`absolute -left-[17px] top-1 w-8 h-8 rounded-full border-2 border-white flex items-center justify-center ${getEventBg(event.type)}`}>
+                  <div key={event.id} className={`relative pl-8 group ${i !== events.length - 1 ? 'mb-8' : ''}`}>
+                    <div className={`absolute -left-[17px] top-1 w-8 h-8 rounded-full border border-white flex items-center justify-center shadow-sm transition-transform duration-300 group-hover:scale-110 ${getEventBg(event.type)}`}>
                       {getEventIcon(event.type)}
                     </div>
                     
-                    <div className="flex flex-col md:flex-row md:items-center gap-4 bg-gray-50/50 hover:bg-gray-50 transition-colors p-4 rounded-xl border border-gray-100">
-                      <Avatar className="w-10 h-10 border border-gray-200 shrink-0">
-                        <AvatarFallback className="bg-gray-100 text-gray-600 font-bold">
+                    <div className="flex flex-col md:flex-row md:items-center gap-4 bg-white hover:bg-gray-50 transition-all duration-300 hover:shadow-sm hover:-translate-y-[1px] hover:border-gray-200 p-4 rounded-xl border border-gray-100 text-left">
+                      <Avatar className="w-10 h-10 border border-gray-100 shrink-0 shadow-sm">
+                        <AvatarFallback className="bg-gray-50 text-gray-700 font-bold text-xs">
                           {assoc.name.substring(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                        <p className="text-sm font-bold text-gray-900 flex items-center gap-2">
                           {assoc.name}
-                          <span className="text-xs font-normal text-gray-500 bg-white border border-gray-100 px-2 py-0.5 rounded-md">
+                          <span className="text-[10px] uppercase font-bold text-gray-500 bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-lg tracking-widest">
                             {assoc.regionId}
                           </span>
                         </p>
-                        <p className="text-sm text-gray-600 mt-0.5 font-medium">
-                          <span className="font-semibold text-gray-900">{event.title}</span> — {event.description}
+                        <p className="text-sm text-gray-600 mt-1 font-medium">
+                          <span className="font-bold text-gray-900">{event.title}</span> — {event.description}
                         </p>
                       </div>
 
-                      <div className="text-xs font-medium text-gray-400 whitespace-nowrap shrink-0 md:text-right">
+                      <div className="text-[11px] font-bold tracking-wider uppercase text-gray-400 whitespace-nowrap shrink-0 md:text-right bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
                         {format(new Date(event.timestamp), 'h:mm a')}
-                        <br className="hidden md:block" />
-                        <span className="md:mt-0.5 inline-block ml-2 md:ml-0">
-                          ({formatDistanceToNow(new Date(event.timestamp), { addSuffix: true })})
+                        <span className="md:mt-0.5 block text-[10px] text-gray-400">
+                          {formatDistanceToNow(new Date(event.timestamp), { addSuffix: true })}
                         </span>
                       </div>
                     </div>

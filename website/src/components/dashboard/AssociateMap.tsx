@@ -19,7 +19,9 @@ interface AssociateMapProps {
 function MapUpdater({ center, zoom }: { center: [number, number], zoom: number }) {
   const map = useMap();
   useEffect(() => {
-    map.setView(center, zoom);
+    if (center && typeof center[0] === 'number' && typeof center[1] === 'number' && !isNaN(center[0]) && !isNaN(center[1])) {
+      map.setView(center, zoom);
+    }
   }, [center, zoom, map]);
   return null;
 }
@@ -93,7 +95,7 @@ export function AssociateMap({
       {route.length > 0 && (
         <div className="absolute top-4 left-4 z-[400]">
           {snapStatus === 'loading' ? (
-            <div className="flex items-center gap-2 bg-white/90 backdrop-blur border border-gray-200 text-gray-700 px-3 py-1.5 rounded-xl text-[11px] font-semibold shadow-sm animate-pulse">
+            <div className="flex items-center gap-2 bg-white border border-gray-100 text-gray-700 px-4 py-2 rounded-full text-xs font-bold shadow-md animate-pulse">
               <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />
               Snapping to roads...
             </div>
@@ -101,39 +103,39 @@ export function AssociateMap({
             <button
               onClick={() => setUseSnapped(prev => !prev)}
               className={`
-                flex items-center gap-2 backdrop-blur px-3 py-1.5 rounded-xl text-[11px] font-semibold shadow-sm
-                transition-all duration-200 cursor-pointer select-none
+                flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold shadow-md
+                transition-all duration-300 cursor-pointer select-none border
                 ${showSnapped
-                  ? 'bg-green-50/90 border border-green-300 text-green-700 hover:bg-green-100/90'
-                  : 'bg-white/90 border border-gray-200 text-gray-600 hover:bg-gray-50/90'
+                  ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+                  : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
                 }
               `}
               title={showSnapped ? 'Click to show raw GPS route' : 'Click to show road-snapped route'}
             >
               {showSnapped ? (
                 <>
-                  <Route size={13} className="text-green-600" />
+                  <Route size={14} className="text-green-600" />
                   Road-snapped
                 </>
               ) : (
                 <>
-                  <Navigation size={13} className="text-gray-500" />
+                  <Navigation size={14} className="text-gray-500" />
                   Raw GPS
                 </>
               )}
               {/* Toggle pill */}
               <div className={`
-                relative w-7 h-4 rounded-full transition-colors duration-200
+                relative w-8 h-5 rounded-full transition-colors duration-300 ml-1
                 ${showSnapped ? 'bg-green-500' : 'bg-gray-300'}
               `}>
                 <div className={`
-                  absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-200
-                  ${showSnapped ? 'translate-x-3.5' : 'translate-x-0.5'}
+                  absolute top-[2px] w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300
+                  ${showSnapped ? 'translate-x-[14px]' : 'translate-x-[2px]'}
                 `} />
               </div>
             </button>
           ) : snapStatus === 'failed' ? (
-            <div className="flex items-center gap-2 bg-white/90 backdrop-blur border border-amber-200 text-amber-700 px-3 py-1.5 rounded-xl text-[11px] font-semibold shadow-sm">
+            <div className="flex items-center gap-2 bg-white border border-amber-200 text-amber-700 px-4 py-2 rounded-full text-xs font-bold shadow-md">
               <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
               GPS route (snap failed)
             </div>
@@ -148,7 +150,7 @@ export function AssociateMap({
       >
         <MapUpdater center={mapCenter} zoom={mapZoom} />
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           attribution='&copy; OpenStreetMap &copy; CARTO'
         />
 

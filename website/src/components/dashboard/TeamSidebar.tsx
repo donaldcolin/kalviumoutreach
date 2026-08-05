@@ -17,6 +17,7 @@ interface TeamSidebarProps {
   managers: User[];
   selectedManagerId: string;
   setSelectedManagerId: (val: string) => void;
+  isLoading?: boolean;
 }
 
 export function TeamSidebar({
@@ -30,7 +31,8 @@ export function TeamSidebar({
   teamTrackingStatus = {},
   managers = [],
   selectedManagerId,
-  setSelectedManagerId
+  setSelectedManagerId,
+  isLoading
 }: TeamSidebarProps) {
   const { user } = useAuthStore();
   const [isHovered, setIsHovered] = useState(false);
@@ -83,7 +85,7 @@ export function TeamSidebar({
 
           {/* EXPANDED STATE HEADER */}
           <div className={`w-full flex items-center justify-between transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-            {(user?.role === 'admin' || user?.role === 'regionalManager') && managers.length > 0 ? (
+            {(user?.role === 'admin' || user?.role === 'regionalManager' || user?.role === 'seniorManager') && managers.length > 0 ? (
               <Popover>
                 <PopoverTrigger className="flex items-center justify-between flex-1 text-left bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-lg px-3 py-1.5 transition-all outline-none focus:ring-2 focus:ring-red-500/20 group/trigger">
                   <div className="flex flex-col min-w-0 pr-2">
@@ -142,7 +144,20 @@ export function TeamSidebar({
 
       <div className="flex-1 overflow-y-auto min-h-0 p-2">
         <div className="flex flex-col gap-1">
-          {Object.entries(groupedUsers).map(([region, users]) => (
+          {isLoading ? (
+            // Skeleton Loader for Sidebar
+            <div className="flex flex-col gap-3 mt-4">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3 p-2">
+                  <div className={`shrink-0 w-10 h-10 bg-gray-200 rounded-full animate-pulse ${isHovered ? 'mx-0' : 'mx-auto'}`} />
+                  <div className={`flex-1 min-w-0 transition-opacity duration-300 ${isHovered ? 'block opacity-100' : 'hidden opacity-0'}`}>
+                    <div className="h-4 bg-gray-200 rounded w-24 mb-1.5 animate-pulse" />
+                    <div className="h-3 bg-gray-100 rounded w-16 animate-pulse" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : Object.entries(groupedUsers).map(([region, users]) => (
             <div key={region} className="flex flex-col gap-1 mb-2">
               <div className={`px-2 mb-1 mt-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 transition-opacity duration-300 ${isHovered ? 'block opacity-100' : 'hidden opacity-0'}`}>
                 {region}
@@ -156,11 +171,13 @@ export function TeamSidebar({
                   <div
                     key={u.id}
                     onClick={() => setSelectedAssociate(u)}
-                    className={`flex items-center gap-3 p-2 cursor-pointer transition-colors duration-200 rounded-xl border ${isSelected
-                        ? 'bg-red-50 border-red-200 text-red-900'
-                        : 'bg-white border-transparent hover:bg-gray-50 text-gray-900'
+                    className={`flex items-center gap-3 p-2 cursor-pointer transition-all duration-300 rounded-xl border relative overflow-hidden group/associate ${isSelected
+                        ? 'bg-red-50/80 border-red-200 text-red-900 shadow-sm shadow-red-100/50 scale-[0.98]'
+                        : 'bg-white border-transparent hover:bg-gray-50/80 text-gray-900 hover:scale-[0.99]'
                       }`}
                   >
+                    {/* Sliding indicator line for active state */}
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 bg-red-500 transition-transform duration-300 ${isSelected ? 'scale-y-100' : 'scale-y-0'}`} />
                     <div className={`relative shrink-0 flex items-center justify-center w-10 h-10 transition-all ${isHovered ? 'mx-0' : 'mx-auto'}`}>
                       <Avatar className="w-10 h-10 border border-gray-200">
                         <AvatarFallback className={`${isSelected ? 'bg-red-100 text-red-700 font-bold' : 'bg-gray-100 text-gray-600 font-bold'}`}>
@@ -208,7 +225,7 @@ export function TeamSidebar({
               })}
             </div>
           ))}
-          {filteredUsers.length === 0 && (
+          {!isLoading && filteredUsers.length === 0 && (
             <div className={`flex-col items-center justify-center h-40 text-gray-400 ${isHovered ? 'flex' : 'hidden'}`}>
               <Search size={20} className="mb-2 opacity-20" />
               <p className="text-sm font-medium">No team members</p>

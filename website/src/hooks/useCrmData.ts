@@ -28,10 +28,7 @@ export function useCrmData(user: User | null, users: Record<string, User>) {
   // Compute available managers based on RBAC
   const availableManagers = useMemo(() => {
     if (!user) return [];
-    const allUsers = Object.values(users);
-    if (user.role === 'admin') return allUsers.filter(u => u.role === 'teamLead');
-    if (user.role === 'regionalManager') return allUsers.filter(u => u.role === 'teamLead' && u.managerId === user.id);
-    return [];
+    return Object.values(users).filter(u => u.role === 'teamLead');
   }, [user, users]);
 
 

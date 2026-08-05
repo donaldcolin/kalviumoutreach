@@ -35,10 +35,10 @@ export function AssociateHeader({
   return (
     <>
       <div className="grid grid-cols-2 gap-6 shrink-0 animate-in slide-in-from-top-4 duration-500">
-      <div className="bg-white p-6 border border-gray-100 shadow-sm flex flex-col justify-between min-h-[140px] rounded-xl relative overflow-hidden">
+      <div className="bg-white p-6 border border-gray-100 shadow-sm flex flex-col justify-between min-h-[140px] rounded-[20px] relative overflow-hidden transition-all duration-300 hover:shadow-md hover:border-gray-200">
         <div className="flex justify-between items-start">
           <div>
-            <h3 className="text-xl font-semibold text-gray-900 tracking-tight pr-2">{selectedAssociate.name}</h3>
+            <h3 className="text-2xl font-bold text-gray-900 tracking-tight pr-2">{selectedAssociate.name}</h3>
             <p className="text-gray-500 text-sm mt-1 font-medium">{selectedAssociate.regionId}</p>
           </div>
           <div className="flex items-center gap-3">
@@ -86,35 +86,36 @@ export function AssociateHeader({
             </Popover>
           </div>
         </div>
-        <div className="mt-4 flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <span className="inline-block px-3 py-1 bg-gray-50 text-gray-700 text-[11px] font-semibold uppercase tracking-widest border border-gray-100 rounded-lg">
+        <div className="mt-4 flex items-center justify-between">
+          <div className="flex items-center gap-2 min-w-0 pr-4">
+            <span className="inline-block px-3 py-1 bg-gray-50 text-gray-700 text-[11px] font-semibold uppercase tracking-widest border border-gray-100 rounded-lg shrink-0">
               {selectedAssociate.regionId}
             </span>
-            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">{format(selectedDate, "MMM d")}</span>
-          </div>
-          
-          {ongoingWalkIn && (
-            <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg p-2 mt-1">
-              <div className="flex h-2 w-2 relative ml-1 mr-1">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            {ongoingWalkIn && (
+              <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-lg px-2 py-1 min-w-0">
+                <div className="flex h-1.5 w-1.5 relative shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+                </div>
+                <p className="text-[11px] font-medium text-green-700 truncate">
+                  Currently at <span className="font-bold">{ongoingWalkIn.schoolName || 'In Walk-in'}</span>
+                </p>
               </div>
-              <p className="text-xs font-medium text-green-700 truncate">
-                Currently at <span className="font-bold">{ongoingWalkIn.schoolName || 'In Walk-in'}</span>
-              </p>
-            </div>
-          )}
+            )}
+          </div>
+          <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider shrink-0">{format(selectedDate, "MMM d")}</span>
         </div>
       </div>
       
-      <div className="bg-white p-6 border border-gray-100 shadow-sm flex flex-col justify-between min-h-[140px] group rounded-xl">
+      <div className="bg-white p-6 border border-gray-100 shadow-sm flex flex-col justify-between min-h-[140px] group rounded-[20px] transition-all duration-300 hover:shadow-md hover:border-gray-200">
         <div className="flex items-start justify-between">
-          <span className="text-sm font-medium text-gray-500 tracking-wider uppercase">Activities (Selected Date)</span>
-          <ClipboardList className="h-5 w-5 text-gray-400 group-hover:text-gray-900 transition-colors" />
+          <span className="text-xs font-bold text-gray-400 tracking-widest uppercase">Activities (Selected Date)</span>
+          <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-gray-50 text-gray-400 transition-transform duration-300 group-hover:scale-110 group-hover:bg-gray-100 group-hover:text-gray-600">
+            <ClipboardList className="h-5 w-5" />
+          </div>
         </div>
         <div className="flex items-end justify-between mt-auto pt-4">
-          <div className="text-5xl font-semibold text-gray-900 tracking-tighter">{timelineVisitsCount}</div>
+          <div className="text-[2.75rem] leading-none font-bold text-gray-900 tracking-tight">{timelineVisitsCount}</div>
           <div className="flex gap-2">
             <button
               onClick={handleFetchLocation}
