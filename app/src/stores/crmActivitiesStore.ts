@@ -25,7 +25,7 @@ async function fetchActivities(email: string): Promise<CrmActivity[]> {
 
   const acts = snapshot.docs.map((d: { id: any; data: () => any; }) => ({ ...d.data(), id: d.id } as CrmActivity));
 
-  acts.sort((a: { walkInDateTime: any; lsqCreatedOn: any; }, b: { walkInDateTime: any; lsqCreatedOn: any; }) => {
+  acts.sort((a, b) => {
     const ta = new Date(a.walkInDateTime || a.lsqCreatedOn || 0).getTime();
     const tb = new Date(b.walkInDateTime || b.lsqCreatedOn || 0).getTime();
     return tb - ta;

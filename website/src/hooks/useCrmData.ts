@@ -107,30 +107,36 @@ export function useCrmData(user: User | null, users: Record<string, User>) {
     queryKey: ['leads', targetTeamIds],
     queryFn: async () => {
       if (targetTeamIds.length === 0) return [];
-      if (targetTeamIds.length > 5 && associateFilter === 'all') return [];
 
-      const results = await Promise.all(
-        targetTeamIds.map(email => 
-          fetch(`${API_BASE_URL}/api/leads?email=${encodeURIComponent(email)}`)
-            .then(res => res.json())
-            .then(res => ({ ...res, email }))
-            .catch(() => ({ success: false, leads: [], email }))
-        )
-      );
-      
       let combinedLeads: Lead[] = [];
-      results.forEach(res => {
-        if (res.success && Array.isArray(res.leads)) {
-          const leadsWithEmail = res.leads.map((l: any) => ({
-            ...l,
-            OwnerEmailAddress: l.OwnerEmailAddress || l.OwnerEmail || res.email
-          }));
-          combinedLeads = [...combinedLeads, ...leadsWithEmail];
-        }
-      });
+      const chunkedEmails = [];
+      for (let i = 0; i < targetTeamIds.length; i += 5) {
+        chunkedEmails.push(targetTeamIds.slice(i, i + 5));
+      }
+
+      for (const chunk of chunkedEmails) {
+        const results = await Promise.all(
+          chunk.map(email => 
+            fetch(`${API_BASE_URL}/api/leads?email=${encodeURIComponent(email)}`)
+              .then(res => res.json())
+              .then(res => ({ ...res, email }))
+              .catch(() => ({ success: false, leads: [], email }))
+          )
+        );
+        
+        results.forEach(res => {
+          if (res.success && Array.isArray(res.leads)) {
+            const leadsWithEmail = res.leads.map((l: any) => ({
+              ...l,
+              OwnerEmailAddress: l.OwnerEmailAddress || l.OwnerEmail || res.email
+            }));
+            combinedLeads = [...combinedLeads, ...leadsWithEmail];
+          }
+        });
+      }
       return combinedLeads;
     },
-    enabled: targetTeamIds.length > 0 && !(targetTeamIds.length > 5 && associateFilter === 'all')
+    enabled: targetTeamIds.length > 0
   });
 
   // 3. Aggregate everything  // Computed Derived Data
