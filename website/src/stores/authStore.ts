@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { auth, db } from '../firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, collection, onSnapshot, query, where, or } from 'firebase/firestore';
+import { doc, getDoc, collection, onSnapshot, query, where } from 'firebase/firestore';
 
 import type { User, UserRole } from '@kalvium-outreach/shared';
 export type { User, UserRole };

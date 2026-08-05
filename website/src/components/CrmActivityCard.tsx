@@ -16,7 +16,7 @@ export function CrmActivityCard({ activity, onLocate, onMoreDetails }: CrmActivi
 
   return (
     <div 
-      onClick={(e) => {
+      onClick={() => {
         // If clicking the card, we want to show details. If onLocate is needed, maybe clicking the map pin icon is better, but since it's the whole card, let's trigger more details by default
         if (onMoreDetails) {
           onMoreDetails();
