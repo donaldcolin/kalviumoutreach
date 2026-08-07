@@ -17,6 +17,7 @@ interface AssociateHeaderProps {
   ongoingWalkIn?: CrmActivity;
   isFetchingLocation: boolean;
   handleFetchLocation: () => void;
+  cancelOngoingWalkIn: () => Promise<void>;
 }
 
 export function AssociateHeader({
@@ -28,7 +29,8 @@ export function AssociateHeader({
   timelineVisitsCount,
   ongoingWalkIn,
   isFetchingLocation,
-  handleFetchLocation
+  handleFetchLocation,
+  cancelOngoingWalkIn
 }: AssociateHeaderProps) {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
 
@@ -92,14 +94,26 @@ export function AssociateHeader({
               {selectedAssociate.regionId}
             </span>
             {ongoingWalkIn && (
-              <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-lg px-2 py-1 min-w-0">
+              <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-lg px-2 py-1 min-w-0 pr-1 group/walkin">
                 <div className="flex h-1.5 w-1.5 relative shrink-0">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
                 </div>
-                <p className="text-[11px] font-medium text-green-700 truncate">
+                <p className="text-[11px] font-medium text-green-700 truncate pr-1">
                   Currently at <span className="font-bold">{ongoingWalkIn.schoolName || 'In Walk-in'}</span>
                 </p>
+                <button
+                  onClick={async () => {
+                    if (window.confirm('Are you sure you want to end this walk-in remotely? This will clear it from the associate\'s app as well.')) {
+                      await cancelOngoingWalkIn();
+                    }
+                  }}
+                  className="flex items-center justify-center h-4 w-4 rounded-full bg-green-100 text-green-600 hover:bg-green-200 hover:text-green-800 transition-colors opacity-0 group-hover/walkin:opacity-100 focus:opacity-100 focus:outline-none"
+                  title="End Walk-in"
+                >
+                  <span className="sr-only">End Walk-in</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
               </div>
             )}
           </div>

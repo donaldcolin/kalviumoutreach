@@ -248,4 +248,154 @@ app.get('/api/leads/search', async (req, res) => {
   }
 });
 
+// ─── Create Lead (Quick Creation) ───────────────────────────────────────────
+
+let lsqUsersCache = null;
+let lsqUsersCacheTime = 0;
+
+async function getLsqOwnerIdByEmail(email) {
+  if (!lsqUsersCache || Date.now() - lsqUsersCacheTime > 15 * 60 * 1000) {
+    try {
+      const users = await lsqFetch('/v2/UserManagement.svc/Users.Get', 'GET');
+      if (Array.isArray(users)) {
+        lsqUsersCache = users;
+        lsqUsersCacheTime = Date.now();
+        console.log(`[DEBUG] Fetched ${users.length} LSQ users into cache`);
+      } else {
+        console.log(`[DEBUG] Failed to parse LSQ users. Response:`, users);
+      }
+    } catch (err) {
+      console.error('Failed to fetch LSQ users for owner mapping:', err);
+    }
+  }
+  
+  if (Array.isArray(lsqUsersCache)) {
+    const user = lsqUsersCache.find(u => u.EmailAddress && u.EmailAddress.toLowerCase() === email.toLowerCase());
+    console.log(`[DEBUG] Mapping email '${email}' -> ID:`, user ? user.ID : 'NOT FOUND');
+    return user ? user.ID : null;
+  }
+  return null;
+}
+
+app.post('/api/leads', async (req, res) => {
+  try {
+    const { email, schoolName, phone, address, board, studentStrength, city, district, state, latitude, longitude } = req.body;
+    if (!email || !schoolName || !phone) {
+      return res.status(400).json({ error: 'Executive email, School Name, and Phone are required' });
+    }
+
+    // Pre-check: if phone exists, throw error
+    const searchBody = {
+      "Parameter": {
+        "LookupName": "Phone",
+        "LookupValue": phone,
+        "SqlOperator": "="
+      }
+    };
+    const existingLeads = await lsqFetch('/v2/LeadManagement.svc/Leads.Get', 'POST', searchBody);
+    if (Array.isArray(existingLeads) && existingLeads.length > 0) {
+      return res.status(400).json({ error: 'A lead with this Phone Number already exists.' });
+    }
+
+    // Map to LSQ attributes
+    const leadBody = [
+      { Attribute: "FirstName", Value: schoolName },
+      { Attribute: "Phone", Value: phone },
+      { Attribute: "mx_Address", Value: address || '' },
+      { Attribute: "mx_City", Value: city || '' },
+      { Attribute: "mx_District", Value: district || '' },
+      { Attribute: "mx_State", Value: state || '' },
+      { Attribute: "mx_Board", Value: board || '' },
+      { Attribute: "mx_Student_Strength", Value: studentStrength || '' },
+      { Attribute: "Source", Value: "School_Outreach_2027" },
+      { Attribute: "ProspectStage", Value: "School Prospect" } // Ensure it's marked as School Prospect
+    ];
+
+    // Step 1: Create Lead (LeadSquared may override the OwnerId here based on automation rules)
+    const ownerId = await getLsqOwnerIdByEmail(email);
+    if (ownerId) {
+      leadBody.push({ Attribute: "OwnerId", Value: ownerId });
+    }
+    
+    console.log(`[DEBUG] Creating lead for phone ${phone}. OwnerId mapping: ${ownerId}. Payload:`, JSON.stringify(leadBody));
+
+    const lsqResp = await lsqFetch('/v2/LeadManagement.svc/Lead.Create', 'POST', leadBody);
+
+    if (lsqResp.Status === 'Error') {
+      console.error('LSQ Create Lead Error:', lsqResp);
+      return res.status(400).json({ error: lsqResp.ExceptionMessage || 'Failed to create lead in LSQ' });
+    }
+
+    const leadId = lsqResp.Message.Id;
+
+    // Step 2: Log "Outreach Lead Created" Activity (Event 282)
+    try {
+      const activityBody = {
+        "RelatedProspectId": leadId,
+        "ActivityEvent": 282,
+        "ActivityNote": "Created via Kalvium Outreach Mobile App",
+        "Fields": [
+          { "SchemaName": "mx_Custom_1", "Value": email },
+          { "SchemaName": "mx_Custom_2", "Value": new Date().toISOString().replace('T', ' ').substring(0, 19) },
+          { "SchemaName": "mx_Custom_3", "Value": latitude || "0.0" },
+          { "SchemaName": "mx_Custom_4", "Value": longitude || "0.0" }
+        ]
+      };
+      await lsqFetch('/v2/ProspectActivity.svc/Create', 'POST', activityBody);
+    } catch (actErr) {
+      console.error('Failed to log Activity 282:', actErr.message || actErr);
+    }
+
+    // Step 3: Force Update OwnerId
+    if (ownerId) {
+      try {
+        const updateBody = [{ "Attribute": "OwnerId", "Value": ownerId }];
+        await lsqFetch(`/v2/LeadManagement.svc/Lead.Update?leadId=${leadId}`, 'POST', updateBody);
+      } catch (updErr) {
+        console.error('Failed to force update OwnerId:', updErr.message || updErr);
+      }
+    }
+
+    // Immediately fetch the created lead to return full details to the app
+    let newLeadDetails = {};
+    if (leadId && typeof leadId === 'string') {
+        try {
+            const fetchResp = await lsqFetch(`/v2/LeadManagement.svc/Leads.GetById?id=${leadId}`, 'GET');
+            if (Array.isArray(fetchResp) && fetchResp.length > 0) {
+                newLeadDetails = fetchResp[0];
+            }
+        } catch (fetchErr) {
+            console.error('Failed to fetch newly created lead details:', fetchErr);
+        }
+    }
+
+    res.json({
+      success: true,
+      leadId: leadId,
+      lead: newLeadDetails
+    });
+
+  } catch (err) {
+    console.error('Create lead failed:', err);
+    
+    // Parse LSQ Error
+    if (err.message.includes('MXDuplicateEntryException')) {
+      return res.status(400).json({ error: 'A lead with this Phone Number already exists.' });
+    }
+    
+    // Clean up generic JSON errors for UI
+    if (err.message.includes('ExceptionMessage')) {
+      try {
+        const jsonPart = err.message.substring(err.message.indexOf('{'));
+        const lsqErr = JSON.parse(jsonPart);
+        if (lsqErr.ExceptionMessage) {
+          return res.status(400).json({ error: lsqErr.ExceptionMessage });
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default app;

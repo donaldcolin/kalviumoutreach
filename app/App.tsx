@@ -35,8 +35,6 @@ import { firestoreSync } from './src/tracking/firestoreSync';
 import type { LocationPing } from './src/types';
 
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
-import { VStack } from '@/components/ui/vstack';
-import { Spinner } from '@/components/ui/spinner';
 import { ToastManager } from '@/components/ui/ToastManager';
 // @ts-ignore
 import '@/global.css';
@@ -102,6 +100,7 @@ function App() {
             speed: null,
             accuracy: ping.accuracy,
           }]);
+          await firestoreSync.syncUnsyncedLocations();
           
           if (requestId) {
             await firestore().collection('locationRequests').doc(requestId).update({ status: 'fulfilled' });

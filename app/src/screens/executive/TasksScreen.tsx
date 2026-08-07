@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ScrollView, View, RefreshControl, TouchableOpacity, Text, Alert } from 'react-native';
+import { View, RefreshControl, TouchableOpacity, Text, Alert } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useAuthStore } from '../../stores/authStore';
 import { useTasksStore } from '../../stores/tasksStore';
 import { TaskTabs, TaskList } from '../../components/tasks';
@@ -39,7 +40,9 @@ export default function TasksScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScrollView
+      <FlashList
+        data={activeTab === 'overdue' ? overdueTasks : activeTab === 'today' ? todayTasks : activeTab === 'upcoming' ? upcomingTasks : completedTasks}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 12, paddingBottom: 100 }}
         refreshControl={
           <RefreshControl
@@ -49,75 +52,59 @@ export default function TasksScreen() {
             tintColor="#E11D48"
           />
         }
-      >
-        {/* Summary Header with Stats */}
-
-        {/* Header removed as requested */}
-
-        {/* ── Tabs Toggle ── */}
-        {failedSyncs.length > 0 && (
-          <TouchableOpacity 
-            className="bg-red-500 rounded-lg p-3 mb-4 flex-row justify-center items-center"
-            onPress={() => {
-              Alert.alert(
-                'Retry Sync', 
-                `You have ${failedSyncs.length} failed visits. Tap OK to retry syncing them to LeadSquared.`,
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'OK', onPress: () => {
-                    failedSyncs.forEach(doc => retrySync(doc));
-                  }}
-                ]
-              );
-            }}
-          >
-            <Text className="text-white font-semibold text-center">
-              {failedSyncs.length} Visit{failedSyncs.length > 1 ? 's' : ''} Failed to Sync - Tap to Retry
+        ListHeaderComponent={
+          <>
+            {failedSyncs.length > 0 && (
+              <TouchableOpacity 
+                className="bg-red-500 rounded-lg p-3 mb-4 flex-row justify-center items-center"
+                onPress={() => {
+                  Alert.alert(
+                    'Retry Sync', 
+                    `You have ${failedSyncs.length} failed visits. Tap OK to retry syncing them to LeadSquared.`,
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'OK', onPress: () => {
+                        failedSyncs.forEach(doc => retrySync(doc));
+                      }}
+                    ]
+                  );
+                }}
+              >
+                <Text className="text-white font-semibold text-center">
+                  {failedSyncs.length} Visit{failedSyncs.length > 1 ? 's' : ''} Failed to Sync - Tap to Retry
+                </Text>
+              </TouchableOpacity>
+            )}
+            <TaskTabs
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              overdueCount={overdueCount}
+              todayCount={todayCount}
+              upcomingCount={upcomingCount}
+              completedCount={completedTasks.length}
+            />
+          </>
+        }
+        ListEmptyComponent={
+          <View className="w-full items-center justify-center py-16 bg-white rounded-2xl border border-slate-100 mt-4">
+            <Text className="text-slate-900 font-semibold text-xl tracking-tight mb-2">
+              {activeTab === 'completed' ? 'No completed tasks' : 'All caught up'}
             </Text>
-          </TouchableOpacity>
-        )}
-        <TaskTabs
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          overdueCount={overdueCount}
-          todayCount={todayCount}
-          upcomingCount={upcomingCount}
-          completedCount={completedTasks.length}
-        />
-
-        {/* ── Content ── */}
-        {activeTab === 'overdue' && (
+            <Text className="text-slate-500 text-sm text-center px-4">
+              {activeTab === 'completed'
+                ? 'Completed tasks will appear here.'
+                : 'No active tasks in this section.'}
+            </Text>
+          </View>
+        }
+        renderItem={({ item, index }) => (
           <TaskList
-            tasks={overdueTasks}
-            activeTab="overdue"
+            tasks={[item]}
+            activeTab={activeTab}
             completeTask={completeTask}
           />
         )}
-
-        {activeTab === 'today' && (
-          <TaskList
-            tasks={todayTasks}
-            activeTab="today"
-            completeTask={completeTask}
-          />
-        )}
-
-        {activeTab === 'upcoming' && (
-          <TaskList
-            tasks={upcomingTasks}
-            activeTab="upcoming"
-            completeTask={completeTask}
-          />
-        )}
-
-        {activeTab === 'completed' && (
-          <TaskList
-            tasks={completedTasks}
-            activeTab="completed"
-            completeTask={completeTask}
-          />
-        )}
-      </ScrollView>
+      />
     </View>
   );
 }

@@ -64,6 +64,7 @@ export default function Dashboard() {
     isAssociateLoading,
     handleFetchLocation,
     toggleTrackingStatus,
+    cancelOngoingWalkIn,
   } = useDashboardData(
     user,
     visibleUsers,
@@ -170,6 +171,7 @@ export default function Dashboard() {
             ongoingWalkIn={selectedAssociate ? ongoingWalkIns[selectedAssociate.id] : null}
             isFetchingLocation={isFetchingLocation}
             handleFetchLocation={handleFetchLocation}
+            cancelOngoingWalkIn={cancelOngoingWalkIn}
           />
         )}
 

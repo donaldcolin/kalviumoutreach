@@ -5,8 +5,9 @@ import React, { useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { ExecutiveTabParamList } from '../types';
-import { Image, TouchableOpacity, Modal, View, StyleSheet, TouchableWithoutFeedback } from 'react-native';
-import { User, Menu, MapPin, FileText, List, Briefcase, Bug } from 'lucide-react-native';
+import { TouchableOpacity, Modal, View, StyleSheet, TouchableWithoutFeedback } from 'react-native';
+import { Image } from 'expo-image';
+import { User, Menu, MapPin, FileText, List, Briefcase, Bug, Plus } from 'lucide-react-native';
 
 import DashboardScreen from '../screens/executive/DashboardScreen';
 import MeetingNotesScreen from '../screens/executive/MeetingNotesScreen';
@@ -15,6 +16,7 @@ import LeadsScreen from '../screens/executive/LeadsScreen';
 import LeadDetailScreen from '../screens/executive/LeadDetailScreen';
 import WalkInSessionScreen from '../screens/executive/WalkInSessionScreen';
 import BugReportScreen from '../screens/executive/BugReportScreen';
+import AddLeadScreen from '../screens/executive/AddLeadScreen';
 
 import { Box } from '@/components/ui/box';
 import { VStack } from '@/components/ui/vstack';
@@ -111,6 +113,19 @@ function HeaderRightMenu() {
                   <Bug color="#DC2626" size={20} strokeWidth={1.5} style={{ marginRight: 12 }} />
                   <Text style={{ fontSize: 16, color: '#DC2626', fontWeight: '500' }}>Report Bug</Text>
                 </TouchableOpacity>
+
+                <View style={{ height: 1, backgroundColor: '#F1F5F9', marginVertical: 4 }} />
+
+                <TouchableOpacity
+                  style={{ padding: 12, flexDirection: 'row', alignItems: 'center', borderRadius: 10 }}
+                  onPress={() => {
+                    setVisible(false);
+                    navigation.navigate('AddLead');
+                  }}
+                >
+                  <Plus color="#0F172A" size={20} strokeWidth={1.5} style={{ marginRight: 12 }} />
+                  <Text style={{ fontSize: 16, color: '#0F172A', fontWeight: '500' }}>Add Lead</Text>
+                </TouchableOpacity>
               </View>
             </TouchableWithoutFeedback>
           </View>
@@ -146,7 +161,7 @@ function ExecutiveTabs() {
             <Image
               source={require('../../assets/LOGO.png')}
               style={{ width: 120, height: 32, marginLeft: 16 }}
-              resizeMode="contain"
+              contentFit="contain"
             />
           ),
           headerRight: () => <HeaderRightMenu />,
@@ -229,6 +244,13 @@ export default function ExecutiveNavigator() {
       <ExecutiveStack.Screen
         name="ActivityForm"
         component={WalkInSessionScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <ExecutiveStack.Screen
+        name="AddLead"
+        component={AddLeadScreen}
         options={{
           headerShown: false,
         }}

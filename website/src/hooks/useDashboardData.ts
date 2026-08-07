@@ -278,6 +278,24 @@ export function useDashboardData(
     }, { merge: true });
   };
 
+  const cancelOngoingWalkIn = async () => {
+    if (!selectedAssociate) return;
+    try {
+      // deleteDoc must be imported from 'firebase/firestore'
+      const { deleteDoc } = await import('firebase/firestore');
+      await deleteDoc(doc(db, 'ongoingWalkIns', selectedAssociate.id));
+      
+      // Update local state immediately so UI reflects the cancellation
+      setOngoingWalkIns(prev => {
+        const next = { ...prev };
+        delete next[selectedAssociate.id];
+        return next;
+      });
+    } catch (err) {
+      console.error('Failed to cancel ongoing walk-in:', err);
+    }
+  };
+
   return {
     ongoingWalkIns,
     teamTrackingStatus,
@@ -294,5 +312,6 @@ export function useDashboardData(
     isAssociateLoading,
     handleFetchLocation,
     toggleTrackingStatus,
+    cancelOngoingWalkIn,
   };
 }

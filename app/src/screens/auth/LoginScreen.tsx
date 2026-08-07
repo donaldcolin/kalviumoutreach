@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Image, View, StyleSheet, Dimensions } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, View, StyleSheet, Dimensions } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../stores/authStore';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -77,6 +78,7 @@ export default function LoginScreen({ navigation }: Props) {
                 <Image
                   source={require('../../../assets/LOGO.png')}
                   style={styles.logo}
+                  contentFit="contain"
                 />
                 <Text className="text-4xl font-extrabold text-slate-800 mt-6 text-center tracking-tight">
                   Welcome Back!
@@ -178,7 +180,6 @@ const styles = StyleSheet.create({
   logo: {
     width: 220,
     height: 80,
-    resizeMode: 'contain',
   },
   formWrapper: {
     width: '100%',

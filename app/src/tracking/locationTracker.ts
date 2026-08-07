@@ -52,7 +52,7 @@ class LocationTracker {
   // detect motion and trigger an immediate upgrade back to High accuracy.
   private deepStationaryTimeout: ReturnType<typeof setTimeout> | null = null;
   private isDeepStationary: boolean = false;
-  private static readonly DEEP_STATIONARY_DELAY_MS = 300000; // 5 minutes
+  private static readonly DEEP_STATIONARY_DELAY_MS = 120000; // 2 minutes
 
   public subscribe(listener: LocationBatchListener): () => void {
     this.listeners.add(listener);
@@ -216,15 +216,15 @@ class LocationTracker {
 
     if (this.currentMotionState === 'MOVING') {
       accuracy = Location.Accuracy.High;
-      distanceInterval = 10; // 10 meters
-      deferredUpdatesInterval = 10000; // 10s
-      deferredUpdatesDistance = 10;
+      distanceInterval = 25; // 25 meters
+      deferredUpdatesInterval = 180000; // 3 mins batching
+      deferredUpdatesDistance = 200; // wait for 200m before waking up
     } else if (this.currentMotionState === 'POSSIBLY_STOPPED') {
       // Maintain High accuracy during grace period
       accuracy = Location.Accuracy.High;
-      distanceInterval = 20;
-      deferredUpdatesInterval = 30000;
-      deferredUpdatesDistance = 20;
+      distanceInterval = 25;
+      deferredUpdatesInterval = 180000;
+      deferredUpdatesDistance = 200;
     } else if (this.currentMotionState === 'STATIONARY' && this.isDeepStationary) {
       // Deep stationary: 5+ minutes idle — drop to Low accuracy (WiFi/cell only)
       // to save significant GPS battery. Accelerometer will detect motion and
@@ -265,7 +265,7 @@ class LocationTracker {
   // ─── GPS Quality Filters ────────────────────────────────────────────────────
   // Max acceptable accuracy radius in meters. Android in Indian cities
   // routinely reports 50-150m accuracy. Being too strict drops real pings.
-  static readonly MAX_ACCURACY_METERS = 150;
+  static readonly MAX_ACCURACY_METERS = 300;
   // Max realistic speed in m/s (200 km/h). Higher = GPS glitch.
   static readonly MAX_SPEED_MS = 55;
   // Min distance in meters from last saved point. Less than this = GPS jitter.

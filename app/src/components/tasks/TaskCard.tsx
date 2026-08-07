@@ -67,7 +67,7 @@ const SECTION_STYLES = {
   },
 } as const;
 
-export function TaskCard({ task, section, index, onComplete }: TaskCardProps) {
+export const TaskCard = React.memo(function TaskCard({ task, section, index, onComplete }: TaskCardProps) {
   const styles = SECTION_STYLES[section];
   const overdueDays = section === 'overdue' && task.date ? getOverdueDays(task.date) : 0;
 
@@ -174,4 +174,4 @@ export function TaskCard({ task, section, index, onComplete }: TaskCardProps) {
       </View>
     </Animated.View>
   );
-}
+});

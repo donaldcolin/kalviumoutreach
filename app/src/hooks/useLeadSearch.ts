@@ -95,13 +95,22 @@ export function useLeadSearch(userEmail?: string) {
     }
   }, [globalSearchQuery]);
 
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
   const filteredLeads = leads.filter((l) => {
     // Only show School Prospect leads
     if (l.ProspectStage && l.ProspectStage !== 'School Prospect') return false;
     
     const name = `${l.FirstName || ''} ${l.LastName || ''}`.toLowerCase();
     const city = (l.mx_City || '').toLowerCase();
-    const q = searchQuery.toLowerCase();
+    const q = debouncedSearchQuery.toLowerCase();
     return name.includes(q) || city.includes(q);
   });
 
@@ -139,6 +148,10 @@ export function useLeadSearch(userEmail?: string) {
     }
   }, [userEmail]);
 
+  const prependLead = useCallback((newLead: Lead) => {
+    setLeads((prev) => [newLead, ...prev]);
+  }, []);
+
   return {
     leads,
     filteredLeads,
@@ -155,5 +168,6 @@ export function useLeadSearch(userEmail?: string) {
     loadMoreLeads,
     clearGlobalSearch,
     refresh,
+    prependLead,
   };
 }

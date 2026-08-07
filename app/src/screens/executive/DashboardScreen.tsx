@@ -1,5 +1,6 @@
 import React, { useEffect, useCallback } from 'react';
-import { ScrollView, View, AppState, RefreshControl, FlatList, InteractionManager } from 'react-native';
+import { ScrollView, View, AppState, RefreshControl, InteractionManager } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, interpolateColor, Easing, FadeInUp } from 'react-native-reanimated';
 import * as Location from 'expo-location';
 import { useAuthStore } from '../../stores/authStore';
@@ -31,19 +32,29 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     const task = InteractionManager.runAfterInteractions(() => {
-      if (user?.email) initCrm(user.email);
-      if (user?.id) initTasks(user.id);
+      if (user?.id) {
+        initCrm(user.id);
+        initTasks(user.id);
+      }
     });
     return () => task.cancel();
-  }, [user?.email, user?.id]);
-  const { ongoingWalkIn, loadOngoing } = useWalkInStore();
+  }, [user?.id]);
+  const { ongoingWalkIn, loadOngoing, subscribeToRemoteCancellations, unsubscribeFromRemoteCancellations } = useWalkInStore();
 
   useEffect(() => {
+    let isMounted = true;
     if (user?.id) {
-      const task = InteractionManager.runAfterInteractions(() => {
-        loadOngoing(user.id);
-      });
-      return () => task.cancel();
+      const initializeWalkIn = async () => {
+        await loadOngoing(user.id);
+        if (isMounted) {
+          subscribeToRemoteCancellations(user.id);
+        }
+      };
+      initializeWalkIn();
+      return () => {
+        isMounted = false;
+        unsubscribeFromRemoteCancellations();
+      }
     }
   }, [user?.id]);
 
@@ -152,6 +163,9 @@ export default function DashboardScreen() {
         startDay(); // fallback
         return;
       }
+      
+      // Request background permissions immediately after foreground
+      await Location.requestBackgroundPermissionsAsync();
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       setStartCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
 
@@ -180,7 +194,7 @@ export default function DashboardScreen() {
 
   return (
     <View className="flex-1 bg-white">
-      <FlatList
+      <FlashList
         data={filteredActivities}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 12, paddingBottom: 18 }}

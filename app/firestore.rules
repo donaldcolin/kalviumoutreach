@@ -153,7 +153,7 @@ service cloud.firestore {
       allow read: if request.auth != null
                   && (request.auth.uid == wUserId || isManager());
       allow write: if request.auth != null && request.auth.uid == wUserId;
-      allow delete: if request.auth != null && request.auth.uid == wUserId;
+      allow delete: if request.auth != null && (request.auth.uid == wUserId || isManager());
     }
 
     // ─── System Logs ───────────────────────────────────────────────────────────

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, FlatList, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native';
+import { View, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { Toast } from '@/components/ui/ToastManager';
 import { Box } from '@/components/ui/box';
 import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import { useAuthStore } from '../../stores/authStore';
-import { Search, X, Globe, User } from 'lucide-react-native';
-import { useNavigation } from '@react-navigation/native';
+import { Search, X, Globe, User, Plus } from 'lucide-react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import firestore from '@react-native-firebase/firestore';
 import { useLeadSearch } from '../../hooks/useLeadSearch';
 import { LeadCard } from '../../components/leads/LeadCard';
@@ -39,6 +40,7 @@ export default function LeadsScreen() {
     loadMoreLeads,
     clearGlobalSearch,
     refresh,
+    prependLead,
   } = useLeadSearch(user?.email || '');
 
   const [tab, setTab] = useState<TabMode>('my');
@@ -46,6 +48,15 @@ export default function LeadsScreen() {
   const [requestingAccess, setRequestingAccess] = useState<string | null>(null);
   
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+
+  useEffect(() => {
+    if (route.params?.newLead) {
+      prependLead(route.params.newLead);
+      // Clear the param so it doesn't get added again if the screen re-renders
+      navigation.setParams({ newLead: undefined });
+    }
+  }, [route.params?.newLead, prependLead, navigation]);
 
   // Real-time listener for this user's access requests
   useEffect(() => {
@@ -55,7 +66,7 @@ export default function LeadsScreen() {
       .collection('leadAccessRequests')
       .where('requestedBy', '==', user.id)
       .onSnapshot(
-        (snap: any[]) => {
+        (snap) => {
           const map: Record<string, AccessRequest> = {};
           snap.forEach((doc: { data: () => any; id: any; }) => {
             const data = doc.data();
@@ -176,7 +187,7 @@ export default function LeadsScreen() {
               <ActivityIndicator size="large" color="#E11D48" />
             </View>
           ) : (
-            <FlatList
+            <FlashList
               data={paginatedLeads}
               keyExtractor={(item) => item.ProspectID}
               showsVerticalScrollIndicator={false}
@@ -238,7 +249,7 @@ export default function LeadsScreen() {
               <ActivityIndicator size="large" color="#E11D48" />
             </View>
           ) : (
-            <FlatList
+            <FlashList
               data={globalResults}
               keyExtractor={(item) => item.ProspectID}
               showsVerticalScrollIndicator={false}

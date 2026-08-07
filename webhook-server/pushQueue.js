@@ -29,13 +29,24 @@ export async function handlePushQueue(event) {
     if (resolvedAction === 'CREATE_ACTIVITY') {
       if (!leadId) throw new Error('leadId is required to create an activity');
       
+      const safeNotes = notes ? (notes.length > 200 ? notes.substring(0, 197) + '...' : notes) : 'Walk-in Started';
+      const safeFields = (activityData || []).map(f => {
+        if (f.SchemaName === 'ActivityEvent_Note' && f.Value && f.Value.length > 200) {
+          return { ...f, Value: f.Value.substring(0, 197) + '...' };
+        }
+        if (f.SchemaName === 'mx_Custom_36' && f.Value === 'Follow-up Visit') {
+          return { ...f, Value: 'Follow-Up Visit' };
+        }
+        return f;
+      });
+
       const createBody = {
         RelatedProspectId: leadId,
         ActivityEvent: 232,
-        ActivityNote: notes || 'Walk-in Started',
+        ActivityNote: safeNotes,
         ActivityDateTime: new Date().toISOString().replace('T', ' ').split('.')[0],
         // Pass any custom fields provided by the app
-        Fields: activityData || []
+        Fields: safeFields
       };
 
       const lsqResp = await lsqFetch('/v2/ProspectActivity.svc/Create', 'POST', createBody);
@@ -58,11 +69,22 @@ export async function handlePushQueue(event) {
       const lsqId = localDoc.exists ? localDoc.data().lsqActivityId : null;
       if (!lsqId) throw new Error(`No lsqActivityId found for local activity ${activityId}. CREATE may still be pending.`);
 
+      const safeNotes = notes ? (notes.length > 200 ? notes.substring(0, 197) + '...' : notes) : '';
+      const safeFields = (activityData || []).map(f => {
+        if (f.SchemaName === 'ActivityEvent_Note' && f.Value && f.Value.length > 200) {
+          return { ...f, Value: f.Value.substring(0, 197) + '...' };
+        }
+        if (f.SchemaName === 'mx_Custom_36' && f.Value === 'Follow-up Visit') {
+          return { ...f, Value: 'Follow-Up Visit' };
+        }
+        return f;
+      });
+
       const updateBody = {
         ProspectActivityId: lsqId,
         ActivityEvent: 232,
-        ActivityNote: notes || '',
-        Fields: activityData || []
+        ActivityNote: safeNotes,
+        Fields: safeFields
       };
 
       const lsqResp = await lsqFetch('/v2/ProspectActivity.svc/Update', 'POST', updateBody);
@@ -90,10 +112,12 @@ export async function handlePushQueue(event) {
         ? `${existingNote}\n\nRecording: ${storageUrl}`
         : `Recording: ${storageUrl}`;
 
+      const safeNote = newNote.length > 200 ? newNote.substring(0, 197) + '...' : newNote;
+
       const updateBody = {
         ProspectActivityId: lsqId,
         ActivityEvent: 232,
-        ActivityNote: newNote,
+        ActivityNote: safeNote,
       };
 
       const lsqResp = await lsqFetch('/v2/ProspectActivity.svc/Update', 'POST', updateBody);

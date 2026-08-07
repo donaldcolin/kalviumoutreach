@@ -35,7 +35,8 @@ export function AssociateMap({
   ongoingWalkIn,
   routeCacheKey = '',
 }: AssociateMapProps) {
-  const geoTimeline = timeline.filter(t => t.lat != null && t.lng != null);
+  const geoTimeline = timeline.filter(t => t.lat != null && typeof t.lat === 'number' && !isNaN(t.lat) && t.lng != null && typeof t.lng === 'number' && !isNaN(t.lng));
+  const validRoute = route.filter(pt => pt[0] != null && !isNaN(pt[0]) && pt[1] != null && !isNaN(pt[1]));
 
   // Road-snapped route state
   const [snappedRoute, setSnappedRoute] = useState<[number, number][] | null>(null);
@@ -51,7 +52,7 @@ export function AssociateMap({
     setSnappedRoute(null);
     setSnapStatus('idle');
 
-    if (route.length < 2 || !routeCacheKey) return;
+    if (validRoute.length < 2 || !routeCacheKey) return;
 
     // Check localStorage cache first
     const cached = readCache(routeCacheKey);
@@ -66,7 +67,7 @@ export function AssociateMap({
 
     setSnapStatus('loading');
 
-    snapToRoads(route, controller.signal).then((result) => {
+    snapToRoads(validRoute, controller.signal).then((result) => {
       // If this request was aborted while in-flight, ignore the result
       if (controller.signal.aborted) return;
 
@@ -92,7 +93,7 @@ export function AssociateMap({
     <div className="flex-1 bg-gray-100 border border-gray-200 shadow-sm relative overflow-hidden group rounded-xl">
 
       {/* Road Snap Toggle */}
-      {route.length > 0 && (
+      {validRoute.length > 0 && (
         <div className="absolute top-4 left-4 z-[400]">
           {snapStatus === 'loading' ? (
             <div className="flex items-center gap-2 bg-white border border-gray-100 text-gray-700 px-4 py-2 rounded-full text-xs font-bold shadow-md animate-pulse">
@@ -165,9 +166,9 @@ export function AssociateMap({
         )}
 
         {/* Raw GPS route — shown when toggle is OFF, or snapping failed/loading */}
-        {route.length > 0 && !showSnapped && (
+        {validRoute.length > 0 && !showSnapped && (
           <Polyline
-            positions={route}
+            positions={validRoute}
             color="#ef4444"
             weight={4}
             opacity={0.7}
@@ -187,8 +188,8 @@ export function AssociateMap({
         )}
 
         {/* Route start marker (green flag) */}
-        {route.length > 0 && (
-          <Marker position={route[0]} icon={startIcon}>
+        {validRoute.length > 0 && (
+          <Marker position={validRoute[0]} icon={startIcon}>
             <Tooltip direction="top" offset={[0, -15]} opacity={1} className="font-sans text-xs">
               <div className="font-semibold text-green-700 flex items-center gap-1"><Flag size={12} /> Route Start</div>
             </Tooltip>
@@ -196,8 +197,8 @@ export function AssociateMap({
         )}
 
         {/* Current/latest location marker (red pulsing pin) */}
-        {route.length > 0 && (
-          <Marker position={route[route.length - 1]} icon={currentLocationIcon}>
+        {validRoute.length > 0 && (
+          <Marker position={validRoute[validRoute.length - 1]} icon={currentLocationIcon}>
             <Popup className="rounded-xl">
               <div className="font-sans">
                 <strong className="block text-red-700 mb-1 flex items-center gap-1"><MapPin size={12} /> Current Location</strong>

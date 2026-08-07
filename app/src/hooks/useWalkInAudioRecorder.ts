@@ -17,7 +17,7 @@ export function useWalkInAudioRecorder() {
   const [recordingUrl, setRecordingUrl] = useState<string | null>(null);
 
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  const recorderState = useAudioRecorderState(recorder, 250);
+  const recorderState = useAudioRecorderState(recorder, 1000);
   const lastDurationRef = useRef(0);
 
   useEffect(() => {

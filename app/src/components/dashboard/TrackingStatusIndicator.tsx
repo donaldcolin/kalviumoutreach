@@ -48,11 +48,18 @@ export function TrackingStatusIndicator({ isTracking, sessionStatus, onEndDay, o
   };
 
   return (
-    <View className="flex-row items-center justify-between bg-white border border-gray-200 rounded-xl p-3 mb-6 shadow-sm">
-      <View className="flex-row items-center">
-        <View className="w-2 h-2 rounded-full bg-red-600 mr-3 animate-pulse" />
-        <Text className="text-gray-600 text-xs tracking-wide">
-          Location tracking active
+    <View className="mb-6">
+      <View className="flex-row items-center justify-between bg-white border border-gray-200 rounded-t-xl p-3 shadow-sm" style={{ borderBottomWidth: 0 }}>
+        <View className="flex-row items-center">
+          <View className="w-2 h-2 rounded-full bg-red-600 mr-3 animate-pulse" />
+          <Text className="text-gray-600 font-medium text-xs tracking-wide">
+            Location tracking active
+          </Text>
+        </View>
+      </View>
+      <View className="bg-amber-50 border border-amber-200 rounded-b-xl p-3 shadow-sm">
+        <Text className="text-amber-800 text-[10px] leading-4">
+          ⚠️ Tracking may stop midway if Android puts the app to sleep. For reliable tracking, go to <Text className="font-bold">Settings &gt; Apps &gt; Kalvium Outreach &gt; Battery</Text> and select <Text className="font-bold">Unrestricted</Text>.
         </Text>
       </View>
     </View>

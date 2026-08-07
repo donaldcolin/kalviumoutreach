@@ -16,6 +16,7 @@ import { Building2Icon, Mic, Square, MapPinIcon } from 'lucide-react-native';
 import { useWalkInForm } from '../../hooks/useWalkInForm';
 import { WalkInForm } from '../../components/walk-in/WalkInForm';
 import { buildWalkInActivityData } from '../../utils/lsqMappers';
+import { firestoreSync } from '../../tracking/firestoreSync';
 
 export default function WalkInSessionScreen() {
   const route = useRoute<any>();
@@ -200,6 +201,10 @@ export default function WalkInSessionScreen() {
       if (user?.id) {
         await clearWalkIn(user.id);
       }
+      
+      // Piggyback GPS sync onto this network request
+      firestoreSync.syncUnsyncedLocations().catch(console.error);
+
       hasSubmitted.current = true;
       navigation.goBack();
     } else {

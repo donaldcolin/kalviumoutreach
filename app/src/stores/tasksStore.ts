@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Toast } from '@/components/ui/ToastManager';
 import firestore from '@react-native-firebase/firestore';
 import type { Task } from '../types';
+import { firestoreSync } from '../tracking/firestoreSync';
 
 // ─── Date helpers ────────────────────────────────────────────────────────────
 
@@ -246,6 +247,9 @@ export const useTasksStore = create<TasksState>((set, get) => ({
         completedAt: firestore.FieldValue.serverTimestamp(),
       });
       // Real-time listener will automatically update the lists
+      
+      // Piggyback GPS sync onto this network request
+      firestoreSync.syncUnsyncedLocations().catch(console.error);
     } catch (err) {
       console.error('Failed to complete task', err);
       Toast.show({

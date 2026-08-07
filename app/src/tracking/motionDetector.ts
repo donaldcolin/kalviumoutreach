@@ -20,9 +20,9 @@ const POSSIBLY_STOPPED_DEBOUNCE_MS = 60000; // 60 seconds — don't drop to stat
 // MOVING: 1s — need responsive detection for walk/stop transitions
 // POSSIBLY_STOPPED: 3s — moderate check rate during the 60s grace period
 // STATIONARY: only used briefly before switching to pedometer wake gate
-const ACCEL_INTERVAL_MOVING_MS = 1000;
-const ACCEL_INTERVAL_POSSIBLY_STOPPED_MS = 3000;
-const ACCEL_INTERVAL_STATIONARY_MS = 5000;
+const ACCEL_INTERVAL_MOVING_MS = 5000;
+const ACCEL_INTERVAL_POSSIBLY_STOPPED_MS = 5000;
+const ACCEL_INTERVAL_STATIONARY_MS = 10000;
 
 // ─── Pedometer Wake Gate ─────────────────────────────────────────────────────
 // When STATIONARY, we stop the accelerometer entirely and use the Pedometer
@@ -101,24 +101,30 @@ class MotionDetector {
   private async engagePedometerGate() {
     if (this.isPedometerGateActive) return;
 
-    // Check if pedometer is available on this device
-    const available = await Pedometer.isAvailableAsync();
-    if (!available) {
-      // Fallback: keep accelerometer running at slow interval
+    try {
+      // Check if pedometer is available on this device
+      const available = await Pedometer.isAvailableAsync();
+      if (!available) {
+        // Fallback: keep accelerometer running at slow interval
+        return;
+      }
+
+      this.isPedometerGateActive = true;
+      this.stopAccelerometer(); // Stop the CPU-heavy accelerometer
+
+      // Watch for step events — any step means movement started
+      this.pedometerSubscription = Pedometer.watchStepCount((_result) => {
+        // Steps detected! User is moving. Disengage pedometer and restart
+        // accelerometer for fine-grained motion classification.
+        this.disengagePedometerGate();
+        this.startAccelerometer();
+        this.handleMotionDetected();
+      });
+    } catch (error) {
+      // Fallback: keep accelerometer running if pedometer crashes natively
+      this.isPedometerGateActive = false;
       return;
     }
-
-    this.isPedometerGateActive = true;
-    this.stopAccelerometer(); // Stop the CPU-heavy accelerometer
-
-    // Watch for step events — any step means movement started
-    this.pedometerSubscription = Pedometer.watchStepCount((_result) => {
-      // Steps detected! User is moving. Disengage pedometer and restart
-      // accelerometer for fine-grained motion classification.
-      this.disengagePedometerGate();
-      this.startAccelerometer();
-      this.handleMotionDetected();
-    });
   }
 
   private disengagePedometerGate() {

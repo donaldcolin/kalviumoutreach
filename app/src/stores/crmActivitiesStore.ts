@@ -7,20 +7,20 @@ interface CrmActivitiesState {
   activities: CrmActivity[];
   isLoading: boolean;
   isRefreshing: boolean;
-  _currentEmail: string | null;
+  _currentUid: string | null;
 
-  initialize: (email: string) => void;
+  initialize: (uid: string) => void;
   refresh: () => Promise<void>;
   cleanup: () => void;
 }
 
-async function fetchActivities(email: string): Promise<CrmActivity[]> {
-  const uid = auth().currentUser?.uid;
-  if (!uid) return [];
+async function fetchActivities(uid: string): Promise<CrmActivity[]> {
+  const currentUid = auth().currentUser?.uid;
+  if (!currentUid) return [];
 
   const snapshot = await firestore()
     .collection('crmActivities')
-    .where('executiveEmail', '==', email)
+    .where('executiveId', '==', uid)
     .get();
 
   const acts = snapshot.docs.map((d: { id: any; data: () => any; }) => ({ ...d.data(), id: d.id } as CrmActivity));
@@ -38,21 +38,20 @@ export const useCrmActivitiesStore = create<CrmActivitiesState>((set, get) => ({
   activities: [],
   isLoading: true,
   isRefreshing: false,
-  _currentEmail: null,
+  _currentUid: null,
 
-  initialize: async (email: string) => {
-    const normalizedEmail = email.toLowerCase();
+  initialize: async (uid: string) => {
     const state = get();
 
-    // Don't re-fetch if already loaded for this email
-    if (state._currentEmail === normalizedEmail && state.activities.length > 0) {
+    // Don't re-fetch if already loaded for this user
+    if (state._currentUid === uid && state.activities.length > 0) {
       return;
     }
 
-    set({ isLoading: true, _currentEmail: normalizedEmail });
+    set({ isLoading: true, _currentUid: uid });
 
     try {
-      const acts = await fetchActivities(normalizedEmail);
+      const acts = await fetchActivities(uid);
       set({ activities: acts, isLoading: false });
     } catch (err) {
       console.error('CrmActivities fetch error:', err);
@@ -61,12 +60,12 @@ export const useCrmActivitiesStore = create<CrmActivitiesState>((set, get) => ({
   },
 
   refresh: async () => {
-    const { _currentEmail } = get();
-    if (!_currentEmail) return;
+    const { _currentUid } = get();
+    if (!_currentUid) return;
 
     set({ isRefreshing: true });
     try {
-      const acts = await fetchActivities(_currentEmail);
+      const acts = await fetchActivities(_currentUid);
       set({ activities: acts, isRefreshing: false });
     } catch (err) {
       console.error('CrmActivities refresh error:', err);
@@ -75,6 +74,6 @@ export const useCrmActivitiesStore = create<CrmActivitiesState>((set, get) => ({
   },
 
   cleanup: () => {
-    set({ activities: [], _currentEmail: null });
+    set({ activities: [], _currentUid: null });
   },
 }));

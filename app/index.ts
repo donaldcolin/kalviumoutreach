@@ -26,8 +26,9 @@ messaging().setBackgroundMessageHandler(async (remoteMessage: any) => {
         accuracy: loc.coords.accuracy ?? 0,
       };
       
-      const dateStr = format(new Date(), 'yyyy-MM-dd');
+      const dateStr = format(new Date(), 'yyyyMMdd');
       await firestoreSync.appendHeadlessLocations(userId as string, dateStr, [ping as any]);
+      await firestoreSync.syncUnsyncedLocations();
       
       if (requestId) {
         await firestore().collection('locationRequests').doc(requestId as string).update({ status: 'fulfilled' });

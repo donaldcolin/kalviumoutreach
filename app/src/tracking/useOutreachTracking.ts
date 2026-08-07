@@ -8,6 +8,8 @@ import { School } from '../types';
 import { getAllSchools, onDailyTrack } from '../services/firestore';
 import { format } from 'date-fns';
 import { logger } from '../utils/logger';
+import * as Crypto from 'expo-crypto';
+import auth from '@react-native-firebase/auth';
 
 // ─── Stale Session Threshold ─────────────────────────────────────────────────
 // If an 'active' session's lastPing is older than this, the session is
@@ -19,7 +21,7 @@ export function useOutreachTracking(userId: string | undefined) {
   const [isTrackingInitialized, setIsTrackingInitialized] = useState(false);
   const [sessionStatus, setSessionStatus] = useState<'none' | 'active' | 'ended' | 'stale'>('none');
   const isTrackingRef = useRef(false);
-  
+
   useEffect(() => {
     isTrackingRef.current = isTracking;
   }, [isTracking]);
@@ -28,12 +30,13 @@ export function useOutreachTracking(userId: string | undefined) {
 
   const hasResumedRef = useRef(false);
   const hasAutoStoppedRef = useRef(false);
+  const locallyEndedRef = useRef(false);
 
   useEffect(() => {
     // Reset on userId change
     hasResumedRef.current = false;
 
-    let unsubTrack = () => {};
+    let unsubTrack = () => { };
     if (userId) {
       const today = format(new Date(), 'yyyyMMdd');
       unsubTrack = onDailyTrack(userId, today, async (track) => {
@@ -81,7 +84,7 @@ export function useOutreachTracking(userId: string | undefined) {
           }
         } else if (track.status === 'ended' || track.status === 'stale') {
           hasResumedRef.current = false;
-          if (isTrackingRef.current && track.status === 'ended') {
+          if (isTrackingRef.current && track.status === 'ended' && !locallyEndedRef.current) {
             Toast.show({ title: 'Tracking Stopped Remotely', message: 'Your Team Lead has stopped your tracking session.', type: 'info', duration: 5000 });
           }
           setIsTracking(false);
@@ -97,6 +100,7 @@ export function useOutreachTracking(userId: string | undefined) {
 
   const endDay = useCallback(async () => {
     // If called from the auto-stop timer, we just want to stop everything.
+    locallyEndedRef.current = true;
     setIsTracking(false);
     await locationTracker.stopTracking();
     if (userId) {
@@ -114,10 +118,14 @@ export function useOutreachTracking(userId: string | undefined) {
       if (hour >= 18 && !hasAutoStoppedRef.current) {
         console.log('[useOutreachTracking] 6 PM reached, auto-stopping day.');
         hasAutoStoppedRef.current = true;
+        locallyEndedRef.current = true;
+        
+        Toast.show({ title: 'Tracking Auto-Stopped', message: "It's 6 PM. Your tracking session has been automatically stopped.", type: 'info', duration: 5000 });
+        
         endDay();
       }
     };
-    
+
     checkTime();
     const interval = setInterval(checkTime, 60000);
     return () => clearInterval(interval);
@@ -125,19 +133,21 @@ export function useOutreachTracking(userId: string | undefined) {
 
   const startDay = useCallback(async () => {
     if (!userId || isTracking) return;
-    
+
     // If user explicitly starts after 6 PM, bypass the auto-stop
     if (new Date().getHours() >= 18) {
       hasAutoStoppedRef.current = true;
     }
 
     setIsTracking(true);
+    locallyEndedRef.current = false;
     await firestoreSync.startSession(userId);
     await locationTracker.startTracking();
   }, [userId, isTracking]);
 
-  console.log('[useOutreachTracking] state:', { isTracking, isTrackingInitialized, sessionStatus, activeSchoolMatch });
-  
+  useEffect(() => {
+    console.log('[useOutreachTracking] state changed:', { isTracking, isTrackingInitialized, sessionStatus, activeSchoolMatch });
+  }, [isTracking, isTrackingInitialized, sessionStatus, activeSchoolMatch]);
   return {
     isTracking,
     isTrackingInitialized,

@@ -28,8 +28,8 @@ export default function MeetingNotesScreen() {
   const { activities: allActivities, initialize } = useCrmActivitiesStore();
 
   useEffect(() => {
-    if (user?.email) initialize(user.email);
-  }, [user?.email]);
+    if (user?.id) initialize(user.id);
+  }, [user?.id]);
   const picPrincipalActivities = useMemo(() => {
     return [...allActivities]
       .filter((a) => {

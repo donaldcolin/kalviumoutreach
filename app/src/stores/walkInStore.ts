@@ -26,11 +26,16 @@ interface WalkInState {
 
   /** Clear the ongoing walk-in (on successful push or cancel) */
   clearWalkIn: (userId: string) => Promise<void>;
+
+  /** Subscribe to remote walk-in cancellations */
+  subscribeToRemoteCancellations: (userId: string) => void;
+  unsubscribeFromRemoteCancellations: () => void;
+  _unsubFunc?: () => void;
 }
 
 const STORAGE_KEY = 'ongoing_walk_in';
 
-export const useWalkInStore = create<WalkInState>((set) => ({
+export const useWalkInStore = create<WalkInState>((set, get) => ({
   ongoingWalkIn: null,
   isLoading: true,
 
@@ -38,13 +43,52 @@ export const useWalkInStore = create<WalkInState>((set) => ({
     try {
       const stored = await AsyncStorage.getItem(`${STORAGE_KEY}_${userId}`);
       if (stored) {
-        set({ ongoingWalkIn: JSON.parse(stored) as OngoingWalkIn, isLoading: false });
+        // Verify the walk-in still exists in Firestore (manager may have cancelled it)
+        const docSnap = await firestore().collection('ongoingWalkIns').doc(userId).get();
+        if (docSnap.exists()) {
+          set({ ongoingWalkIn: JSON.parse(stored) as OngoingWalkIn, isLoading: false });
+        } else {
+          // Walk-in was cancelled remotely — clear stale local copy
+          await AsyncStorage.removeItem(`${STORAGE_KEY}_${userId}`);
+          set({ ongoingWalkIn: null, isLoading: false });
+        }
       } else {
         set({ ongoingWalkIn: null, isLoading: false });
       }
     } catch (err) {
-      console.error('Failed to load ongoing walk-in from AsyncStorage:', err);
-      set({ isLoading: false });
+      // If Firestore is unreachable, fall back to showing the local walk-in
+      console.error('Failed to load ongoing walk-in:', err);
+      const stored = await AsyncStorage.getItem(`${STORAGE_KEY}_${userId}`).catch(() => null);
+      set({ ongoingWalkIn: stored ? JSON.parse(stored) as OngoingWalkIn : null, isLoading: false });
+    }
+  },
+
+  subscribeToRemoteCancellations: (userId: string) => {
+    const currentUnsub = get()._unsubFunc;
+    if (currentUnsub) currentUnsub();
+
+    const unsub = firestore()
+      .collection('ongoingWalkIns')
+      .doc(userId)
+      .onSnapshot((docSnap) => {
+        // If the document does not exist remotely, but we have an ongoing walk-in locally,
+        // it means a manager cancelled it from the dashboard.
+        if (!docSnap.exists && get().ongoingWalkIn) {
+          console.log('[WalkInStore] Walk-in was cancelled remotely by a manager.');
+          get().clearWalkIn(userId);
+        }
+      }, (error) => {
+        console.error('[WalkInStore] Error listening to remote walk-ins:', error);
+      });
+
+    set({ _unsubFunc: unsub });
+  },
+
+  unsubscribeFromRemoteCancellations: () => {
+    const unsub = get()._unsubFunc;
+    if (unsub) {
+      unsub();
+      set({ _unsubFunc: undefined });
     }
   },
 
@@ -62,11 +106,12 @@ export const useWalkInStore = create<WalkInState>((set) => ({
 
   clearWalkIn: async (userId: string) => {
     try {
+      // Optimistically update the UI immediately
+      set({ ongoingWalkIn: null });
+
       await AsyncStorage.removeItem(`${STORAGE_KEY}_${userId}`);
       // Remove from Firestore
       await firestore().collection('ongoingWalkIns').doc(userId).delete();
-      
-      set({ ongoingWalkIn: null });
     } catch (err) {
       console.error('Failed to clear ongoing walk-in:', err);
     }

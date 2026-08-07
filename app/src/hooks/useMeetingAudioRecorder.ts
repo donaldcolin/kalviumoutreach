@@ -18,7 +18,7 @@ export function useMeetingAudioRecorder(userId: string | undefined) {
 
   // Recorder with HIGH_QUALITY preset
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  const recorderState = useAudioRecorderState(recorder, 250);
+  const recorderState = useAudioRecorderState(recorder, 1000);
   const lastDurationRef = useRef(0);
 
   // Track live duration while recording
