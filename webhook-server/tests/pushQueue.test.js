@@ -34,7 +34,7 @@ const mockDoc = {
 };
 mockCollection.doc.mockReturnValue(mockDoc);
 
-jest.unstable_mockModule('./config.js', () => ({
+jest.unstable_mockModule('../src/config/config.js', () => ({
   db: mockDb,
   FieldValue: { serverTimestamp: jest.fn(() => 'mock-timestamp') },
   LSQ_HOST: 'https://api.leadsquared.com',
@@ -44,12 +44,12 @@ jest.unstable_mockModule('./config.js', () => ({
 }));
 
 const mockLsqFetch = jest.fn();
-jest.unstable_mockModule('./lsq.js', () => ({
+jest.unstable_mockModule('../src/services/lsq.js', () => ({
   lsqFetch: mockLsqFetch,
 }));
 
-const { handlePushQueue } = await import('./pushQueue.js');
-const { fetch } = await import('./config.js');
+const { handlePushQueue } = await import('../src/services/pushQueue.js');
+const { fetch } = await import('../src/config/config.js');
 
 describe('handlePushQueue', () => {
   beforeEach(() => {

@@ -1,4 +1,4 @@
-import { db } from './config.js';
+import { db } from '../src/config/config.js';
 
 async function wipeActivities() {
   console.log('Fetching all CRM activities...');

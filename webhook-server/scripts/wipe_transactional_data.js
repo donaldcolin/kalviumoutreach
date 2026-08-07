@@ -1,7 +1,16 @@
-import { db } from './config.js';
+import { db } from '../src/config/config.js';
 
 async function wipeAll() {
-  const collections = ['crmActivities', 'leadAccessRequests', 'lsqLeads', 'schools'];
+  const collections = [
+    'appointments', 
+    'dailyTracks', 
+    'locationRequests', 
+    'meetingRecordings', 
+    'ongoingWalkIns', 
+    'pushQueue',
+    'system_logs'
+  ];
+  
   for (const col of collections) {
     console.log(`Fetching ${col}...`);
     const snapshot = await db.collection(col).get();

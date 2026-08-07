@@ -1,5 +1,5 @@
 import { getMessaging } from 'firebase-admin/messaging';
-import { db } from './config.js';
+import { db } from '../config/config.js';
 
 export const handleLocationRequest = async (event) => {
   const snapshot = event.data;

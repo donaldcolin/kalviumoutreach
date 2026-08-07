@@ -1,7 +1,7 @@
 import { jest } from '@jest/globals';
 
 // Mock config.js using ES modules compatible syntax
-jest.unstable_mockModule('./config.js', () => {
+jest.unstable_mockModule('../src/config/config.js', () => {
   return {
     LSQ_HOST: 'https://api.leadsquared.com',
     ACCESS_KEY: 'test-access',
@@ -14,7 +14,7 @@ jest.unstable_mockModule('./config.js', () => {
 });
 
 // We must dynamically import the module under test AFTER unstable_mockModule
-const { parseActivityData, buildFirestoreDoc } = await import('./lsq.js');
+const { parseActivityData, buildFirestoreDoc } = await import('../src/services/lsq.js');
 
 describe('parseActivityData', () => {
   test('parses direct mx_Custom fields', () => {

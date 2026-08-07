@@ -14,10 +14,10 @@ import { onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 
-import { SYNC_INTERVAL_MINUTES } from './config.js';
-import { syncActivities } from './sync.js';
-import app from './routes.js';
-import { handlePushQueue } from './pushQueue.js';
+import { SYNC_INTERVAL_MINUTES } from './src/config/config.js';
+import { syncActivities } from './src/services/sync.js';
+import app from './src/api/routes.js';
+import { handlePushQueue } from './src/services/pushQueue.js';
 
 // ─── Export: HTTP API (Express) ─────────────────────────────────────────────
 export const api = onRequest({ secrets: ["LSQ_ACCESS_KEY", "LSQ_SECRET_KEY"] }, app);
@@ -48,9 +48,9 @@ export const syncCron = onSchedule({ schedule: `every ${SYNC_INTERVAL_MINUTES} m
 export const processPushQueue = onDocumentCreated({ document: "pushQueue/{docId}", secrets: ["LSQ_ACCESS_KEY", "LSQ_SECRET_KEY"] }, handlePushQueue);
 
 // ─── Export: Location Requests Trigger ───────────────────────────────────────
-import { handleLocationRequest } from './locationRequests.js';
+import { handleLocationRequest } from './src/services/locationRequests.js';
 export const processLocationRequest = onDocumentCreated({ document: "locationRequests/{docId}" }, handleLocationRequest);
 
 // ─── Export: User Claims Sync Trigger ────────────────────────────────────────
-import { syncUserClaims } from './claims.js';
+import { syncUserClaims } from './src/services/claims.js';
 export const processUserClaims = syncUserClaims;

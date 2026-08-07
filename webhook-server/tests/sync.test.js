@@ -26,7 +26,7 @@ const mockQuery = {
 mockDb.collection.mockReturnValue(mockCollection);
 mockCollection.where.mockReturnValue(mockQuery);
 
-jest.unstable_mockModule('./config.js', () => ({
+jest.unstable_mockModule('../src/config/config.js', () => ({
   db: mockDb,
   LSQ_HOST: 'https://api.leadsquared.com',
   ACCESS_KEY: 'test',
@@ -37,18 +37,20 @@ jest.unstable_mockModule('./config.js', () => ({
 
 // Mock lsq.js
 const mockLsqFetch = jest.fn();
-jest.unstable_mockModule('./lsq.js', () => ({
+jest.unstable_mockModule('../src/services/lsq.js', () => ({
   lsqFetch: mockLsqFetch,
   parseActivityData: jest.fn(() => ({})),
   buildFirestoreDoc: jest.fn(() => ({ id: 'doc1' })),
 }));
 
-const { syncActivities } = await import('./sync.js');
-const { fetch } = await import('./config.js');
+const { syncActivities } = await import('../src/services/sync.js');
+const { fetch } = await import('../src/config/config.js');
 
 describe('syncActivities', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    fetch.mockReset();
+    mockLsqFetch.mockReset();
     
     // Mock the users collection get()
     mockCollection.get.mockResolvedValue({
@@ -82,9 +84,6 @@ describe('syncActivities', () => {
             { ActivityId: 'act_1', Latitude: '12.0', Longitude: '77.0' }
           ]
         })
-      })
-      .mockResolvedValueOnce({
-        json: async () => ({ List: [] }) // End of pages
       });
 
     // Mock Lead name fetch

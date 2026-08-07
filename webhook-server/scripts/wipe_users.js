@@ -1,5 +1,5 @@
 import { getAuth } from 'firebase-admin/auth';
-import { db } from './config.js';
+import { db } from '../src/config/config.js';
 
 async function wipeAndCreateAdmin() {
   console.log('Starting DB wipe...');

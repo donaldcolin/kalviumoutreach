@@ -4,7 +4,7 @@
  * - parseActivityData: Extracts mx_Custom_* fields from various LSQ response formats
  * - buildFirestoreDoc: Converts raw LSQ activity data to a normalized Firestore document
  */
-import { LSQ_HOST, ACCESS_KEY, SECRET_KEY, FieldValue, fetch } from './config.js';
+import { LSQ_HOST, ACCESS_KEY, SECRET_KEY, FieldValue, fetch } from '../config/config.js';
 
 // ─── LSQ API Helper ─────────────────────────────────────────────────────────
 

@@ -3,7 +3,7 @@
  * Triggered automatically when a new document is written to the pushQueue collection.
  * Handles: CREATE_ACTIVITY, UPDATE_ACTIVITY, PUSH_RECORDING
  */
-import { db, FieldValue } from './config.js';
+import { db, FieldValue } from '../config/config.js';
 import { lsqFetch } from './lsq.js';
 
 export async function handlePushQueue(event) {

@@ -4,9 +4,9 @@
  */
 import express from 'express';
 import cors from 'cors';
-import { db, auth, FieldValue } from './config.js';
-import { lsqFetch } from './lsq.js';
-import { syncActivities, lastSyncResult } from './sync.js';
+import { db, auth, FieldValue } from '../config/config.js';
+import { lsqFetch } from '../services/lsq.js';
+import { syncActivities, lastSyncResult } from '../services/sync.js';
 
 const app = express();
 

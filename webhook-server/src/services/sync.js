@@ -2,7 +2,7 @@
  * LSQ → Firestore Sync Engine
  * Fetches Outreach Activities (code 232) from LeadSquared and writes them to Firestore.
  */
-import { db, LSQ_HOST, ACCESS_KEY, SECRET_KEY, SYNC_LOOKBACK_MINUTES, fetch } from './config.js';
+import { db, LSQ_HOST, ACCESS_KEY, SECRET_KEY, SYNC_LOOKBACK_MINUTES, fetch } from '../config/config.js';
 import { lsqFetch, parseActivityData, buildFirestoreDoc } from './lsq.js';
 
 // ─── State ──────────────────────────────────────────────────────────────────
