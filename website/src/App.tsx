@@ -15,6 +15,7 @@ const BugReport = lazy(() => import('./pages/BugReport'));
 const ActivityFeed = lazy(() => import('./pages/ActivityFeed'));
 const CRMHub = lazy(() => import('./pages/CRMHub'));
 const UserManagement = lazy(() => import('./pages/admin/UserManagement'));
+const DistanceTracker = lazy(() => import('./pages/DistanceTracker'));
 
 const PageLoader = () => (
   <div className="flex h-screen w-full flex-col items-center justify-center bg-background">
@@ -106,6 +107,7 @@ function App() {
                 <Route path="activity" element={<ActivityFeed />} />
                 <Route path="requests" element={<LeadRequests />} />
                 <Route path="users" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
+                <Route path="distance" element={<ProtectedRoute allowedRoles={['admin']}><DistanceTracker /></ProtectedRoute>} />
                 <Route path="logs" element={<ProtectedRoute allowedRoles={['admin']}><DevLogs /></ProtectedRoute>} />
                 <Route path="bug-report" element={<BugReport />} />
                 <Route path="*" element={<Navigate to="/" replace />} />

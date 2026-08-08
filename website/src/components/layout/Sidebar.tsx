@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, LogOut, BarChart3, Building2, Terminal, UserCheck, Bug, Shield, Bell, Pin, PinOff } from 'lucide-react';
+import { LayoutDashboard, LogOut, BarChart3, Building2, Terminal, UserCheck, Bug, Shield, Bell, Pin, PinOff, Navigation } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 
 export function Sidebar() {
@@ -48,6 +48,7 @@ export function Sidebar() {
       label: 'Insights',
       items: [
         { path: '/analytics', icon: BarChart3, label: 'Analytics', roles: ['admin', 'regionalManager', 'seniorManager', 'teamLead'] },
+        { path: '/distance', icon: Navigation, label: 'Distance Tracker', roles: ['admin'] },
       ]
     },
     {

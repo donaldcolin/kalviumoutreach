@@ -58,8 +58,8 @@ export function TrackingStatusIndicator({ isTracking, sessionStatus, onEndDay, o
         </View>
       </View>
       <View className="bg-amber-50 border border-amber-200 rounded-b-xl p-3 shadow-sm">
-        <Text className="text-amber-800 text-[10px] leading-4">
-          ⚠️ Tracking may stop midway if Android puts the app to sleep. For reliable tracking, go to <Text className="font-bold">Settings &gt; Apps &gt; Kalvium Outreach &gt; Battery</Text> and select <Text className="font-bold">Unrestricted</Text>.
+        <Text className="text-amber-800 text-xs">
+          ⚠️ Tracking may stop midway if Android puts the app to sleep. For reliable tracking, go to <Text className="font-bold text-xs">Settings &gt; Apps &gt; Kalvium Outreach &gt; Battery</Text> and select <Text className="font-bold text-xs">Unrestricted</Text>.
         </Text>
       </View>
     </View>

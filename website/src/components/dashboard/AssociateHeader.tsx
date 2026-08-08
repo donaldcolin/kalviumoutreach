@@ -1,4 +1,4 @@
-import { Calendar as CalendarIcon, ClipboardList, Plus, Map as MapIcon, AlertTriangle } from 'lucide-react';
+import { Calendar as CalendarIcon, ClipboardList, Plus, Map as MapIcon, AlertTriangle, Navigation } from 'lucide-react';
 import { useState } from 'react';
 import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
@@ -14,6 +14,7 @@ interface AssociateHeaderProps {
   dailyTrackStatus: 'active' | 'ended' | 'stale' | null;
   toggleTrackingStatus: () => void;
   timelineVisitsCount: number;
+  totalDistanceKm: number;
   ongoingWalkIn?: CrmActivity;
   isFetchingLocation: boolean;
   handleFetchLocation: () => void;
@@ -27,6 +28,7 @@ export function AssociateHeader({
   dailyTrackStatus,
   toggleTrackingStatus,
   timelineVisitsCount,
+  totalDistanceKm,
   ongoingWalkIn,
   isFetchingLocation,
   handleFetchLocation,
@@ -41,7 +43,15 @@ export function AssociateHeader({
         <div className="flex justify-between items-start">
           <div>
             <h3 className="text-2xl font-bold text-gray-900 tracking-tight pr-2">{selectedAssociate.name}</h3>
-            <p className="text-gray-500 text-sm mt-1 font-medium">{selectedAssociate.regionId}</p>
+            <div className="flex items-center gap-3 mt-1">
+              <p className="text-gray-500 text-sm font-medium">{selectedAssociate.regionId}</p>
+              {totalDistanceKm > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-700 text-xs font-semibold rounded-lg">
+                  <Navigation className="h-3 w-3" />
+                  {totalDistanceKm < 1 ? `${Math.round(totalDistanceKm * 1000)}m` : `${totalDistanceKm.toFixed(1)} km`}
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-3">
             {format(selectedDate, 'yyyyMMdd') === format(new Date(), 'yyyyMMdd') && (

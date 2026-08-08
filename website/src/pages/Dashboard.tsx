@@ -5,6 +5,7 @@ import { useToast } from '../hooks/use-toast';
 import { TimelineActivityDialog } from "../components/TimelineActivityDialog";
 import { EmptyState } from '../components/ui/EmptyState';
 import { buildTimeline, type TimelineEvent } from '../lib/timelineBuilder';
+import { calculateDistanceMeters } from '../lib/distance';
 
 import { TeamSidebar } from '../components/dashboard/TeamSidebar';
 import { GlobalStats } from '../components/dashboard/GlobalStats';
@@ -77,6 +78,14 @@ export default function Dashboard() {
   const timeline = useMemo(() => {
     return buildTimeline(selectedDateLocReqs, selectedDateCrmActivities, rawPings);
   }, [selectedDateLocReqs, selectedDateCrmActivities, rawPings]);
+
+  const totalDistanceKm = useMemo(() => {
+    let total = 0;
+    for (let i = 1; i < rawPings.length; i++) {
+      total += calculateDistanceMeters(rawPings[i - 1].lat, rawPings[i - 1].lng, rawPings[i].lat, rawPings[i].lng);
+    }
+    return total / 1000;
+  }, [rawPings]);
 
   const filteredUsers = useMemo(() => {
     let result = visibleUsers;
@@ -168,6 +177,7 @@ export default function Dashboard() {
             dailyTrackStatus={dailyTrackStatus}
             toggleTrackingStatus={toggleTrackingStatus}
             timelineVisitsCount={timeline.filter(t => t.type === 'crm').length}
+            totalDistanceKm={totalDistanceKm}
             ongoingWalkIn={selectedAssociate ? ongoingWalkIns[selectedAssociate.id] : null}
             isFetchingLocation={isFetchingLocation}
             handleFetchLocation={handleFetchLocation}
