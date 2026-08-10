@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { collection, query, where, onSnapshot, getDocs, orderBy, doc, setDoc, addDoc, serverTimestamp, documentId } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { collection, query, where, onSnapshot, getDocs, doc, setDoc, addDoc, serverTimestamp, documentId } from 'firebase/firestore';
 import { db } from '../firebase';
 import { format } from 'date-fns';
 import { cleanGpsRoute, buildRouteCacheKey, type RawPing } from '../lib/gpsUtils';
@@ -22,7 +22,7 @@ export function useDashboardData(
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
   const [route, setRoute] = useState<[number, number][]>([]);
   const [rawPings, setRawPings] = useState<RawPing[]>([]);
-  const rawPingsRef = useRef<Map<string, RawPing>>(new Map());
+
   const [routeCacheKey, setRouteCacheKey] = useState<string>('');
   const [isAssociateLoading, setIsAssociateLoading] = useState(false);
   
@@ -44,11 +44,12 @@ export function useDashboardData(
   // Live Walk-Ins State
   const [ongoingWalkIns, setOngoingWalkIns] = useState<Record<string, CrmActivity>>({});
   const [isStatsLoading, setIsStatsLoading] = useState(true);
+  const [isRefreshingOnReturn, setIsRefreshingOnReturn] = useState(false);
 
   // Team Tracking Status
   const [teamTrackingStatus, setTeamTrackingStatus] = useState<Record<string, 'active' | 'ended' | 'stale'>>({});
 
-  // 1. Global Dashboard Stats & Live Walk-Ins (Static Fetch)
+  // 1. Global Dashboard Stats & Live Walk-Ins (visibility-aware polling)
   useEffect(() => {
     if (!user) return;
 
@@ -57,7 +58,8 @@ export function useDashboardData(
 
     const chunks = chunkArray(visibleUserIds, 30);
 
-    const fetchDashboardStats = async () => {
+    const fetchDashboardStats = async (isReturn = false) => {
+      if (isReturn) setIsRefreshingOnReturn(true);
       try {
         // Fetch ongoing walk-ins
         const currentWalkIns: Record<string, CrmActivity> = {};
@@ -95,14 +97,31 @@ export function useDashboardData(
         console.error("Failed to fetch dashboard stats:", error);
       } finally {
         setIsStatsLoading(false);
+        setIsRefreshingOnReturn(false);
       }
     };
 
     fetchDashboardStats();
-    
-    // Auto-refresh every 5 minutes
-    const interval = setInterval(fetchDashboardStats, 300000);
-    return () => clearInterval(interval);
+
+    // Visibility-aware polling: only poll when the tab is active
+    let interval: ReturnType<typeof setInterval> | null = setInterval(fetchDashboardStats, 300000);
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        // Tab went to background — stop polling
+        if (interval) { clearInterval(interval); interval = null; }
+      } else {
+        // Tab came back — fetch immediately, then resume polling
+        fetchDashboardStats(true);
+        interval = setInterval(fetchDashboardStats, 300000);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      if (interval) clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
 
   }, [user, visibleUsers]);
 
@@ -125,7 +144,7 @@ export function useDashboardData(
     setSelectedDateCrmActivities([]);
     setSelectedAssociateTasks([]);
     setRouteCacheKey('');
-    rawPingsRef.current.clear();
+
     setDailyTrackStatus(null);
     setDailyTrackId(null);
 
@@ -133,15 +152,6 @@ export function useDashboardData(
     const dateStr = `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}${String(dateObj.getDate()).padStart(2, '0')}`;
     const trackDocId = `${selectedAssociate.id}_${dateStr}`;
     setDailyTrackId(trackDocId);
-
-    const unsubTrack = onSnapshot(doc(db, 'dailyTracks', trackDocId), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setDailyTrackStatus(data.status || null);
-      } else {
-        setDailyTrackStatus(null);
-      }
-    });
 
     let locationsLoaded = false;
     let crmLoaded = false;
@@ -151,42 +161,37 @@ export function useDashboardData(
       }
     };
 
-    const unsubLocations = onSnapshot(
-      query(collection(db, 'dailyTracks', trackDocId, 'locations'), orderBy('ts', 'asc')),
-      (snapshot) => {
-        if (!locationsLoaded) {
-          locationsLoaded = true;
-          checkLoadingDone();
-        }
-        let changed = false;
-        snapshot.docChanges().forEach(change => {
-          if (change.type === 'removed') {
-            rawPingsRef.current.delete(change.doc.id);
-            changed = true;
-          } else {
-            rawPingsRef.current.set(change.doc.id, change.doc.data() as RawPing);
-            changed = true;
-          }
-        });
-        
-        if (!changed && !snapshot.empty) return;
+    const unsubTrack = onSnapshot(doc(db, 'dailyTracks', trackDocId), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setDailyTrackStatus(data.status || null);
 
-        const pings = Array.from(rawPingsRef.current.values()).sort((a, b) => a.ts - b.ts);
-        const validPings = pings.filter((p) => p && typeof p.lat === 'number' && typeof p.lng === 'number');
-        
-        // Apply client-side GPS cleaning pipeline
+        // Read route from routeArray on the document (no subcollection reads)
+        const routeArray = (data.routeArray || []) as RawPing[];
+        const sorted = routeArray.length > 0
+          ? [...routeArray].sort((a, b) => a.ts - b.ts)
+          : [];
+        const validPings = sorted.filter(p => p && typeof p.lat === 'number' && typeof p.lng === 'number');
         const cleanedPings = cleanGpsRoute(validPings);
-        
-        setRoute(cleanedPings.map((p) => [p.lat, p.lng]));
+
+        setRoute(cleanedPings.map(p => [p.lat, p.lng]));
         setRawPings(cleanedPings);
-        
-        // Build cache key
+
         if (selectedAssociate) {
           const dateStr = format(selectedDate, 'yyyyMMdd');
           setRouteCacheKey(buildRouteCacheKey(selectedAssociate.id, dateStr, cleanedPings));
         }
+      } else {
+        setDailyTrackStatus(null);
+        setRoute([]);
+        setRawPings([]);
       }
-    );
+
+      if (!locationsLoaded) {
+        locationsLoaded = true;
+        checkLoadingDone();
+      }
+    });
 
     const qReqsToday = query(
       collection(db, 'locationRequests'),
@@ -244,7 +249,6 @@ export function useDashboardData(
 
     return () => {
       unsubTrack();
-      if (typeof unsubLocations === 'function') unsubLocations();
       unsubReqsToday();
       unsubLocationReq();
       if (typeof unsubCrm === 'function') unsubCrm();
@@ -300,6 +304,7 @@ export function useDashboardData(
     ongoingWalkIns,
     teamTrackingStatus,
     isStatsLoading,
+    isRefreshingOnReturn,
     dailyTrackStatus,
     dailyTrackId,
     route,

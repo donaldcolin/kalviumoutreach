@@ -6,6 +6,9 @@ import { calculateDistanceMeters } from '../lib/distance';
 import { cleanGpsRoute, type RawPing } from '../lib/gpsUtils';
 import { Navigation, ChevronLeft, ChevronRight, Loader2, Search, X, Download } from 'lucide-react';
 
+// Module-level cache: once distance data is fetched for a month, don't refetch
+const distanceCache = new Map<string, Record<string, number>>();
+
 function computeDistanceKm(points: RawPing[]): number {
   let total = 0;
   for (let i = 1; i < points.length; i++) {
@@ -157,9 +160,17 @@ export default function DistanceTracker() {
     return mgr?.name || null;
   }, [selectedStats, users]);
 
-  // Fetch all dailyTracks for this month, then their locations
+  // Fetch all dailyTracks for this month, read routeArray from each doc (no subcollection reads)
   useEffect(() => {
     if (allExecutives.length === 0) return;
+
+    const cacheKey = `${year}_${month}`;
+    const cached = distanceCache.get(cacheKey);
+    if (cached) {
+      setDistanceMap(cached);
+      setIsLoading(false);
+      return;
+    }
 
     const fetchMonth = async () => {
       setIsLoading(true);
@@ -176,45 +187,21 @@ export default function DistanceTracker() {
         );
         const tracksSnap = await getDocs(tracksQuery);
 
-        if (tracksSnap.empty) {
-          setIsLoading(false);
-          return;
-        }
-
         const results: Record<string, number> = {};
-        const fetchPromises = tracksSnap.docs.map(async (trackDoc) => {
+        tracksSnap.docs.forEach((trackDoc) => {
           const data = trackDoc.data();
           const key = `${data.userId}_${data.date}`;
+          const routeArray = data.routeArray as RawPing[] | undefined;
+          if (!routeArray || routeArray.length < 2) return;
 
-          const locsSnap = await getDocs(collection(db, 'dailyTracks', trackDoc.id, 'locations'));
-          if (locsSnap.empty) return;
-
-          const rawPoints: RawPing[] = [];
-          locsSnap.forEach(d => {
-            const p = d.data();
-            if (typeof p.lat === 'number' && typeof p.lng === 'number' && typeof p.ts === 'number') {
-              rawPoints.push({
-                lat: p.lat,
-                lng: p.lng,
-                ts: p.ts,
-                accuracy: p.accuracy ?? null,
-                speed: p.speed ?? null,
-              });
-            }
-          });
-
-          rawPoints.sort((a, b) => a.ts - b.ts);
-          // Apply the same GPS cleaning pipeline the Dashboard uses:
-          // 1. Filter by accuracy (drop noisy pings > 50m radius)
-          // 2. Remove outliers (impossible jumps > 150m from both neighbors)
-          // 3. Smooth route (sliding window average to reduce micro-jitter)
-          const cleaned = cleanGpsRoute(rawPoints);
+          const sorted = [...routeArray].sort((a, b) => a.ts - b.ts);
+          const cleaned = cleanGpsRoute(sorted);
           if (cleaned.length > 1) {
             results[key] = computeDistanceKm(cleaned);
           }
         });
 
-        await Promise.all(fetchPromises);
+        distanceCache.set(cacheKey, results);
         setDistanceMap(results);
       } catch (e) {
         console.error('Failed to fetch distance data:', e);

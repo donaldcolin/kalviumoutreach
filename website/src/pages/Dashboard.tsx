@@ -55,6 +55,7 @@ export default function Dashboard() {
     ongoingWalkIns,
     teamTrackingStatus,
     isStatsLoading,
+    isRefreshingOnReturn,
     dailyTrackStatus,
     route,
     rawPings,
@@ -146,7 +147,15 @@ export default function Dashboard() {
   }, [visibleUsers]);
 
   return (
-    <div className="flex h-[calc(100vh-48px)] gap-6 bg-transparent text-gray-900 animate-in fade-in duration-700">
+    <div className="relative flex h-[calc(100vh-48px)] gap-6 bg-transparent text-gray-900 animate-in fade-in duration-700">
+      {isRefreshingOnReturn && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/60 backdrop-blur-sm rounded-xl">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
+            <span className="text-sm font-medium text-gray-500">Refreshing data…</span>
+          </div>
+        </div>
+      )}
       <TeamSidebar
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}

@@ -144,39 +144,25 @@ class FirestoreSync {
 
     const docId = `${userId}_${activeDateStr}`;
     const docRef = firestore().collection('dailyTracks').doc(docId);
-    const locationsRef = docRef.collection('locations');
 
     try {
-      const batches = [];
-      let batch = firestore().batch();
-      let count = 0;
-      
-      batch.set(docRef, {
-        userId,
-        date: activeDateStr,
-        status: 'active',
-        lastPing: firestore.FieldValue.serverTimestamp(),
-      }, { merge: true });
-      count++;
-
-      for (const point of points) {
-        if (count >= 490) {
-          batches.push(batch.commit());
-          batch = firestore().batch();
-          count = 0;
-        }
-        const pointRef = locationsRef.doc(point.ts.toString());
-        batch.set(pointRef, point);
-        count++;
+      // Append all points to routeArray on the parent doc (no subcollection writes)
+      // ponytail: chunk at 400 to stay within Firestore arrayUnion limits
+      const CHUNK = 400;
+      for (let i = 0; i < points.length; i += CHUNK) {
+        const slice = points.slice(i, i + CHUNK);
+        await docRef.set({
+          userId,
+          date: activeDateStr,
+          status: 'active',
+          lastPing: firestore.FieldValue.serverTimestamp(),
+          routeArray: firestore.FieldValue.arrayUnion(...slice),
+        }, { merge: true });
       }
 
       const lastPoint = points[points.length - 1];
       if (this.shouldUpdateLastKnownLocation(lastPoint)) {
-        if (count >= 490) {
-          batches.push(batch.commit());
-          batch = firestore().batch();
-        }
-        batch.update(firestore().collection('users').doc(userId), {
+        await firestore().collection('users').doc(userId).update({
           lastKnownLocation: {
             lat: lastPoint.lat,
             lng: lastPoint.lng,
@@ -186,11 +172,8 @@ class FirestoreSync {
         });
         this.lastWrittenLocation = { lat: lastPoint.lat, lng: lastPoint.lng, ts: lastPoint.ts };
       }
-
-      batches.push(batch.commit());
-      await Promise.all(batches);
     } catch (e) {
-      logger.warn('Failed to write batched locations to Firestore', e instanceof Error ? e.message : String(e));
+      logger.warn('Failed to write locations to Firestore', e instanceof Error ? e.message : String(e));
       throw e; // throw so syncUnsyncedLocations doesn't delete the local copy on failure
     }
   }
