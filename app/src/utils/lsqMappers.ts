@@ -26,6 +26,8 @@ export interface WalkInFormState {
   principalPhone: string;
   principalEmail: string;
   proposalSentToPrincipal: string;
+  photoUri?: string;
+  photoUrl?: string;
 }
 
 export function buildWalkInActivityData(form: WalkInFormState) {
@@ -89,7 +91,10 @@ export function buildWalkInActivityData(form: WalkInFormState) {
     activityType: 'Walk-in Activity',
     followUpDate: form.followUpDate?.toISOString() || '',
     notes: form.notes,
+    ...(form.photoUrl ? { photoUrl: form.photoUrl } : {}),
   };
+  
+
 
   if (form.walkInStatus === 'Refused Entry - RE') {
     extraData.refusedEntryReason = form.reasonForRefusal;

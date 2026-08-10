@@ -5,7 +5,8 @@ import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import { Button, ButtonText } from '@/components/ui/button';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { ChevronDownIcon, CalendarIcon, ClockIcon, MapPinIcon, Mic } from 'lucide-react-native';
+import { ChevronDownIcon, CalendarIcon, ClockIcon, MapPinIcon, Mic, Camera, X } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 
 import { WalkInFormState } from '../../utils/lsqMappers';
 
@@ -168,7 +169,7 @@ interface WalkInFormProps {
   recordingUrl: string | null;
   isSyncing: boolean;
   isValidatingLocation: boolean;
-  handleSubmit: () => void;
+  handleSubmit: (photoUri?: string) => void;
 }
 
 export function WalkInForm({
@@ -367,7 +368,23 @@ export function WalkInForm({
           size="lg"
           className="rounded-xl bg-rose-600 h-14"
           disabled={isSyncing || isValidatingLocation || !form.typeOfWalkIn || !form.walkInStatus || isUploading}
-          onPress={handleSubmit}
+          onPress={async () => {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+              alert('Sorry, we need camera permissions to submit this activity!');
+              return;
+            }
+            const result = await ImagePicker.launchCameraAsync({
+              mediaTypes: ['images'],
+              allowsEditing: false, // Don't allow editing to keep original aspect ratio for GPS watermark
+              quality: 0.5,
+            });
+            if (!result.canceled) {
+              const uri = result.assets[0].uri;
+              updateForm({ photoUri: uri });
+              handleSubmit(uri);
+            }
+          }}
         >
           {isSyncing || isValidatingLocation ? (
             <ActivityIndicator color="#FFF" />

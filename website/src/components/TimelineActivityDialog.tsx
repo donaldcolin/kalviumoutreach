@@ -241,6 +241,26 @@ export function TimelineActivityDialog({ open, onOpenChange, stop }: TimelineAct
                 </div>
               )}
 
+              {/* Photo Preview */}
+              {photoUrl && (
+                <div className="bg-white p-4 rounded-2xl border border-zinc-200 shadow-sm">
+                  <div className="flex items-center gap-2 mb-3">
+                    <ImageIcon size={14} className="text-blue-500" />
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Activity Photo</p>
+                  </div>
+                  <div className="relative w-full rounded-xl overflow-hidden border border-zinc-100 bg-zinc-50 flex items-center justify-center min-h-[200px]">
+                    <img 
+                      src={photoUrl} 
+                      alt="Activity" 
+                      className="w-full max-h-[400px] object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=Image+Unavailable';
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Metadata */}
               <div className="flex items-center gap-2 flex-wrap">
                 {dataCrm.lsqLeadId && (

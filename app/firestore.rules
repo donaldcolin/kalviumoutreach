@@ -98,6 +98,9 @@ service cloud.firestore {
       // Associate can update their own tasks (e.g. mark complete)
       allow update: if request.auth != null
                     && resource.data.executiveId == request.auth.uid;
+      // Executives can create their own tasks (auto-created from walk-in submissions)
+      allow create: if request.auth != null
+                    && request.resource.data.executiveId == request.auth.uid;
       // TLs/Admins can manage tasks (create, update, delete)
       allow write: if request.auth != null && isManager();
     }

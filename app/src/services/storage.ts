@@ -102,3 +102,13 @@ export async function uploadRecording(
   // Audio files must go to the 'video' endpoint in Cloudinary
   return uploadToCloudinary(localUri, 'video', onProgress);
 }
+
+/**
+ * Upload an activity photo.
+ */
+export async function uploadPhoto(
+  localUri: string,
+  onProgress?: UploadProgressCallback,
+): Promise<string> {
+  return uploadToCloudinary(localUri, 'image', onProgress);
+}

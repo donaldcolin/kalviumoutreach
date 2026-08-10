@@ -17,6 +17,7 @@ import { useWalkInForm } from '../../hooks/useWalkInForm';
 import { WalkInForm } from '../../components/walk-in/WalkInForm';
 import { buildWalkInActivityData } from '../../utils/lsqMappers';
 import { firestoreSync } from '../../tracking/firestoreSync';
+import { uploadPhoto } from '../../services/storage';
 
 export default function WalkInSessionScreen() {
   const route = useRoute<any>();
@@ -156,7 +157,7 @@ export default function WalkInSessionScreen() {
     setPhase('form');
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (finalPhotoUri?: string) => {
     if (!leadId) {
       Toast.show({ title: 'Error', message: 'Missing lead ID', type: 'error' });
       return;
@@ -185,9 +186,32 @@ export default function WalkInSessionScreen() {
     } catch (e) {
       console.log('Failed to fetch end location:', e);
     }
+    
+    // Merge in the final photo URI if provided directly
+    const finalFormState = { ...form };
+    if (finalPhotoUri) {
+      finalFormState.photoUri = finalPhotoUri;
+      
+      try {
+        const rawUrl = await uploadPhoto(finalPhotoUri);
+        
+        // Add watermarking to the Cloudinary URL using URL Transformations
+        const lat = endLocation?.lat || startLocation?.lat;
+        const lng = endLocation?.lng || startLocation?.lng;
+        const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'short', timeStyle: 'short' });
+        
+        let watermarkedUrl = rawUrl;
+        // The user requested to skip the timing/location watermark overlay.
+        finalFormState.photoUrl = watermarkedUrl;
+      } catch (err) {
+        console.error("Photo upload failed:", err);
+        Toast.show({ title: 'Warning', message: 'Activity submitted, but photo upload failed.', type: 'error' });
+      }
+    }
+
     setIsValidatingLocation(false);
 
-    const { filteredData, extraData } = buildWalkInActivityData(form);
+    const { filteredData, extraData } = buildWalkInActivityData(finalFormState);
 
     const locationPayload = {
       startLocation,
