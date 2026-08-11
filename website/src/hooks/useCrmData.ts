@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { type User } from '../stores/authStore';
 import { type SchoolPipelineEntry, getStageIndex, type CrmActivity } from '../components/pipeline/types';
 import type { Lead } from '@kalvium-outreach/shared';
@@ -112,9 +112,12 @@ export function useCrmData(user: User | null, users: Record<string, User>) {
       }
 
       for (const chunk of chunkedEmails) {
+        const token = await auth.currentUser?.getIdToken();
         const results = await Promise.all(
           chunk.map(email => 
-            fetch(`${API_BASE_URL}/api/leads?email=${encodeURIComponent(email)}`)
+            fetch(`${API_BASE_URL}/api/leads?email=${encodeURIComponent(email)}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            })
               .then(res => res.json())
               .then(res => ({ ...res, email }))
               .catch(() => ({ success: false, leads: [], email }))

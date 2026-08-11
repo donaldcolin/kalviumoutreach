@@ -100,9 +100,17 @@ export const useAuthStore = create<AuthState>((set) => ({
   addAssociate: async (newUser, pass) => {
     try {
       const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const currentUser = auth.currentUser;
+      if (!currentUser) throw new Error('Not authenticated');
+      
+      const token = await currentUser.getIdToken();
+      
       const response = await fetch(`${baseUrl}/api/create-user`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ ...newUser, password: pass })
       });
       

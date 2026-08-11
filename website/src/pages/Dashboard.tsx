@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useAuthStore, type User } from '../stores/authStore';
+import { auth } from '../firebase';
 import 'leaflet/dist/leaflet.css';
 import { useToast } from '../hooks/use-toast';
 import { TimelineActivityDialog } from "../components/TimelineActivityDialog";
@@ -129,7 +130,12 @@ export default function Dashboard() {
       toast({ title: 'Syncing LeadSquared...', description: 'Fetching latest activities globally.' });
 
       const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://us-central1-kalvium-outreach-53f54.cloudfunctions.net/api';
-      const res = await fetch(`${API_BASE_URL}/api/sync-now`);
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch(`${API_BASE_URL}/api/sync-now`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       const data = await res.json();
 
       toast({

@@ -4,9 +4,11 @@
  */
 import express from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import { db, auth, FieldValue } from '../config/config.js';
 import { lsqFetch } from '../services/lsq.js';
 import { syncActivities, lastSyncResult } from '../services/sync.js';
+import { requireAuth } from './authMiddleware.js';
 
 const app = express();
 
@@ -29,6 +31,25 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// Global Rate Limiter: max 100 requests per 15 minutes per IP
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' }
+});
+app.use('/api/', globalLimiter);
+
+// Strict Rate Limiter for lead search: max 20 requests per 15 minutes
+const searchLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Search limit exceeded. Please try again later.' }
+});
+
 // ─── Health Check ───────────────────────────────────────────────────────────
 
 app.get('/api/health', (req, res) => {
@@ -41,7 +62,7 @@ app.get('/api/health', (req, res) => {
 
 // ─── Manual Sync Trigger ────────────────────────────────────────────────────
 
-app.get('/api/sync-now', (req, res) => {
+app.get('/api/sync-now', requireAuth, (req, res) => {
   console.log('🔔 Manual sync triggered via /api/sync-now (24-hour backfill)');
 
   // Put-and-forget: Start the heavy sync in the background without `await`
@@ -64,10 +85,16 @@ app.get('/api/last-sync', (req, res) => {
 
 // ─── Create User ────────────────────────────────────────────────────────────
 
-app.post('/api/create-user', async (req, res) => {
+app.post('/api/create-user', requireAuth, async (req, res) => {
   try {
     const { email, password, role, name, phone, regionId, managerId, seniorManagerId } = req.body;
     
+    // Only admins can create users
+    const callerRole = req.user.role;
+    if (callerRole !== 'admin') {
+      return res.status(403).json({ error: 'Forbidden: Insufficient privileges. Only admins can create users.' });
+    }
+
     if (!email || !password || !role) {
       return res.status(400).json({ error: 'Email, password, and role are required' });
     }
@@ -111,9 +138,16 @@ app.post('/api/create-user', async (req, res) => {
 
 // ─── Leads Search ───────────────────────────────────────────────────────────
 
-app.get('/api/leads', async (req, res) => {
+app.get('/api/leads', requireAuth, async (req, res) => {
   try {
-    const { email } = req.query;
+    // If not admin/manager, enforce searching own email
+    let email = req.query.email;
+    const isManager = ['admin', 'regionalManager', 'seniorManager', 'teamLead'].includes(req.user.role);
+    
+    if (!isManager || !email) {
+      email = req.user.email;
+    }
+
     if (!email) {
       return res.status(400).json({ error: 'Email is required' });
     }
@@ -148,7 +182,7 @@ app.get('/api/leads', async (req, res) => {
 
 // ─── Push Recording (Legacy HTTP endpoint) ──────────────────────────────────
 
-app.post('/api/push-recording', async (req, res) => {
+app.post('/api/push-recording', requireAuth, async (req, res) => {
   try {
     const { activityId, storageUrl, recordingId } = req.body;
     if (!activityId || !storageUrl) {
@@ -183,12 +217,20 @@ app.post('/api/push-recording', async (req, res) => {
 
 // ─── Global Lead Search (for Lead Sharing) ──────────────────────────────────
 
-app.get('/api/leads/search', async (req, res) => {
+app.get('/api/leads/search', requireAuth, searchLimiter, async (req, res) => {
   try {
-    const { q, userEmail } = req.query;
-    if (!q || String(q).trim().length < 2) {
-      return res.status(400).json({ error: 'Search query "q" must be at least 2 characters' });
+    const { q } = req.query;
+    let { userEmail } = req.query;
+    
+    if (!q || String(q).trim().length < 3) {
+      return res.status(400).json({ error: 'Search query "q" must be at least 3 characters' });
     }
+    
+    const isManager = ['admin', 'regionalManager', 'seniorManager', 'teamLead'].includes(req.user.role);
+    if (!isManager || !userEmail) {
+      userEmail = req.user.email;
+    }
+    
     if (!userEmail) {
       return res.status(400).json({ error: 'userEmail is required for searching' });
     }
@@ -281,9 +323,16 @@ async function getLsqOwnerIdByEmail(email) {
   return null;
 }
 
-app.post('/api/leads', async (req, res) => {
+app.post('/api/leads', requireAuth, async (req, res) => {
   try {
-    const { email, schoolName, phone, address, board, studentStrength, city, district, state, latitude, longitude } = req.body;
+    const { schoolName, phone, address, board, studentStrength, city, district, state, latitude, longitude } = req.body;
+    let { email } = req.body;
+
+    const isManager = ['admin', 'regionalManager', 'seniorManager', 'teamLead'].includes(req.user.role);
+    if (!isManager || !email) {
+      email = req.user.email;
+    }
+
     if (!email || !schoolName || !phone) {
       return res.status(400).json({ error: 'Executive email, School Name, and Phone are required' });
     }

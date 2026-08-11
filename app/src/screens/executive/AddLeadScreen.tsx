@@ -9,6 +9,7 @@ import { Toast } from '@/components/ui/ToastManager';
 import { useAuthStore } from '../../stores/authStore';
 import { ArrowLeft, MapPin, Phone, BookOpen, School } from 'lucide-react-native';
 import * as Location from 'expo-location';
+import auth from '@react-native-firebase/auth';
 
 const API_URL = 'https://us-central1-kalvium-outreach-53f54.cloudfunctions.net/api';
 
@@ -52,10 +53,15 @@ export default function AddLeadScreen() {
         console.warn("Could not get location:", locErr);
       }
 
+      const token = await auth().currentUser?.getIdToken();
+      
       const apiUrl = `${API_URL}/api/leads`;
       const res = await fetch(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           email: user?.email,
           latitude,

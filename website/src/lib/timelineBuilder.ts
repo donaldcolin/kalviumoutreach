@@ -69,8 +69,11 @@ export function buildTimeline(
   for (let i = 1; i < rawPings.length; i++) {
     const prev = rawPings[i - 1];
     const curr = rawPings[i];
-    const prevTs = prev.ts || 0;
-    const currTs = curr.ts || 0;
+    
+    if (!prev.ts || !curr.ts || prev.ts === 0 || curr.ts === 0) continue;
+
+    const prevTs = prev.ts;
+    const currTs = curr.ts;
 
     const gapMs = currTs - prevTs;
     if (gapMs > 3600000) {

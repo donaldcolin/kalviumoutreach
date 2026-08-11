@@ -17,9 +17,11 @@ service cloud.firestore {
     function canSeeUser(targetUserId) {
       return request.auth.uid == targetUserId
           || isAdmin()
-          || (request.auth.token.role == 'teamLead' && request.auth.token.managerId == request.auth.uid) // Note: Custom Claims don't know the TARGET's managerId directly without a get()
-          // For now, we will allow managers to read if they are managers, but ideally we'd pass managerId on the doc.
-          || isManager(); 
+          || request.auth.token.role == 'regionalManager'
+          || (isManager() && (
+               get(/databases/$(database)/documents/users/$(targetUserId)).data.managerId == request.auth.uid
+               || get(/databases/$(database)/documents/users/$(targetUserId)).data.seniorManagerId == request.auth.uid
+             ));
     }
 
     // ─── Users ─────────────────────────────────────────────────────────────────
@@ -39,9 +41,9 @@ service cloud.firestore {
                       'lastKnownLocation.updatedAt',
                       'fcmToken'
                     ]);
-      // Only managers can create new user profiles
+      // Only admins can create new user profiles
       allow create: if request.auth != null
-                    && isManager();
+                    && isAdmin();
       allow delete: if false; // Only manageable from server/admin SDK
     }
 

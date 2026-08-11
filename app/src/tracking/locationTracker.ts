@@ -277,6 +277,13 @@ class LocationTracker {
   public addPoints(locations: Location.LocationObject[]) {
     if (!this.isTracking) return;
 
+    // Strictly enforce no location tracking after 6 PM
+    if (new Date().getHours() >= 18) {
+      logger.info('Dropping location points, strictly no tracking after 6 PM.');
+      this.stopTracking();
+      return;
+    }
+
     const filtered = filterLocationPoints(locations, this.lastSavedPoint);
     if (filtered.length > 0) {
       this.lastSavedPoint = filtered[filtered.length - 1];

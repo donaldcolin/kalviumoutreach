@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import auth from '@react-native-firebase/auth';
 import type { Lead } from '../types';
 
 const API_BASE = 'https://us-central1-kalvium-outreach-53f54.cloudfunctions.net/api';
@@ -56,7 +57,10 @@ export function useLeadSearch(userEmail?: string) {
         // We only show loading spinner if we didn't have a cache
         if (!cachedStr) setLoading(true); 
 
-        const res = await fetch(`${API_BASE}/api/leads?email=${encodeURIComponent(email)}`);
+        const token = await auth().currentUser?.getIdToken();
+        const res = await fetch(`${API_BASE}/api/leads?email=${encodeURIComponent(email)}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         const data = await res.json();
         
         if (data.success) {
@@ -83,7 +87,10 @@ export function useLeadSearch(userEmail?: string) {
     try {
       setGlobalLoading(true);
       const url = `${API_BASE}/api/leads/search?q=${encodeURIComponent(q)}&userEmail=${encodeURIComponent(userEmail || '')}`;
-      const res = await fetch(url);
+      const token = await auth().currentUser?.getIdToken();
+      const res = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const data = await res.json();
       if (data.success) {
         setGlobalResults(data.leads || []);
@@ -131,7 +138,10 @@ export function useLeadSearch(userEmail?: string) {
     if (!userEmail) return;
     setIsRefreshing(true);
     try {
-      const res = await fetch(`${API_BASE}/api/leads?email=${encodeURIComponent(userEmail)}`);
+      const token = await auth().currentUser?.getIdToken();
+      const res = await fetch(`${API_BASE}/api/leads?email=${encodeURIComponent(userEmail)}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const data = await res.json();
       if (data.success) {
         const freshLeads = data.leads || [];

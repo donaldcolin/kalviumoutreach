@@ -116,13 +116,15 @@ export function useOutreachTracking(userId: string | undefined) {
       const hour = new Date().getHours();
       // Only auto-stop once per app session.
       if (hour >= 18 && !hasAutoStoppedRef.current) {
-        console.log('[useOutreachTracking] 6 PM reached, auto-stopping day.');
+        console.log('[useOutreachTracking] 6 PM reached, pausing location tracking but keeping app active.');
         hasAutoStoppedRef.current = true;
-        locallyEndedRef.current = true;
         
-        Toast.show({ title: 'Tracking Auto-Stopped', message: "It's 6 PM. Your tracking session has been automatically stopped.", type: 'info', duration: 5000 });
+        Toast.show({ title: 'Location Paused', message: "It's past 6 PM. Background location tracking is paused, but you can continue using the app.", type: 'info', duration: 5000 });
         
-        endDay();
+        // Only stop location tracking, don't end the session
+        locationTracker.stopTracking();
+        // Force flush of any remaining unsynced locations
+        firestoreSync.syncUnsyncedLocations().catch(console.error);
       }
     };
 
@@ -134,9 +136,10 @@ export function useOutreachTracking(userId: string | undefined) {
   const startDay = useCallback(async () => {
     if (!userId || isTracking) return;
 
-    // If user explicitly starts after 6 PM, bypass the auto-stop
+    // Users can start their day after 6 PM, but background location will remain disabled
     if (new Date().getHours() >= 18) {
       hasAutoStoppedRef.current = true;
+      Toast.show({ title: 'Location Paused', message: 'Location tracking is disabled after 6 PM. You can continue using the app.', type: 'info', duration: 3000 });
     }
 
     setIsTracking(true);

@@ -23,6 +23,7 @@ class FirestoreSync {
   private userId: string | null = null;
   private dateStr: string | null = null;
   private isStarting = false; 
+  private isFirstPing = false;
   private unsubscribeLocation: (() => void) | null = null;
   private lastWrittenLocation: { lat: number; lng: number; ts: number } | null = null;
   private static readonly LAST_KNOWN_MIN_DISTANCE_M = 100;
@@ -36,6 +37,7 @@ class FirestoreSync {
     try {
       this.userId = userId;
       this.dateStr = format(new Date(), 'yyyyMMdd');
+      this.isFirstPing = true;
 
       const docId = `${this.userId}_${this.dateStr}`;
       const docRef = firestore().collection('dailyTracks').doc(docId);
@@ -189,6 +191,11 @@ class FirestoreSync {
   private async handleLocationBatch(points: LocationPoint[]) {
     if (!this.userId || !this.dateStr) return;
     await this.appendHeadlessLocations(this.userId, this.dateStr, points);
+    
+    if (this.isFirstPing) {
+      this.isFirstPing = false;
+      await this.syncUnsyncedLocations();
+    }
   }
 }
 
