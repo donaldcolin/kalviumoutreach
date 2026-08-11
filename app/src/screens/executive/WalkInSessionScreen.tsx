@@ -18,6 +18,7 @@ import { WalkInForm } from '../../components/walk-in/WalkInForm';
 import { buildWalkInActivityData } from '../../utils/lsqMappers';
 import { firestoreSync } from '../../tracking/firestoreSync';
 import { uploadPhoto } from '../../services/storage';
+import { format } from '@/src/utils/safeFormat';
 
 export default function WalkInSessionScreen() {
   const route = useRoute<any>();
@@ -198,7 +199,7 @@ export default function WalkInSessionScreen() {
         // Add watermarking to the Cloudinary URL using URL Transformations
         const lat = endLocation?.lat || startLocation?.lat;
         const lng = endLocation?.lng || startLocation?.lng;
-        const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'short', timeStyle: 'short' });
+        const timestamp = format(new Date(), 'dd/MM/yyyy, hh:mm a');
         
         let watermarkedUrl = rawUrl;
         // The user requested to skip the timing/location watermark overlay.

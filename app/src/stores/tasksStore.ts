@@ -1,3 +1,4 @@
+import { parseSafeDate } from '@/src/utils/safeFormat';
 import { create } from 'zustand';
 import { Toast } from '@/components/ui/ToastManager';
 import firestore from '@react-native-firebase/firestore';
@@ -38,7 +39,7 @@ function categorizeTasks(docs: Task[]): {
   docs.forEach(task => {
     if (task.status !== 'completed' && task.date) {
       const key = (task.schoolName || '').toLowerCase().trim();
-      const time = new Date(task.date).getTime();
+      const time = parseSafeDate(task.date).getTime();
       const current = latestPendingBySchool.get(key) || 0;
       if (time > current) {
         latestPendingBySchool.set(key, time);
@@ -50,7 +51,7 @@ function categorizeTasks(docs: Task[]): {
     if (task.status === 'completed' || !task.date) return true;
     const key = (task.schoolName || '').toLowerCase().trim();
     const latestTime = latestPendingBySchool.get(key);
-    const time = new Date(task.date).getTime();
+    const time = parseSafeDate(task.date).getTime();
     if (latestTime && time < latestTime) return false;
     return true;
   });
@@ -62,7 +63,7 @@ function categorizeTasks(docs: Task[]): {
     }
 
     // Skip snoozed tasks — manager has hidden them until a future date
-    if (task.snoozedUntil && new Date(task.snoozedUntil) > now) {
+    if (task.snoozedUntil && parseSafeDate(task.snoozedUntil) > now) {
       continue;
     }
 
@@ -73,7 +74,7 @@ function categorizeTasks(docs: Task[]): {
       continue;
     }
 
-    const taskDate = new Date(task.date);
+    const taskDate = parseSafeDate(task.date);
 
     if (taskDate < todayStart) {
       overdue.push(task);
@@ -86,29 +87,29 @@ function categorizeTasks(docs: Task[]): {
 
   // Sort overdue: most overdue first (oldest date first)
   overdue.sort((a, b) => {
-    const dateA = a.date ? new Date(a.date).getTime() : 0;
-    const dateB = b.date ? new Date(b.date).getTime() : 0;
+    const dateA = a.date ? parseSafeDate(a.date).getTime() : 0;
+    const dateB = b.date ? parseSafeDate(b.date).getTime() : 0;
     return dateA - dateB;
   });
 
   // Sort today: earliest time first
   today.sort((a, b) => {
-    const dateA = a.date ? new Date(a.date).getTime() : 0;
-    const dateB = b.date ? new Date(b.date).getTime() : 0;
+    const dateA = a.date ? parseSafeDate(a.date).getTime() : 0;
+    const dateB = b.date ? parseSafeDate(b.date).getTime() : 0;
     return dateA - dateB;
   });
 
   // Sort upcoming: nearest date first
   upcoming.sort((a, b) => {
-    const dateA = a.date ? new Date(a.date).getTime() : Infinity;
-    const dateB = b.date ? new Date(b.date).getTime() : Infinity;
+    const dateA = a.date ? parseSafeDate(a.date).getTime() : Infinity;
+    const dateB = b.date ? parseSafeDate(b.date).getTime() : Infinity;
     return dateA - dateB;
   });
 
   // Sort completed: most recent first
   completed.sort((a, b) => {
-    const dateA = a.date ? new Date(a.date).getTime() : 0;
-    const dateB = b.date ? new Date(b.date).getTime() : 0;
+    const dateA = a.date ? parseSafeDate(a.date).getTime() : 0;
+    const dateB = b.date ? parseSafeDate(b.date).getTime() : 0;
     return dateB - dateA;
   });
 

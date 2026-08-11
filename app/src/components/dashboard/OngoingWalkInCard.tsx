@@ -1,3 +1,4 @@
+import { parseSafeDate } from '@/src/utils/safeFormat';
 import React, { useEffect, useState } from 'react';
 import { View, Pressable } from 'react-native';
 import { Text } from '@/components/ui/text';
@@ -30,7 +31,7 @@ export function OngoingWalkInCard({ walkIn, onResume }: OngoingWalkInCardProps) 
   // Elapsed time ticker
   useEffect(() => {
     const update = () => {
-      const startMs = new Date(walkIn.startTime).getTime();
+      const startMs = parseSafeDate(walkIn.startTime).getTime();
       const diff = Date.now() - startMs;
       const mins = Math.floor(diff / 60000);
       const hrs = Math.floor(mins / 60);

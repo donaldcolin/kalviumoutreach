@@ -40,7 +40,7 @@ export default function TasksScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <FlashList
+      <FlashList estimatedItemSize={150}
         data={activeTab === 'overdue' ? overdueTasks : activeTab === 'today' ? todayTasks : activeTab === 'upcoming' ? upcomingTasks : completedTasks}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 12, paddingBottom: 100 }}

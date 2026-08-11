@@ -76,7 +76,7 @@ export default function LoginScreen({ navigation }: Props) {
               {/* Header Section */}
               <Animated.View entering={FadeInUp.delay(200).duration(1000).springify()} style={styles.header}>
                 <Image
-                  source={require('../../../assets/LOGO.png')}
+                  source={require('../../../assets/logo_small.png')}
                   style={styles.logo}
                   contentFit="contain"
                 />

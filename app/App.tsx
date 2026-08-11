@@ -150,7 +150,7 @@ function App() {
       <GluestackUIProvider mode="light">
         <View style={{ flex: 1, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center' }}>
           <Animated.Image 
-            source={require('./assets/LOGO.png')} 
+            source={require('./assets/logo_small.png')} 
             style={[{ width: 180, height: 100, resizeMode: 'contain' }, animatedSplashStyle]} 
           />
         </View>

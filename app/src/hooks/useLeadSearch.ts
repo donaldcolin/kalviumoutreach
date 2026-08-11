@@ -149,8 +149,17 @@ export function useLeadSearch(userEmail?: string) {
   }, [userEmail]);
 
   const prependLead = useCallback((newLead: Lead) => {
-    setLeads((prev) => [newLead, ...prev]);
-  }, []);
+    setLeads((prev) => {
+      const updated = [newLead, ...prev];
+      if (userEmail) {
+        AsyncStorage.setItem(`leads_cache_${userEmail}`, JSON.stringify({
+          leads: updated,
+          timestamp: Date.now()
+        })).catch(err => console.error('Failed to update cache on prepend:', err));
+      }
+      return updated;
+    });
+  }, [userEmail]);
 
   return {
     leads,

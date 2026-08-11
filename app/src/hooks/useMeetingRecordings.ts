@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import firestore from '@react-native-firebase/firestore';
 import type { MeetingRecording } from '../types';
+import { format, parseSafeDate } from '@/src/utils/safeFormat';
 
 export interface GroupedRecordings {
   title: string;
@@ -44,9 +45,9 @@ export function useMeetingRecordings(userId: string | undefined) {
     const groups: GroupedRecordings[] = [];
     recordings.forEach((rec) => {
       const d = rec.timestamp?.toDate ? rec.timestamp.toDate() : new Date();
-      let title = d.toLocaleDateString();
+      let title = format(d, 'MM/dd/yyyy');
       if (d.toDateString() === new Date().toDateString()) title = 'Today';
-      else if (d.toDateString() === new Date(Date.now() - 86400000).toDateString()) title = 'Yesterday';
+      else if (d.toDateString() === parseSafeDate(Date.now() - 86400000).toDateString()) title = 'Yesterday';
 
       let group = groups.find((g) => g.title === title);
       if (!group) {

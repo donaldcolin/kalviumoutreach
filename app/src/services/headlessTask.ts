@@ -4,7 +4,7 @@ import * as BackgroundFetch from 'expo-background-fetch';
 import firestore from '@react-native-firebase/firestore';
 import * as Location from 'expo-location';
 import { appendPing } from './firestore';
-import { format } from 'date-fns';
+import { format } from '@/src/utils/safeFormat';
 import { logger } from '../utils/logger';
 import type { LocationPing } from '../types';
 

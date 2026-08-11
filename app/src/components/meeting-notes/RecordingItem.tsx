@@ -7,6 +7,7 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Play, Pause, Upload } from 'lucide-react-native';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import type { MeetingRecording } from '../../types';
+import { format } from '@/src/utils/safeFormat';
 
 export interface RecordingItemProps {
   item: MeetingRecording;
@@ -35,7 +36,7 @@ export function RecordingItem({ item, index, onPushPress }: RecordingItemProps) 
         <HStack className="justify-between items-center mb-2">
           <Text className="text-slate-900 font-medium text-sm">
             {item.timestamp?.toDate
-              ? item.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              ? format(item.timestamp.toDate(), 'hh:mm a')
               : 'Just now'}
           </Text>
           <HStack className="items-center" space="sm">

@@ -9,6 +9,7 @@ import { Heading } from '@/components/ui/heading';
 import { Button, ButtonText } from '@/components/ui/button';
 import { AlertTriangle, Clock, Calendar, ChevronRight, Building2 } from 'lucide-react-native';
 import type { Task } from '../../types';
+import { format, parseSafeDate } from '@/src/utils/safeFormat';
 
 export interface UpcomingTasksListProps {
   tasks: Task[];
@@ -18,10 +19,10 @@ export interface UpcomingTasksListProps {
 }
 
 function formatShortDate(dateStr: string): string {
-  const d = new Date(dateStr);
+  const d = parseSafeDate(dateStr);
   const now = new Date();
   now.setHours(0, 0, 0, 0);
-  const taskDate = new Date(d);
+  const taskDate = parseSafeDate(d);
   taskDate.setHours(0, 0, 0, 0);
   const diffDays = Math.floor((taskDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
@@ -31,7 +32,7 @@ function formatShortDate(dateStr: string): string {
   }
   if (diffDays === 0) return 'Today';
   if (diffDays === 1) return 'Tomorrow';
-  return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+  return format(d, 'MMM d');
 }
 
 export function UpcomingTasksList({ tasks, overdueCount = 0, todayCount = 0, onCompleteTask }: UpcomingTasksListProps) {
@@ -54,9 +55,9 @@ export function UpcomingTasksList({ tasks, overdueCount = 0, todayCount = 0, onC
       </HStack>
 
       {displayTasks.map((task, index) => {
-        const isOverdue = task.date && new Date(task.date) < new Date(new Date().setHours(0, 0, 0, 0));
+        const isOverdue = task.date && parseSafeDate(task.date) < parseSafeDate(new Date().setHours(0, 0, 0, 0));
         const isToday = task.date && (() => {
-          const td = new Date(task.date!);
+          const td = parseSafeDate(task.date!);
           const now = new Date();
           return td.getFullYear() === now.getFullYear() && td.getMonth() === now.getMonth() && td.getDate() === now.getDate();
         })();

@@ -9,6 +9,7 @@ import { useAuthStore } from '../../stores/authStore';
 import * as Device from 'expo-device';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { ExecutiveStackParamList } from '../../types';
+import { format } from '@/src/utils/safeFormat';
 
 export default function BugReportScreen({ navigation }: { navigation: NativeStackNavigationProp<ExecutiveStackParamList> }) {
   const { user } = useAuthStore();
@@ -36,7 +37,7 @@ ${description}
 Diagnostic Info:
 User: ${userEmail}
 Device: ${deviceInfo}
-Date: ${new Date().toLocaleString()}
+Date: ${format(new Date(), 'PPpp')}
       `.trim();
 
       const targetEmail = 'donald.colin@kalvium.com';

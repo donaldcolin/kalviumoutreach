@@ -1,3 +1,4 @@
+import { parseSafeDate } from '@/src/utils/safeFormat';
 import React, { useEffect, useCallback } from 'react';
 import { ScrollView, View, AppState, RefreshControl, InteractionManager } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
@@ -95,14 +96,14 @@ export default function DashboardScreen() {
   const [selectedDate, setSelectedDate] = React.useState(new Date());
 
   const filteredActivities = React.useMemo(() => {
-    const start = new Date(selectedDate);
+    const start = parseSafeDate(selectedDate);
     start.setHours(0, 0, 0, 0);
-    const end = new Date(selectedDate);
+    const end = parseSafeDate(selectedDate);
     end.setHours(23, 59, 59, 999);
     return allActivities.filter(a => {
       const dt = a.walkInDateTime || a.lsqCreatedOn;
       if (!dt) return false;
-      const ts = new Date(dt).getTime();
+      const ts = parseSafeDate(dt).getTime();
       return ts >= start.getTime() && ts <= end.getTime();
     });
   }, [allActivities, selectedDate]);
@@ -194,7 +195,7 @@ export default function DashboardScreen() {
 
   return (
     <View className="flex-1 bg-white">
-      <FlashList
+      <FlashList estimatedItemSize={150}
         data={filteredActivities}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 12, paddingBottom: 18 }}

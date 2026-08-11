@@ -8,6 +8,7 @@ import { Box } from '@/components/ui/box';
 import { Text } from '@/components/ui/text';
 import type { Task } from '../../types';
 import type { TaskSection } from './TaskSectionHeader';
+import { format, parseSafeDate } from '@/src/utils/safeFormat';
 
 interface TaskCardProps {
   task: Task;
@@ -17,7 +18,7 @@ interface TaskCardProps {
 }
 
 function getOverdueDays(dateStr: string): number {
-  const taskDate = new Date(dateStr);
+  const taskDate = parseSafeDate(dateStr);
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   taskDate.setHours(0, 0, 0, 0);
@@ -25,7 +26,7 @@ function getOverdueDays(dateStr: string): number {
 }
 
 function getRelativeDate(dateStr: string): string {
-  const taskDate = new Date(dateStr);
+  const taskDate = parseSafeDate(dateStr);
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   taskDate.setHours(0, 0, 0, 0);
@@ -34,16 +35,11 @@ function getRelativeDate(dateStr: string): string {
   if (diffDays === 0) return 'Today';
   if (diffDays === 1) return 'Tomorrow';
   if (diffDays <= 7) return `In ${diffDays} days`;
-  return taskDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+  return format(taskDate, 'MMM d');
 }
 
 function formatDateTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleString('en-US', {
-    day: 'numeric',
-    month: 'short',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  return format(parseSafeDate(dateStr), 'MMM d');
 }
 
 const SECTION_STYLES = {

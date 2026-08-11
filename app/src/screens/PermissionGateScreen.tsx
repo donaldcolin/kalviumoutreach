@@ -132,12 +132,12 @@ export default function PermissionGateScreen({
     try {
       const fg = await Location.getForegroundPermissionsAsync();
       if (fg.status === 'granted') updates.foregroundLocation = 'granted';
-    } catch {}
+    } catch { }
 
     try {
       const bg = await Location.getBackgroundPermissionsAsync();
       if (bg.status === 'granted') updates.backgroundLocation = 'granted';
-    } catch {}
+    } catch { }
 
     try {
       const authStatus = await messaging().hasPermission();
@@ -147,12 +147,12 @@ export default function PermissionGateScreen({
       ) {
         updates.notifications = 'granted';
       }
-    } catch {}
+    } catch { }
 
     try {
       const audio = await getRecordingPermissionsAsync();
       if (audio.status === 'granted') updates.microphone = 'granted';
-    } catch {}
+    } catch { }
 
     if (Object.keys(updates).length > 0) {
       setPermissions((prev) =>

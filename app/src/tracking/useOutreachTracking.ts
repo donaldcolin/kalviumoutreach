@@ -6,7 +6,7 @@ import { locationTracker } from './locationTracker';
 import { firestoreSync } from './firestoreSync';
 import { School } from '../types';
 import { getAllSchools, onDailyTrack } from '../services/firestore';
-import { format } from 'date-fns';
+import { format } from '@/src/utils/safeFormat';
 import { logger } from '../utils/logger';
 import * as Crypto from 'expo-crypto';
 import auth from '@react-native-firebase/auth';

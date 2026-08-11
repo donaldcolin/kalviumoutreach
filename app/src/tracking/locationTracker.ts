@@ -17,9 +17,9 @@ function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number)
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLng / 2) *
+    Math.sin(dLng / 2);
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 export const LOCATION_TASK_NAME = 'BACKGROUND_LOCATION_TASK';
@@ -38,10 +38,10 @@ class LocationTracker {
   private isTracking: boolean = false;
   private currentMotionState: MotionState = 'STATIONARY';
   private unsubscribeMotion: (() => void) | null = null;
-  
+
   private buffer: LocationPoint[] = [];
   private listeners: Set<LocationBatchListener> = new Set();
-  
+
   private batchFlushInterval: ReturnType<typeof setTimeout> | null = null;
   private static readonly MOVING_BATCH_INTERVAL_MS = 120000; // 2 minutes — balances dashboard freshness with radio power savings
   private static readonly STATIONARY_BATCH_INTERVAL_MS = 600000; // 10 minutes — stationary user, no urgency to sync
@@ -96,7 +96,7 @@ class LocationTracker {
     } catch (e) {
       logger.warn('Could not get starting location:', e instanceof Error ? e.message : String(e));
     }
-    
+
     this.unsubscribeMotion = motionDetector.subscribe((state) => {
       const prevState = this.currentMotionState;
       this.currentMotionState = state;
@@ -111,16 +111,16 @@ class LocationTracker {
 
   public async stopTracking() {
     if (!this.isTracking) return;
-    
+
     this.isTracking = false;
     this.clearDeepStationaryTimer();
     this.isDeepStationary = false;
-    
+
     if (this.unsubscribeMotion) {
       this.unsubscribeMotion();
       this.unsubscribeMotion = null;
     }
-    
+
     motionDetector.stop();
 
     if (this.batchFlushInterval) {
@@ -140,11 +140,11 @@ class LocationTracker {
     if (this.batchFlushInterval) {
       clearTimeout(this.batchFlushInterval);
     }
-    
+
     if (!this.isTracking) return;
 
-    const interval = this.currentMotionState === 'STATIONARY' 
-      ? LocationTracker.STATIONARY_BATCH_INTERVAL_MS 
+    const interval = this.currentMotionState === 'STATIONARY'
+      ? LocationTracker.STATIONARY_BATCH_INTERVAL_MS
       : LocationTracker.MOVING_BATCH_INTERVAL_MS;
 
     this.batchFlushInterval = setTimeout(() => {
@@ -270,13 +270,13 @@ class LocationTracker {
   static readonly MAX_SPEED_MS = 55;
   // Min distance in meters from last saved point. Less than this = GPS jitter.
   static readonly MIN_DISTANCE_METERS = 3;
-  
+
   private lastSavedPoint: LocationPoint | null = null;
 
   // Called by TaskManager
   public addPoints(locations: Location.LocationObject[]) {
     if (!this.isTracking) return;
-    
+
     const filtered = filterLocationPoints(locations, this.lastSavedPoint);
     if (filtered.length > 0) {
       this.lastSavedPoint = filtered[filtered.length - 1];

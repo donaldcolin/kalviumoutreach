@@ -159,7 +159,7 @@ function ExecutiveTabs() {
           },
           headerLeft: () => (
             <Image
-              source={require('../../assets/LOGO.png')}
+              source={require('../../assets/logo_small.png')}
               style={{ width: 120, height: 32, marginLeft: 16 }}
               contentFit="contain"
             />

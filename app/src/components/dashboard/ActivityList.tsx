@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { format, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
+import { format, parseSafeDate } from '@/src/utils/safeFormat';
 import type { CrmActivity } from '../../types';
 
 export interface ActivityListProps {
@@ -27,7 +28,7 @@ export interface ActivityCardItemProps {
 
 export const ActivityCardItem = React.memo(function ActivityCardItem({ activity, onViewDetails }: ActivityCardItemProps) {
   const dt = activity.walkInDateTime || activity.lsqCreatedOn;
-  const time = dt ? format(new Date(dt), 'h:mm a') : '';
+  const time = dt ? format(parseSafeDate(dt), 'h:mm a') : '';
   const schoolName = activity.schoolName || activity.leadName || 'Unknown School';
 
         const isFirstVisit = activity.typeOfWalkIn === 'First Visit';
@@ -73,7 +74,7 @@ export const ActivityCardItem = React.memo(function ActivityCardItem({ activity,
           const apptDate = activity.seminarAppointmentDate || activity.picAppointmentDate || activity.principalAppointmentDate;
           if (apptDate) {
             try {
-              appointmentDateStr = format(new Date(apptDate), 'MMM d, h:mm a');
+              appointmentDateStr = format(parseSafeDate(apptDate), 'MMM d, h:mm a');
             } catch {
               appointmentDateStr = apptDate;
             }
@@ -124,7 +125,7 @@ export const ActivityCardItem = React.memo(function ActivityCardItem({ activity,
 
             {activity.followUpDate ? (
               <Text style={styles.followUpText}>
-                Follow-up: {format(new Date(activity.followUpDate), 'MMM d')}
+                Follow-up: {format(parseSafeDate(activity.followUpDate), 'MMM d')}
               </Text>
             ) : null}
 

@@ -1,3 +1,4 @@
+import { parseSafeDate } from '@/src/utils/safeFormat';
 import { create } from 'zustand';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
@@ -26,8 +27,8 @@ async function fetchActivities(uid: string): Promise<CrmActivity[]> {
   const acts = snapshot.docs.map((d: { id: any; data: () => any; }) => ({ ...d.data(), id: d.id } as CrmActivity));
 
   acts.sort((a, b) => {
-    const ta = new Date(a.walkInDateTime || a.lsqCreatedOn || 0).getTime();
-    const tb = new Date(b.walkInDateTime || b.lsqCreatedOn || 0).getTime();
+    const ta = parseSafeDate(a.walkInDateTime || a.lsqCreatedOn || 0).getTime();
+    const tb = parseSafeDate(b.walkInDateTime || b.lsqCreatedOn || 0).getTime();
     return tb - ta;
   });
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScrollView, TouchableOpacity, View } from 'react-native';
 import { Text } from '@/components/ui/text';
+import { format } from '@/src/utils/safeFormat';
 
 export interface DashboardDatePickerProps {
   dates: Date[];
@@ -35,7 +36,7 @@ export function DashboardDatePicker({ dates, selectedDate, onSelectDate, scrollV
                 isSelected ? 'text-red-600' : 'text-gray-400'
               }`}
             >
-              {d.toLocaleDateString('en-US', { weekday: 'short' })}
+              {format(d, 'EEE')}
             </Text>
             <Text
               className={`text-xl font-bold ${

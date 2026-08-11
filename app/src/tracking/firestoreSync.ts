@@ -1,6 +1,6 @@
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
-import { format } from 'date-fns';
+import { format } from '@/src/utils/safeFormat';
 import { locationTracker, LocationPoint } from './locationTracker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logger } from '../utils/logger';

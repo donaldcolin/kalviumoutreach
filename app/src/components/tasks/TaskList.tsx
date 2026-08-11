@@ -9,6 +9,7 @@ import { Text } from '@/components/ui/text';
 import type { Task } from '../../types';
 
 import { TaskCard } from './TaskCard';
+import { format, parseSafeDate } from '@/src/utils/safeFormat';
 
 export interface TaskListProps {
   tasks: Task[];
@@ -20,11 +21,7 @@ function formatCompletedDate(task: Task): string {
   // Use date field as fallback
   const dateStr = task.date;
   if (!dateStr) return '';
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+  return format(parseSafeDate(dateStr), 'MMM d, yyyy');
 }
 
 export function TaskList({ tasks, activeTab, completeTask }: TaskListProps) {

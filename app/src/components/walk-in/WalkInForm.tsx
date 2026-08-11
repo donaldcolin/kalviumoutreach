@@ -9,6 +9,7 @@ import { ChevronDownIcon, CalendarIcon, ClockIcon, MapPinIcon, Mic, Camera, X } 
 import * as ImagePicker from 'expo-image-picker';
 
 import { WalkInFormState } from '../../utils/lsqMappers';
+import { format, parseSafeDate } from '@/src/utils/safeFormat';
 
 export const CustomSelect = ({ label, options, value, onChange, placeholder = "Select option" }: { label: string, options: string[], value: string, onChange: (val: string) => void, placeholder?: string }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -87,7 +88,7 @@ export const CustomDateTimePicker = ({ label, date, setDate }: { label: string, 
     if (selectedDate) {
       const currentDate = date || new Date();
       currentDate.setFullYear(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-      setDate(new Date(currentDate));
+      setDate(parseSafeDate(currentDate));
     }
   };
 
@@ -96,7 +97,7 @@ export const CustomDateTimePicker = ({ label, date, setDate }: { label: string, 
     if (selectedDate) {
       const currentDate = date || new Date();
       currentDate.setHours(selectedDate.getHours(), selectedDate.getMinutes());
-      setDate(new Date(currentDate));
+      setDate(parseSafeDate(currentDate));
     }
   };
 
@@ -110,7 +111,7 @@ export const CustomDateTimePicker = ({ label, date, setDate }: { label: string, 
         >
           <CalendarIcon size={16} color="#64748B" />
           <Text className={`text-sm ml-2 font-medium ${date ? "text-slate-900" : "text-slate-400"}`}>
-            {date ? date.toLocaleDateString() : 'Pick a date'}
+            {date ? format(date, 'MM/dd/yyyy') : 'Pick a date'}
           </Text>
         </Pressable>
         
@@ -120,7 +121,7 @@ export const CustomDateTimePicker = ({ label, date, setDate }: { label: string, 
         >
           <ClockIcon size={16} color="#64748B" />
           <Text className={`text-sm ml-2 font-medium ${date ? "text-slate-900" : "text-slate-400"}`}>
-            {date ? date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Pick time'}
+            {date ? format(date, 'hh:mm a') : 'Pick time'}
           </Text>
         </Pressable>
       </View>

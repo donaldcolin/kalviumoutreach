@@ -10,6 +10,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useWalkInStore } from '../../stores/walkInStore';
 import { Building2 } from 'lucide-react-native';
 import type { CrmActivity } from '../../types';
+import { format, parseSafeDate } from '@/src/utils/safeFormat';
 
 // ─── Status Tags (Red/White/Gray only) ───────────────────────────────────────
 const getStatusTag = (status: string) => {
@@ -22,22 +23,22 @@ const getStatusTag = (status: string) => {
 
 function formatTime(dateStr: string) {
   try {
-    const d = new Date(dateStr);
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const d = parseSafeDate(dateStr);
+    return format(d, 'hh:mm a');
   } catch { return ''; }
 }
 
 function formatDate(dateStr: string) {
   try {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const d = parseSafeDate(dateStr);
+    return format(d, 'MMM d, yyyy');
   } catch { return ''; }
 }
 
 function formatShortDate(dateStr: string) {
   try {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const d = parseSafeDate(dateStr);
+    return format(d, 'MMM d');
   } catch { return ''; }
 }
 
@@ -239,8 +240,8 @@ export default function LeadDetailScreen() {
 
       const acts = snapshot.docs.map((d: { id: any; data: () => Omit<CrmActivity, "id">; }) => ({ id: d.id, ...(d.data() as Omit<CrmActivity, 'id'>) }));
       acts.sort((a: { walkInDateTime: any; lsqCreatedOn: any; }, b: { walkInDateTime: any; lsqCreatedOn: any; }) => {
-        const ta = new Date(a.walkInDateTime || a.lsqCreatedOn || 0).getTime();
-        const tb = new Date(b.walkInDateTime || b.lsqCreatedOn || 0).getTime();
+        const ta = parseSafeDate(a.walkInDateTime || a.lsqCreatedOn || 0).getTime();
+        const tb = parseSafeDate(b.walkInDateTime || b.lsqCreatedOn || 0).getTime();
         return tb - ta;
       });
       setActivities(acts);

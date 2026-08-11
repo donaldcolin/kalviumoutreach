@@ -4,6 +4,7 @@ import { VStack } from '@/components/ui/vstack';
 import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import type { CrmActivity } from '../../types';
+import { format, parseSafeDate } from '@/src/utils/safeFormat';
 
 export interface PushToLsModalProps {
   visible: boolean;
@@ -60,7 +61,7 @@ export function PushToLsModal({ visible, onClose, activities, onPush, isPushing 
                         </Text>
                       </View>
                       <Text className="text-xs text-slate-400">
-                        {item.lsqCreatedOn ? new Date(item.lsqCreatedOn).toLocaleDateString() : ''}
+                        {item.lsqCreatedOn ? format(parseSafeDate(item.lsqCreatedOn), 'MM/dd/yyyy') : ''}
                       </Text>
                     </HStack>
                   </VStack>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Text } from '@/components/ui/text';
+import { format } from '@/src/utils/safeFormat';
 
 export interface DailyStatsCardProps {
   selectedDate: Date;
@@ -9,7 +10,7 @@ export interface DailyStatsCardProps {
 
 export function DailyStatsCard({ selectedDate, visitCount }: DailyStatsCardProps) {
   const isToday = selectedDate.toDateString() === new Date().toDateString();
-  const dateString = isToday ? 'Today' : selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const dateString = isToday ? 'Today' : format(selectedDate, 'MMM d');
 
   return (
     <View className="w-full mb-6 bg-white border border-gray-200 rounded-xl p-5">

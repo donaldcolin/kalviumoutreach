@@ -70,7 +70,12 @@ export default function AddLeadScreen() {
       }
 
       Toast.show({ title: 'Success', message: 'Lead created successfully', type: 'success' });
-      navigation.goBack();
+      
+      if (data.lead) {
+        navigation.navigate('Leads', { newLead: data.lead });
+      } else {
+        navigation.goBack();
+      }
 
     } catch (error: any) {
       console.error('Error creating lead:', error);

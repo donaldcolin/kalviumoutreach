@@ -187,7 +187,7 @@ export default function LeadsScreen() {
               <ActivityIndicator size="large" color="#E11D48" />
             </View>
           ) : (
-            <FlashList
+            <FlashList estimatedItemSize={150}
               data={paginatedLeads}
               keyExtractor={(item) => item.ProspectID}
               showsVerticalScrollIndicator={false}
@@ -249,7 +249,7 @@ export default function LeadsScreen() {
               <ActivityIndicator size="large" color="#E11D48" />
             </View>
           ) : (
-            <FlashList
+            <FlashList estimatedItemSize={150}
               data={globalResults}
               keyExtractor={(item) => item.ProspectID}
               showsVerticalScrollIndicator={false}

@@ -3,7 +3,7 @@ import firestore from '@react-native-firebase/firestore';
 import { useAuthStore } from '../stores/authStore';
 import * as Location from 'expo-location';
 import { appendPing } from '../services/firestore';
-import { format } from 'date-fns';
+import { format } from '@/src/utils/safeFormat';
 import { logger } from '../utils/logger';
 import type { LocationPing } from '../types';
 
