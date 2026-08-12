@@ -2,6 +2,7 @@
  * Authentication service — email/password and phone OTP via Firebase Auth.
  * Tokens stored in expo-secure-store (not AsyncStorage).
  */
+
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import * as SecureStore from 'expo-secure-store';

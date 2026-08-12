@@ -12,6 +12,10 @@ export async function requireAuth(req, res, next) {
   }
 
   const token = authHeader.split('Bearer ')[1];
+  
+  if (!token || token.trim() === '') {
+    return res.status(401).json({ error: 'Unauthorized: Empty token' });
+  }
 
   try {
     const decodedToken = await auth.verifyIdToken(token);

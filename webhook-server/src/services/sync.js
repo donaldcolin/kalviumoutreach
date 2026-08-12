@@ -10,6 +10,7 @@ import { lsqFetch, parseActivityData, buildFirestoreDoc } from './lsq.js';
 export let lastSyncResult = { timestamp: null, activitiesFetched: 0, activitiesWritten: 0, error: null };
 let isSyncing = false;
 const globalLeadNameCache = new Map();
+const globalEmailToIdCache = new Map();
 
 // ─── Main Sync Function ─────────────────────────────────────────────────────
 
@@ -90,14 +91,33 @@ export async function syncActivities(hours = SYNC_LOOKBACK_MINUTES / 60) {
     }
 
     // 3. Build email → Firestore user ID mapping
-    const usersSnap = await db.collection('users').get();
+    // We rely purely on lazy-loading missing emails to save Firestore reads.
+
+    // Identify missing user emails from the fetched activities
+    const uniqueEmails = [...new Set(allActivities.map(a => a.OwnerIdEmailAddress).filter(Boolean).map(e => e.toLowerCase()))];
+    const missingEmails = uniqueEmails.filter(email => !globalEmailToIdCache.has(email));
+
+    if (missingEmails.length > 0) {
+      console.log(`   📡 Fetching ${missingEmails.length} missing user emails from Firestore...`);
+      // For each missing email, perform a targeted single query
+      await Promise.all(missingEmails.map(async (email) => {
+        const snap = await db.collection('users').where('email', '==', email).limit(1).get();
+        if (!snap.empty) {
+          globalEmailToIdCache.set(email, snap.docs[0].id);
+        } else {
+          // Store null to avoid refetching missing users repeatedly
+          globalEmailToIdCache.set(email, null);
+        }
+      }));
+    }
+
     const emailToFirestoreId = {};
-    usersSnap.forEach(doc => {
-      const data = doc.data();
-      if (data.email) {
-        emailToFirestoreId[data.email.toLowerCase()] = doc.id;
+    for (const email of uniqueEmails) {
+      const id = globalEmailToIdCache.get(email);
+      if (id) {
+        emailToFirestoreId[email] = id;
       }
-    });
+    }
 
     // 4. Fetch missing Lead Names from LeadSquared (Optimized with caching and concurrency)
     // Filter out leads we already have in our global cache
@@ -177,37 +197,13 @@ export async function syncActivities(hours = SYNC_LOOKBACK_MINUTES / 60) {
         // Priority 1: If we already have a doc with this lsqActivityId, update it.
         let docRef = mappedDocs[activityId];
 
-        // Priority 2: If the app created a doc (source='app-push') for the same
-        // lead around the same time, link it instead of creating a duplicate.
-        if (!docRef && raw.RelatedProspectId) {
-          try {
-            const appCreatedSnap = await db.collection('crmActivities')
-              .where('lsqLeadId', '==', raw.RelatedProspectId)
-              .where('source', '==', 'app-push')
-              .where('lsqActivityId', '==', null)
-              .limit(5)
-              .get();
-            
-            if (!appCreatedSnap.empty) {
-              // Check if any of these are within 1 hour of the LSQ activity
-              // (Tightened from 12 hours to 1 hour to prevent merging distinct morning/afternoon visits)
-              const lsqTime = new Date(raw.ModifiedOn || raw.CreatedOn || raw.ActivityDateTime || 0).getTime();
-              for (const appDoc of appCreatedSnap.docs) {
-                if (claimedLocalDocs.has(appDoc.id)) continue;
-                
-                const appData = appDoc.data();
-                const appTime = new Date(appData.walkInDateTime || 0).getTime();
-                if (Math.abs(lsqTime - appTime) < 60 * 60 * 1000) {
-                  docRef = appDoc.ref;
-                  claimedLocalDocs.add(appDoc.id);
-                  // Link the app doc to the LSQ activity ID for future syncs
-                  doc.lsqActivityId = activityId;
-                  break;
-                }
-              }
-            }
-          } catch (e) {
-            // If the dedup query fails, fall through to normal write
+        // Priority 2: Deterministic link via [AppRef:uuid] tag injected by pushQueue.js
+        if (!docRef && doc.notes) {
+          const match = String(doc.notes).match(/\[AppRef:([^\]]+)\]/);
+          if (match && match[1]) {
+            const localUuid = match[1];
+            docRef = db.collection('crmActivities').doc(localUuid);
+            doc.lsqActivityId = activityId;
           }
         }
 

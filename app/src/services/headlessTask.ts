@@ -1,10 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as TaskManager from 'expo-task-manager';
 import * as BackgroundFetch from 'expo-background-fetch';
-import firestore from '@react-native-firebase/firestore';
 import * as Location from 'expo-location';
 import { appendPing } from './firestore';
-import { format } from '@/src/utils/safeFormat';
 import { logger } from '../utils/logger';
 import type { LocationPing } from '../types';
 
@@ -42,7 +40,28 @@ TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
       }
 
       const accuracy = Location.Accuracy.Balanced;
-      const loc = await Location.getCurrentPositionAsync({ accuracy });
+      
+      const locPromise = Location.getCurrentPositionAsync({ accuracy }).catch(e => {
+        logger.warn('getCurrentPositionAsync rejected', String(e));
+        return null;
+      });
+      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 10000));
+      
+      let loc = await Promise.race([locPromise, timeoutPromise]) as Location.LocationObject | null;
+      
+      if (!loc) {
+        logger.warn('getCurrentPositionAsync failed or timed out. Falling back to getLastKnownPositionAsync.');
+        loc = await Location.getLastKnownPositionAsync().catch(e => {
+           logger.warn('getLastKnownPositionAsync rejected', String(e));
+           return null;
+        });
+      }
+      
+      if (!loc) {
+         logger.warn('Could not retrieve any location within the time limit.');
+         return BackgroundFetch.BackgroundFetchResult.NoData;
+      }
+      
       const ping: LocationPing = {
         lat: loc.coords.latitude,
         lng: loc.coords.longitude,

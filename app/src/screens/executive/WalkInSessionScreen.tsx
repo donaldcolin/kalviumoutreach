@@ -3,6 +3,7 @@ import { View, ScrollView, ActivityIndicator, Platform, Pressable, StyleSheet, T
 import { Toast } from '@/components/ui/ToastManager';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import { VStack } from '@/components/ui/vstack';
 import { Text } from '@/components/ui/text';
 import { Button, ButtonText } from '@/components/ui/button';
@@ -188,25 +189,20 @@ export default function WalkInSessionScreen() {
       console.log('Failed to fetch end location:', e);
     }
     
-    // Merge in the final photo URI if provided directly
+    let photoUploadFailedOffline = false;
     const finalFormState = { ...form };
     if (finalPhotoUri) {
       finalFormState.photoUri = finalPhotoUri;
       
       try {
         const rawUrl = await uploadPhoto(finalPhotoUri);
-        
-        // Add watermarking to the Cloudinary URL using URL Transformations
         const lat = endLocation?.lat || startLocation?.lat;
         const lng = endLocation?.lng || startLocation?.lng;
         const timestamp = format(new Date(), 'dd/MM/yyyy, hh:mm a');
-        
-        let watermarkedUrl = rawUrl;
-        // The user requested to skip the timing/location watermark overlay.
-        finalFormState.photoUrl = watermarkedUrl;
+        finalFormState.photoUrl = rawUrl;
       } catch (err) {
         console.error("Photo upload failed:", err);
-        Toast.show({ title: 'Warning', message: 'Activity submitted, but photo upload failed.', type: 'error' });
+        photoUploadFailedOffline = true;
       }
     }
 
@@ -231,9 +227,16 @@ export default function WalkInSessionScreen() {
       firestoreSync.syncUnsyncedLocations().catch(console.error);
 
       hasSubmitted.current = true;
+      
+      if (photoUploadFailedOffline) {
+        Toast.show({ title: 'Saved Offline', message: 'Walk-in saved securely. Photo upload failed due to network connection.', type: 'warning' });
+      } else {
+        Toast.show({ title: 'Success', message: 'Walk-In recorded successfully.', type: 'success' });
+      }
+
       navigation.goBack();
     } else {
-      Toast.show({ title: 'Error', message: 'Failed to push to LeadSquared. Please try again.', type: 'error' });
+      Toast.show({ title: 'Error', message: 'Failed to save Walk-In. Please try again.', type: 'error' });
     }
   };
 
@@ -267,7 +270,7 @@ export default function WalkInSessionScreen() {
 
         {/* Phase 1: Pre-Walk-In */}
         {phase === 'pre' && (
-          <VStack className="flex-1 items-center justify-center pt-24 px-6">
+          <Animated.View entering={FadeInUp.duration(400)} className="flex-1 items-center justify-center pt-24 px-6">
             <View className="w-24 h-24 rounded-full bg-red-50 items-center justify-center mb-6">
               <MapPinIcon size={40} color="#DC2626" />
             </View>
@@ -278,6 +281,7 @@ export default function WalkInSessionScreen() {
             
             <Pressable
               className={`w-full rounded-xl py-4 items-center justify-center ${isValidatingLocation ? 'bg-rose-400' : 'bg-rose-600'}`}
+              style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }] }]}
               onPress={handleStartWalkIn}
               disabled={isValidatingLocation}
             >
@@ -287,12 +291,12 @@ export default function WalkInSessionScreen() {
                 <Text className="text-white font-bold text-lg">Start Walk-In</Text>
               )}
             </Pressable>
-          </VStack>
+          </Animated.View>
         )}
 
         {/* Phase 2: Active Walk-In — Choice Screen */}
         {phase === 'active' && (
-          <VStack className="flex-1 items-center justify-center pt-20 px-6">
+          <Animated.View entering={FadeInUp.duration(400)} className="flex-1 items-center justify-center pt-20 px-6">
             <View className="bg-gray-50 border border-gray-200 px-4 py-1 rounded-full mb-8 flex-row items-center gap-2 self-center">
               <View className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
               <Text className="text-gray-700 font-semibold text-sm">Walk-In Active</Text>
@@ -322,6 +326,7 @@ export default function WalkInSessionScreen() {
             <View className="w-full flex-col gap-4">
               <Pressable
                 onPress={handleRecordMeeting}
+                style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }] }]}
                 className="bg-white border border-gray-200 rounded-xl p-6 flex-row items-center gap-4 active:bg-gray-50"
               >
                 <View className="w-14 h-14 rounded-full bg-red-50 items-center justify-center">
@@ -335,6 +340,7 @@ export default function WalkInSessionScreen() {
 
               <Pressable
                 onPress={handleSkipToForm}
+                style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }] }]}
                 className="bg-white border border-gray-200 rounded-xl p-6 flex-row items-center gap-4 active:bg-gray-50"
               >
                 <View className="w-14 h-14 rounded-full bg-gray-100 items-center justify-center">
@@ -346,12 +352,12 @@ export default function WalkInSessionScreen() {
                 </View>
               </Pressable>
             </View>
-          </VStack>
+          </Animated.View>
         )}
 
         {/* Phase 2b: Recording */}
         {phase === 'recording' && (
-          <VStack className="flex-1 items-center justify-center pt-20 px-6">
+          <Animated.View entering={FadeInUp.duration(400)} className="flex-1 items-center justify-center pt-20 px-6">
             <View className="bg-gray-50 border border-gray-200 px-4 py-1 rounded-full mb-10 flex-row items-center gap-2 self-center">
               <View className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
               <Text className="text-gray-700 font-semibold text-sm">Walk-In Active</Text>
@@ -401,24 +407,26 @@ export default function WalkInSessionScreen() {
                 <ButtonText className="text-white font-bold text-lg">End Walk-In & Proceed</ButtonText>
               </Button>
             </View>
-          </VStack>
+          </Animated.View>
         )}
 
         {/* Phase 3: Form */}
         {phase === 'form' && (
-          <WalkInForm
-            form={form}
-            updateForm={updateForm}
-            locationStatus={locationStatus}
-            locationAddress={locationAddress}
-            startLocation={startLocation}
-            fetchLocation={fetchLocation}
-            isUploading={isUploading}
-            recordingUrl={recordingUrl}
-            isSyncing={isSyncing}
-            isValidatingLocation={isValidatingLocation}
-            handleSubmit={handleSubmit}
-          />
+          <Animated.View entering={FadeInUp.duration(400)} className="flex-1">
+            <WalkInForm
+              form={form}
+              updateForm={updateForm}
+              locationStatus={locationStatus}
+              locationAddress={locationAddress}
+              startLocation={startLocation}
+              fetchLocation={fetchLocation}
+              isUploading={isUploading}
+              recordingUrl={recordingUrl}
+              isSyncing={isSyncing}
+              isValidatingLocation={isValidatingLocation}
+              handleSubmit={handleSubmit}
+            />
+          </Animated.View>
         )}
       </VStack>
     </ScrollView>

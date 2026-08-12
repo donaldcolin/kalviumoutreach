@@ -5,12 +5,12 @@ import React, { useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { ExecutiveTabParamList } from '../types';
-import { TouchableOpacity, Modal, View, StyleSheet, TouchableWithoutFeedback } from 'react-native';
+import { TouchableOpacity, Modal, View, StyleSheet, TouchableWithoutFeedback, Animated, Dimensions, Easing } from 'react-native';
 import { Image } from 'expo-image';
-import { User, Menu, MapPin, FileText, List, Briefcase, Bug, Plus } from 'lucide-react-native';
+import { User, Menu, MapPin, FileText, List, Briefcase, Bug, Plus, X } from 'lucide-react-native';
+import { useActionSheet, ActionSheetProvider } from '@expo/react-native-action-sheet';
 
 import DashboardScreen from '../screens/executive/DashboardScreen';
-import MeetingNotesScreen from '../screens/executive/MeetingNotesScreen';
 import TasksScreen from '../screens/executive/TasksScreen';
 import LeadsScreen from '../screens/executive/LeadsScreen';
 import LeadDetailScreen from '../screens/executive/LeadDetailScreen';
@@ -61,70 +61,75 @@ import { useNavigation } from '@react-navigation/native';
 
 // ─── Header Menu Component ───────────────────────────────────────────────────
 
+const { width } = Dimensions.get('window');
+const DRAWER_WIDTH = width * 0.7;
+
 function HeaderRightMenu() {
   const [visible, setVisible] = useState(false);
   const navigation = useNavigation<any>();
 
+  const openMenu = () => setVisible(true);
+
+  const closeMenu = (callback?: () => void) => {
+    setVisible(false);
+    if (callback) callback();
+  };
+
+  const navigateTo = (screen: string) => {
+    closeMenu(() => navigation.navigate(screen));
+  };
+
   return (
     <>
       <TouchableOpacity
-        onPress={() => setVisible(true)}
-        style={{ padding: 8, marginRight: 12, marginTop: 8, borderRadius: 20 }}
+        onPress={openMenu}
+        style={{ padding: 8, marginRight: 12, borderRadius: 20 }}
       >
         <Menu color="#0F172A" size={28} strokeWidth={1.5} />
       </TouchableOpacity>
 
-      <Modal visible={visible} transparent={true} animationType="fade">
-        <TouchableWithoutFeedback onPress={() => setVisible(false)}>
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.1)' }}>
+      <Modal transparent visible={visible} onRequestClose={() => closeMenu()} animationType="fade">
+        <TouchableWithoutFeedback onPress={() => closeMenu()}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.15)' }}>
             <TouchableWithoutFeedback>
-              <View style={{
-                position: 'absolute',
-                top: 60,
-                right: 16,
-                backgroundColor: '#FFFFFF',
-                borderRadius: 16,
-                padding: 8,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.1,
-                shadowRadius: 12,
-                elevation: 8,
-                minWidth: 160
-              }}>
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 60,
+                  right: 16,
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: 16,
+                  width: 200,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 8 },
+                  shadowOpacity: 0.12,
+                  shadowRadius: 16,
+                  elevation: 8,
+                  overflow: 'hidden'
+                }}
+              >
                 <TouchableOpacity
-                  style={{ padding: 12, flexDirection: 'row', alignItems: 'center', borderRadius: 10 }}
-                  onPress={() => {
-                    setVisible(false);
-                    navigation.navigate('Profile');
-                  }}
+                  onPress={() => navigateTo('Profile')}
+                  className="px-5 py-4 border-b border-slate-50 flex-row items-center"
                 >
-                  <User color="#0F172A" size={20} strokeWidth={1.5} style={{ marginRight: 12 }} />
-                  <Text style={{ fontSize: 16, color: '#0F172A', fontWeight: '500' }}>Profile</Text>
+                  <User color="#64748B" size={20} />
+                  <Text className="text-base font-medium text-slate-700 ml-3">Profile</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={{ padding: 12, flexDirection: 'row', alignItems: 'center', borderRadius: 10, marginTop: 4 }}
-                  onPress={() => {
-                    setVisible(false);
-                    navigation.navigate('BugReport');
-                  }}
+                  onPress={() => navigateTo('AddLead')}
+                  className="px-5 py-4 border-b border-slate-50 flex-row items-center"
                 >
-                  <Bug color="#DC2626" size={20} strokeWidth={1.5} style={{ marginRight: 12 }} />
-                  <Text style={{ fontSize: 16, color: '#DC2626', fontWeight: '500' }}>Report Bug</Text>
+                  <Plus color="#64748B" size={20} />
+                  <Text className="text-base font-medium text-slate-700 ml-3">Add Lead</Text>
                 </TouchableOpacity>
 
-                <View style={{ height: 1, backgroundColor: '#F1F5F9', marginVertical: 4 }} />
-
                 <TouchableOpacity
-                  style={{ padding: 12, flexDirection: 'row', alignItems: 'center', borderRadius: 10 }}
-                  onPress={() => {
-                    setVisible(false);
-                    navigation.navigate('AddLead');
-                  }}
+                  onPress={() => navigateTo('BugReport')}
+                  className="px-5 py-4 flex-row items-center"
                 >
-                  <Plus color="#0F172A" size={20} strokeWidth={1.5} style={{ marginRight: 12 }} />
-                  <Text style={{ fontSize: 16, color: '#0F172A', fontWeight: '500' }}>Add Lead</Text>
+                  <Bug color="#64748B" size={20} />
+                  <Text className="text-base font-medium text-slate-700 ml-3">Report Bug</Text>
                 </TouchableOpacity>
               </View>
             </TouchableWithoutFeedback>
@@ -222,50 +227,52 @@ function ExecutiveTabs() {
 
 export default function ExecutiveNavigator() {
   return (
-    <ExecutiveStack.Navigator screenOptions={{ headerShown: false }}>
-      <ExecutiveStack.Screen name="ExecutiveTabs" component={ExecutiveTabs} />
-      <ExecutiveStack.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{
-          headerShown: true,
-          title: 'Profile',
-          headerStyle: { backgroundColor: '#F8FAFC' },
-          headerShadowVisible: false
-        }}
-      />
-      <ExecutiveStack.Screen
-        name="LeadDetail"
-        component={LeadDetailScreen}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <ExecutiveStack.Screen
-        name="ActivityForm"
-        component={WalkInSessionScreen}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <ExecutiveStack.Screen
-        name="AddLead"
-        component={AddLeadScreen}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <ExecutiveStack.Screen
-        name="BugReport"
-        component={BugReportScreen}
-        options={{
-          headerShown: true,
-          title: '',
-          headerStyle: { backgroundColor: '#F8FAFC' },
-          headerShadowVisible: false,
-          headerTintColor: '#64748B'
-        }}
-      />
-    </ExecutiveStack.Navigator>
+    <ActionSheetProvider>
+      <ExecutiveStack.Navigator screenOptions={{ headerShown: false }}>
+        <ExecutiveStack.Screen name="ExecutiveTabs" component={ExecutiveTabs} />
+        <ExecutiveStack.Screen
+          name="Profile"
+          component={ProfileScreen}
+          options={{
+            headerShown: true,
+            title: 'Profile',
+            headerStyle: { backgroundColor: '#F8FAFC' },
+            headerShadowVisible: false
+          }}
+        />
+        <ExecutiveStack.Screen
+          name="LeadDetail"
+          component={LeadDetailScreen}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <ExecutiveStack.Screen
+          name="ActivityForm"
+          component={WalkInSessionScreen}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <ExecutiveStack.Screen
+          name="AddLead"
+          component={AddLeadScreen}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <ExecutiveStack.Screen
+          name="BugReport"
+          component={BugReportScreen}
+          options={{
+            headerShown: true,
+            title: '',
+            headerStyle: { backgroundColor: '#F8FAFC' },
+            headerShadowVisible: false,
+            headerTintColor: '#64748B'
+          }}
+        />
+      </ExecutiveStack.Navigator>
+    </ActionSheetProvider>
   );
 }

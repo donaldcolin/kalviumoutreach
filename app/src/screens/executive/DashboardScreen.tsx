@@ -12,6 +12,7 @@ import { useOutreachTracking } from '../../tracking/useOutreachTracking';
 import { useCrmActivitiesStore } from '../../stores/crmActivitiesStore';
 import { useTasksStore } from '../../stores/tasksStore';
 import { processAudioQueue } from '../../services/audioUploadQueue';
+import { Skeleton } from '../../components/ui/Skeleton';
 
 import {
   DashboardHeader,
@@ -28,7 +29,7 @@ export default function DashboardScreen() {
   const { user } = useAuthStore();
   const navigation = useNavigation<any>();
   const { isTracking, isTrackingInitialized, sessionStatus, startDay, endDay, activeSchoolMatch } = useOutreachTracking(user?.id);
-  const { activities: allActivities, initialize: initCrm, refresh: refreshCrm, isRefreshing: crmRefreshing } = useCrmActivitiesStore();
+  const { activities: allActivities, initialize: initCrm, refresh: refreshCrm, isRefreshing: crmRefreshing, isLoading: crmLoading } = useCrmActivitiesStore();
   const { pendingTasks: appointments, overdueCount, todayCount, completeTask, initialize: initTasks, refresh: refreshTasks, isRefreshing: tasksRefreshing } = useTasksStore();
 
   useEffect(() => {
@@ -107,6 +108,8 @@ export default function DashboardScreen() {
       return ts >= start.getTime() && ts <= end.getTime();
     });
   }, [allActivities, selectedDate]);
+
+  const isInitialLoading = crmLoading && filteredActivities.length === 0;
 
   const dates = React.useMemo(() => {
     return Array.from({ length: 15 }).map((_, i) => {
@@ -195,9 +198,8 @@ export default function DashboardScreen() {
 
   return (
     <View className="flex-1 bg-white">
-      <FlashList estimatedItemSize={150}
-        data={filteredActivities}
-        keyExtractor={(item) => item.id}
+      <FlashList 
+        keyExtractor={(item: any) => item.id}
         contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 12, paddingBottom: 18 }}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} colors={['#E11D48']} tintColor="#E11D48" />
@@ -239,7 +241,27 @@ export default function DashboardScreen() {
             <ActivityListHeader count={filteredActivities.length} />
           </>
         }
-        renderItem={({ item }) => <ActivityCardItem activity={item} />}
+        data={isInitialLoading ? [{id: 'sk1'}, {id: 'sk2'}, {id: 'sk3'}, {id: 'sk4'}] as any : filteredActivities}
+        renderItem={({ item }: {item: any}) => {
+          if (isInitialLoading) {
+            return (
+              <View className="bg-white rounded-2xl border border-gray-100 p-4 mb-3 shadow-sm mx-1">
+                <View className="flex-row items-start justify-between mb-3">
+                  <View className="flex-row items-center flex-1">
+                    <Skeleton style={{ width: 40, height: 40, borderRadius: 12, marginRight: 12 }} />
+                    <View className="flex-1 mr-4">
+                      <Skeleton style={{ width: '70%', height: 16, marginBottom: 8 }} />
+                      <Skeleton style={{ width: '40%', height: 12 }} />
+                    </View>
+                  </View>
+                  <Skeleton style={{ width: 60, height: 24, borderRadius: 12 }} />
+                </View>
+                <Skeleton style={{ width: '100%', height: 16, marginTop: 8 }} />
+              </View>
+            );
+          }
+          return <ActivityCardItem activity={item} />;
+        }}
       />
 
       <StartDayModal

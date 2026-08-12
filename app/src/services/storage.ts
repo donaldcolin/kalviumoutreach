@@ -16,6 +16,7 @@ export type UploadProgressCallback = (progress: UploadProgress) => void;
  * Upload a file to Cloudinary via REST API.
  * Uses XMLHttpRequest to maintain upload progress tracking.
  */
+
 function uploadToCloudinary(
   localUri: string,
   resourceType: 'image' | 'video' | 'raw',

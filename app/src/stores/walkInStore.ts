@@ -43,9 +43,21 @@ export const useWalkInStore = create<WalkInState>((set, get) => ({
     try {
       const stored = await AsyncStorage.getItem(`${STORAGE_KEY}_${userId}`);
       if (stored) {
-        // Verify the walk-in still exists in Firestore (manager may have cancelled it)
-        const docSnap = await firestore().collection('ongoingWalkIns').doc(userId).get();
-        if (docSnap.exists()) {
+        let existsRemotely = true;
+        try {
+          // Verify the walk-in still exists in Firestore (manager may have cancelled it)
+          // Use a short timeout so we don't hang startup if offline
+          const docSnapPromise = firestore().collection('ongoingWalkIns').doc(userId).get();
+          const timeoutPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
+          const docSnap = await Promise.race([docSnapPromise, timeoutPromise]) as any;
+          
+          existsRemotely = docSnap.exists;
+        } catch (e) {
+          // If network fails or times out, assume it exists so we don't accidentally delete their session while offline
+          console.warn('Failed to verify ongoing walk-in remotely, assuming it exists', String(e));
+        }
+
+        if (existsRemotely) {
           set({ ongoingWalkIn: JSON.parse(stored) as OngoingWalkIn, isLoading: false });
         } else {
           // Walk-in was cancelled remotely — clear stale local copy
@@ -56,10 +68,9 @@ export const useWalkInStore = create<WalkInState>((set, get) => ({
         set({ ongoingWalkIn: null, isLoading: false });
       }
     } catch (err) {
-      // If Firestore is unreachable, fall back to showing the local walk-in
-      console.error('Failed to load ongoing walk-in:', err);
-      const stored = await AsyncStorage.getItem(`${STORAGE_KEY}_${userId}`).catch(() => null);
-      set({ ongoingWalkIn: stored ? JSON.parse(stored) as OngoingWalkIn : null, isLoading: false });
+      // If AsyncStorage read fails
+      console.error('Failed to load ongoing walk-in from storage:', err);
+      set({ ongoingWalkIn: null, isLoading: false });
     }
   },
 
@@ -106,12 +117,14 @@ export const useWalkInStore = create<WalkInState>((set, get) => ({
 
   clearWalkIn: async (userId: string) => {
     try {
-      // Optimistically update the UI immediately
-      set({ ongoingWalkIn: null });
-
-      await AsyncStorage.removeItem(`${STORAGE_KEY}_${userId}`);
-      // Remove from Firestore
+      // Remove from Firestore first (this resolves immediately in offline cache)
+      // If permissions fail, this throws and we don't clear the UI state.
       await firestore().collection('ongoingWalkIns').doc(userId).delete();
+      
+      await AsyncStorage.removeItem(`${STORAGE_KEY}_${userId}`);
+      
+      // Update local state last so UI stays consistent
+      set({ ongoingWalkIn: null });
     } catch (err) {
       console.error('Failed to clear ongoing walk-in:', err);
     }

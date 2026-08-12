@@ -1,0 +1,26 @@
+Refactor: Comprehensive update across app, website, and webhook-server
+
+This commit introduces a wide range of improvements, bug fixes, and cleanups across the entire monorepo:
+
+### 1. Codebase Bloat Removal & Cleanup
+- Deleted unused native directories (`app/ios`, `website/android`) to reduce project size and avoid confusion since we are using Expo/web.
+- Removed unused scripts (`fix_imports.js`, `replace_date.js`, etc.) and deprecated assets (`favicon.png`, `splashscreen_logo.png`, etc.).
+- Cleaned up configuration files (`app.json`, `.env.example`, `firebase.json` redundancies).
+
+### 2. App (Mobile) Updates
+- **Tracking & Location**: Enhanced `locationTracker.ts` and `firestoreSync.ts` for more robust geolocation tracking and data syncing.
+- **UI/UX Improvements**: Updated `ExecutiveNavigator.tsx`, `AddLeadScreen.tsx`, `DashboardScreen.tsx`, and `WalkInSessionScreen.tsx` for better navigation and layout consistency.
+- **State & Services**: Improved `audioUploadQueue.ts` and `headlessTask.ts`. Updated Zustand stores (`authStore.ts`, `walkInStore.ts`) to handle state more gracefully.
+
+### 3. Website (Dashboard) Updates
+- **Analytics & Dashboard**: Refactored `AnalyticsTab.tsx` and `PipelineSeminars.tsx` to include loading states (Skeletons) and better empty state handling.
+- **Routing & CRM**: Minor layout and logic updates in `CRMHub.tsx` and `UserManagement.tsx`.
+- **Hooks**: Updated `useDashboardData.ts` to properly manage data loading states and error boundaries.
+
+### 4. Webhook Server Updates
+- **API Routes & Sync**: Refactored `src/api/routes.js` and `src/services/sync.js` to handle webhook payloads more efficiently.
+- **LeadSquared Integration**: Improved LSQ payload processing in `src/services/lsq.js`.
+- **Middleware**: Added stricter checks in `authMiddleware.js`.
+
+### 5. Dependency Management
+- Updated `package.json` and `package-lock.json` across workspaces to resolve dependency conflicts and ensure stable builds.

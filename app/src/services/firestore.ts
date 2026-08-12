@@ -2,6 +2,7 @@
  * Firestore CRUD operations for all collections.
  * All writes go through Firestore offline persistence automatically.
  */
+
 import firestore, { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 import { School, DailyTrack, LocationPing, } from '../types';
 import { isValidPoint } from '../utils/gpsValidation';

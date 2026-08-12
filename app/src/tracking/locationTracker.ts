@@ -97,10 +97,10 @@ class LocationTracker {
       logger.warn('Could not get starting location:', e instanceof Error ? e.message : String(e));
     }
 
-    this.unsubscribeMotion = motionDetector.subscribe((state) => {
+    this.unsubscribeMotion = motionDetector.subscribe(async (state) => {
       const prevState = this.currentMotionState;
       this.currentMotionState = state;
-      this.handleMotionStateTransition(prevState, state);
+      await this.handleMotionStateTransition(prevState, state);
       this.updateLocationTaskConfig();
       this.setFlushTimer(); // Adjust timer dynamically when motion state changes
     });
@@ -137,17 +137,15 @@ class LocationTracker {
   }
 
   private setFlushTimer() {
-    if (this.batchFlushInterval) {
-      clearTimeout(this.batchFlushInterval);
-    }
-
     if (!this.isTracking) return;
+    if (this.batchFlushInterval) return; // Let the current timer finish to prevent starvation
 
     const interval = this.currentMotionState === 'STATIONARY'
       ? LocationTracker.STATIONARY_BATCH_INTERVAL_MS
       : LocationTracker.MOVING_BATCH_INTERVAL_MS;
 
     this.batchFlushInterval = setTimeout(() => {
+      this.batchFlushInterval = null;
       this.flushBuffer();
       this.setFlushTimer();
     }, interval);
@@ -158,7 +156,7 @@ class LocationTracker {
   // When the user has been STATIONARY for 5+ minutes, we enter deep stationary
   // (Low GPS accuracy, WiFi/cell only). When they start moving again, we
   // immediately grab a high-accuracy departure fix before switching to MOVING config.
-  private handleMotionStateTransition(prevState: MotionState, newState: MotionState) {
+  private async handleMotionStateTransition(prevState: MotionState, newState: MotionState) {
     if (newState === 'STATIONARY') {
       // Start the 5-minute countdown to deep stationary
       this.scheduleDeepStationary();
@@ -170,9 +168,19 @@ class LocationTracker {
         this.isDeepStationary = false;
         // Grab an immediate high-accuracy fix so we capture the departure point
         // before the regular MOVING config kicks in on the next cycle.
-        this.captureImmediateLocation();
+        await this.captureImmediateLocation();
       } else {
         this.isDeepStationary = false;
+      }
+      
+      // Force an immediate flush when transitioning to MOVING
+      if (newState === 'MOVING') {
+        if (this.batchFlushInterval) {
+           clearTimeout(this.batchFlushInterval);
+           this.batchFlushInterval = null;
+        }
+        this.flushBuffer();
+        this.setFlushTimer();
       }
     }
   }
@@ -398,22 +406,19 @@ export function filterLocationPoints(
       // jitter, not a real U-turn. Real U-turns cover more distance.
       if (speed > 0 && speed < 3 && dist < 10 && result.length >= 1) {
         const prevAccepted = result[result.length - 1];
-        const bearingToPrev = bearingDegrees(prevAccepted.lat, prevAccepted.lng, prev.lat, prev.lng);
-        const bearingToCandidate = bearingDegrees(prev.lat, prev.lng, candidate.lat, candidate.lng);
-        let bearingDelta = Math.abs(bearingToCandidate - bearingToPrev);
-        if (bearingDelta > 180) bearingDelta = 360 - bearingDelta;
-        if (bearingDelta > 120) continue; // Likely jitter, not a real turn
+        if (prevAccepted !== prev) {
+          const bearingToPrev = bearingDegrees(prevAccepted.lat, prevAccepted.lng, prev.lat, prev.lng);
+          const bearingToCandidate = bearingDegrees(prev.lat, prev.lng, candidate.lat, candidate.lng);
+          let bearingDelta = Math.abs(bearingToCandidate - bearingToPrev);
+          if (bearingDelta > 180) bearingDelta = 360 - bearingDelta;
+          if (bearingDelta > 120) continue; // Likely jitter, not a real turn
+        }
       }
 
       // Gate 5: Altitude sanity — reject impossible vertical changes
-      // GPS altitude can be wildly inaccurate. If altitude changes by >50m
-      // in under 30 seconds, it's physically impossible (would require
-      // free-climbing speeds) and is almost certainly a GPS artifact.
+      // GPS altitude can be wildly inaccurate.
       const altitude = loc.coords.altitude;
-      if (altitude != null && prev.ts && (candidate.ts - prev.ts) < 30000) {
-        // We need the previous raw altitude — check if we stored it
-        // For simplicity, we compare against the raw location altitude
-        // This gate catches the most egregious altitude spikes
+      if (altitude != null) {
         if (Math.abs(altitude) > 10000) continue; // Reject obviously wrong altitudes (>10km)
       }
     }

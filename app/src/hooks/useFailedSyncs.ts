@@ -35,8 +35,11 @@ export function useFailedSyncs(userId?: string) {
     try {
       const { id, ...data } = failedDoc;
       
+      const batch = firestore().batch();
+      
       // We must create a new document to trigger the onDocumentCreated Cloud Function
-      await firestore().collection('pushQueue').add({
+      const newDocRef = firestore().collection('pushQueue').doc();
+      batch.set(newDocRef, {
         ...data,
         status: 'pending',
         error: firestore.FieldValue.delete(), // remove the error field
@@ -44,7 +47,10 @@ export function useFailedSyncs(userId?: string) {
       });
 
       // Delete the old failed document
-      await firestore().collection('pushQueue').doc(id).delete();
+      const oldDocRef = firestore().collection('pushQueue').doc(id);
+      batch.delete(oldDocRef);
+      
+      await batch.commit();
       
       return true;
     } catch (e) {

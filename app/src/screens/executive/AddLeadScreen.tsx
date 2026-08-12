@@ -7,7 +7,8 @@ import { VStack } from '@/components/ui/vstack';
 import { HStack } from '@/components/ui/hstack';
 import { Toast } from '@/components/ui/ToastManager';
 import { useAuthStore } from '../../stores/authStore';
-import { ArrowLeft, MapPin, Phone, BookOpen, School } from 'lucide-react-native';
+import { ArrowLeft, MapPin, Phone, BookOpen, School, Check } from 'lucide-react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import * as Location from 'expo-location';
 import auth from '@react-native-firebase/auth';
 
@@ -18,6 +19,7 @@ export default function AddLeadScreen() {
   const { user } = useAuthStore();
 
   const [loading, setLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [form, setForm] = useState({
     schoolName: '',
     phone: '',
@@ -75,18 +77,19 @@ export default function AddLeadScreen() {
         throw new Error(data.error || 'Failed to create lead');
       }
 
-      Toast.show({ title: 'Success', message: 'Lead created successfully', type: 'success' });
+      setIsSuccess(true);
       
-      if (data.lead) {
-        navigation.navigate('Leads', { newLead: data.lead });
-      } else {
-        navigation.goBack();
-      }
+      setTimeout(() => {
+        if (data.lead) {
+          navigation.navigate('Leads', { newLead: data.lead });
+        } else {
+          navigation.goBack();
+        }
+      }, 1000);
 
     } catch (error: any) {
       console.error('Error creating lead:', error);
       Toast.show({ title: 'Error', message: error.message || 'Something went wrong', type: 'error' });
-    } finally {
       setLoading(false);
     }
   };
@@ -235,10 +238,14 @@ export default function AddLeadScreen() {
         <View className="p-4 border-t border-gray-100 bg-white mb-6">
           <TouchableOpacity
             onPress={handleSubmit}
-            disabled={loading}
-            className={`rounded-xl py-4 items-center flex-row justify-center ${loading ? 'bg-red-400' : 'bg-red-600'}`}
+            disabled={loading || isSuccess}
+            className={`rounded-xl py-4 items-center flex-row justify-center ${isSuccess ? 'bg-emerald-500' : loading ? 'bg-red-400' : 'bg-red-600'}`}
           >
-            {loading ? (
+            {isSuccess ? (
+              <Animated.View entering={FadeIn}>
+                <Check color="white" size={24} />
+              </Animated.View>
+            ) : loading ? (
               <>
                 <ActivityIndicator color="white" size="small" />
                 <Text className="text-white font-semibold text-base ml-2">Creating...</Text>

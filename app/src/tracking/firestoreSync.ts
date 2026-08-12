@@ -125,7 +125,16 @@ class FirestoreSync {
 
       await this.pushPointsToFirestore(userId, dateStr, points);
 
-      await AsyncStorage.removeItem(FirestoreSync.UNSYNCED_LOCATIONS_KEY);
+      // Safely remove only the points we just synced, in case the background task appended more while we were pushing
+      const currentStored = await AsyncStorage.getItem(FirestoreSync.UNSYNCED_LOCATIONS_KEY);
+      const currentPoints: LocationPoint[] = currentStored ? JSON.parse(currentStored) : [];
+      const remaining = currentPoints.slice(points.length);
+      if (remaining.length === 0) {
+        await AsyncStorage.removeItem(FirestoreSync.UNSYNCED_LOCATIONS_KEY);
+      } else {
+        await AsyncStorage.setItem(FirestoreSync.UNSYNCED_LOCATIONS_KEY, JSON.stringify(remaining));
+      }
+      
       logger.info(`Successfully synced ${points.length} hoarded points to cloud.`);
     } catch (e) {
       logger.error('Failed to sync hoarded locations', e instanceof Error ? e.message : String(e));
@@ -149,9 +158,13 @@ class FirestoreSync {
 
     try {
       // Append all points to routeArray on the parent doc (no subcollection writes)
-      // ponytail: chunk at 400 to stay within Firestore arrayUnion limits
       const CHUNK = 400;
       for (let i = 0; i < points.length; i += CHUNK) {
+        if (i > 0) {
+          // Respect Firestore's 1 write per second limit per document
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
         const slice = points.slice(i, i + CHUNK);
         await docRef.set({
           userId,

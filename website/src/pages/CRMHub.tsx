@@ -8,6 +8,7 @@ import { GlobalDataFilter } from '../components/GlobalDataFilter';
 import { KanbanSquare, ListTodo, Calendar } from 'lucide-react';
 import { useCrmData } from '../hooks/useCrmData';
 import { CrmTableView } from '../components/pipeline/CrmTableView';
+import { Skeleton } from '../components/ui/skeleton';
 
 type ViewMode = 'board' | 'tasks' | 'list';
 
@@ -95,34 +96,59 @@ export default function CRMHub() {
           </div>
         )}
 
-        {viewMode === 'board' && (
-          <div className="flex flex-1 overflow-x-auto snap-x snap-mandatory custom-scrollbar relative min-h-0">
-            <PipelineBoard
-              pipelineData={crmData.pipelineData}
-              stageGroups={crmData.stageGroups}
-              selectedSchool={selectedSchool}
-              setSelectedSchool={setSelectedSchool}
-            />
+        {crmData.isLoadingLeads && crmData.sortedAndPagedData.length === 0 ? (
+          <div className="flex-1 p-8 flex flex-col gap-4 bg-card border-x border-t border-border rounded-t-2xl">
+            {/* Table Header Skeleton */}
+            <div className="flex gap-4 border-b border-border pb-4 mb-2">
+               <Skeleton className="h-4 w-1/4" />
+               <Skeleton className="h-4 w-1/6" />
+               <Skeleton className="h-4 w-1/6" />
+               <Skeleton className="h-4 w-1/3" />
+               <Skeleton className="h-4 w-1/6" />
+            </div>
+            {/* Table Rows Skeleton */}
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div key={i} className="flex gap-4 items-center py-2">
+                <Skeleton className="h-6 w-1/4" />
+                <Skeleton className="h-6 w-1/6" />
+                <Skeleton className="h-8 w-24 rounded-full" />
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-4 w-1/6" />
+              </div>
+            ))}
           </div>
-        )}
+        ) : (
+          <>
+            {viewMode === 'board' && (
+              <div className="flex flex-1 overflow-x-auto snap-x snap-mandatory custom-scrollbar relative min-h-0">
+                <PipelineBoard
+                  pipelineData={crmData.pipelineData}
+                  stageGroups={crmData.stageGroups}
+                  selectedSchool={selectedSchool}
+                  setSelectedSchool={setSelectedSchool}
+                />
+              </div>
+            )}
 
-        {viewMode === 'tasks' && (
-          <div className="flex flex-1 overflow-hidden relative bg-white min-h-0">
-            <TaskCenter isEmbedded />
-          </div>
-        )}
+            {viewMode === 'tasks' && (
+              <div className="flex flex-1 overflow-hidden relative bg-white min-h-0">
+                <TaskCenter isEmbedded />
+              </div>
+            )}
 
-        {viewMode === 'list' && (
-          <CrmTableView
-            paginatedData={crmData.paginatedData}
-            sortedAndPagedData={crmData.sortedAndPagedData}
-            sortConfig={crmData.sortConfig}
-            handleSort={crmData.handleSort}
-            currentPage={crmData.currentPage}
-            setCurrentPage={crmData.setCurrentPage}
-            itemsPerPage={crmData.itemsPerPage}
-            setSelectedSchool={setSelectedSchool}
-          />
+            {viewMode === 'list' && (
+              <CrmTableView
+                paginatedData={crmData.paginatedData}
+                sortedAndPagedData={crmData.sortedAndPagedData}
+                sortConfig={crmData.sortConfig}
+                handleSort={crmData.handleSort}
+                currentPage={crmData.currentPage}
+                setCurrentPage={crmData.setCurrentPage}
+                itemsPerPage={crmData.itemsPerPage}
+                setSelectedSchool={setSelectedSchool}
+              />
+            )}
+          </>
         )}
 
         {/* Existing Detail Sheet for all views */}

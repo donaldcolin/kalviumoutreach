@@ -39,6 +39,8 @@ export default function Analytics() {
     return new Set(visibleUsers.map((u: any) => u.email?.toLowerCase()).filter(Boolean));
   }, [visibleUsers]);
 
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
     // Fetch last 7 days of CRM activities for Analytics tab
     const sevenDaysAgo = new Date();
@@ -67,6 +69,7 @@ export default function Analytics() {
         return new Date(dt).getTime() >= sevenDaysAgoTs;
       });
       setGlobalActivities7Days(filtered);
+      setIsLoading(false);
     });
     
     return () => unsub7();
@@ -101,7 +104,8 @@ export default function Analytics() {
       <div className="flex-1 overflow-hidden flex flex-col">
         <AnalyticsTab 
           users={visibleUsers.reduce((acc, u) => { acc[u.id] = u; return acc; }, {} as Record<string, any>)} 
-          globalActivities={globalActivities7Days} 
+          globalActivities={globalActivities7Days}
+          isLoading={isLoading}
         />
       </div>
     </div>

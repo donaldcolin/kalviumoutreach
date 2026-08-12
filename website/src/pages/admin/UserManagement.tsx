@@ -57,22 +57,28 @@ export default function UserManagement() {
 
   // Build org chart data
   const orgChartData = useMemo(() => {
+    const childrenByManager = new Map<string | undefined, any[]>();
+    const admins = allUsers.filter(u => u.role === 'admin');
+    const unassignedAgms = allUsers.filter(u => u.role === 'regionalManager' && !u.managerId);
+    
+    // Pre-group by managerId (O(N))
+    allUsers.forEach(u => {
+      if (u.managerId) {
+        if (!childrenByManager.has(u.managerId)) childrenByManager.set(u.managerId, []);
+        childrenByManager.get(u.managerId)!.push(u);
+      }
+    });
+
     const buildTree = (managerId?: string, isRoot = false): OrgNode[] => {
-      let children = allUsers.filter(u => {
-        if (isRoot) return u.role === 'admin';
-        
-        // Admins automatically manage all AGMs who don't have a manager assigned
-        const manager = allUsers.find(m => m.id === managerId);
-        if (manager?.role === 'admin' && u.role === 'regionalManager' && !u.managerId) {
-          return true;
-        }
-        
-        return u.managerId === managerId;
-      });
-      
-      // If we're looking for root and there are no admins, fallback to highest roles
-      if (isRoot && children.length === 0) {
-        children = allUsers.filter(u => !u.managerId);
+      let children: any[] = [];
+      if (isRoot) {
+         children = admins.length > 0 ? admins : allUsers.filter(u => !u.managerId);
+      } else {
+         children = childrenByManager.get(managerId) || [];
+         const manager = allUsers.find(m => m.id === managerId);
+         if (manager?.role === 'admin') {
+           children = [...children, ...unassignedAgms];
+         }
       }
 
       return children.map(u => ({
@@ -114,13 +120,16 @@ export default function UserManagement() {
         if (newUser.role === 'executive') {
            const selectedManager = users[newUser.managerId];
            if (selectedManager?.role === 'teamLead') {
-             userToCreate.seniorManagerId = selectedManager.managerId;
+             userToCreate.seniorManagerId = selectedManager.managerId || null;
            }
         }
         
         if (newUser.role === 'teamLead') {
            userToCreate.seniorManagerId = newUser.managerId;
         }
+      } else {
+        userToCreate.managerId = null;
+        userToCreate.seniorManagerId = null;
       }
 
       // Ensure managerId is selected if required

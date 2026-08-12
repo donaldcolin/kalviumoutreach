@@ -24,13 +24,16 @@ export function parseSafeDate(dateStr: string | number | Date | null | undefined
   if (!dateStr) return new Date();
   
   if (dateStr instanceof Date) {
-    if (!isNaN(dateStr.getTime())) return dateStr;
+    if (!isNaN(dateStr.getTime())) return new Date(dateStr.getTime());
     return new Date();
   }
 
   // Handle space-separated date strings like "2023-10-12 10:00:00" which fail on older Hermes/JSC
   if (typeof dateStr === 'string' && dateStr.includes(' ') && !dateStr.includes('T')) {
-    dateStr = dateStr.replace(' ', 'T') + 'Z'; // Force ISO 8601 parsing approximation
+    dateStr = dateStr.replace(' ', 'T');
+    if (!dateStr.endsWith('Z')) {
+      dateStr += 'Z'; // Force ISO 8601 parsing approximation
+    }
   }
 
   const d = new Date(dateStr);

@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Trophy, CalendarCheck, Presentation, Users } from 'lucide-react';
+import { Skeleton } from './ui/skeleton';
 
 interface AnalyticsTabProps {
   users: Record<string, any>;
   globalActivities: any[];
+  isLoading?: boolean;
 }
 
-export function AnalyticsTab({ users, globalActivities }: AnalyticsTabProps) {
+export function AnalyticsTab({ users, globalActivities, isLoading = false }: AnalyticsTabProps) {
   const [timeFilter, setTimeFilter] = useState<'week' | 'month' | 'all'>('week');
 
   // Aggregate activities by Associate
@@ -78,51 +80,60 @@ export function AnalyticsTab({ users, globalActivities }: AnalyticsTabProps) {
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-card p-5 rounded-2xl border border-border shadow-card flex items-start gap-4">
-            <div className="p-3 bg-secondary text-foreground rounded-xl">
-              <CalendarCheck size={20} />
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Skeleton className="h-[104px] w-full rounded-2xl" />
+            <Skeleton className="h-[104px] w-full rounded-2xl" />
+            <Skeleton className="h-[104px] w-full rounded-2xl" />
+            <Skeleton className="h-[104px] w-full rounded-2xl" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-card p-5 rounded-2xl border border-border shadow-card flex items-start gap-4 hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
+              <div className="p-3 bg-secondary text-foreground rounded-xl">
+                <CalendarCheck size={20} />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-1 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" /> Booked
+                </p>
+                <p className="text-2xl font-bold text-foreground">{totals.booked}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-1 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" /> Booked
-              </p>
-              <p className="text-2xl font-bold text-foreground">{totals.booked}</p>
+            <div className="bg-card p-5 rounded-2xl border border-border shadow-card flex items-start gap-4 hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
+              <div className="p-3 bg-primary text-primary-foreground rounded-xl">
+                <Presentation size={20} />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-1 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" /> Conducted
+                </p>
+                <p className="text-2xl font-bold text-foreground">{totals.conducted}</p>
+              </div>
+            </div>
+            <div className="bg-card p-5 rounded-2xl border border-border shadow-card flex items-start gap-4 hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
+              <div className="p-3 bg-secondary text-foreground rounded-xl">
+                <Users size={20} />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Active</p>
+                <p className="text-2xl font-bold text-foreground">{totals.activeCount}</p>
+              </div>
+            </div>
+            <div className="bg-foreground p-5 rounded-2xl border border-foreground shadow-card flex items-start gap-4 relative overflow-hidden text-background hover:-translate-y-1 hover:shadow-lg hover:shadow-foreground/20 transition-all duration-300">
+              <div className="absolute -right-4 -bottom-4 text-background/10">
+                <Trophy size={80} />
+              </div>
+              <div className="p-3 bg-background/20 text-background rounded-xl relative z-10">
+                <Trophy size={20} />
+              </div>
+              <div className="relative z-10">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-background/70 mb-1">Top Performer</p>
+                <p className="text-lg font-bold text-background leading-tight">{topPerformer ? topPerformer.name : 'N/A'}</p>
+              </div>
             </div>
           </div>
-          <div className="bg-card p-5 rounded-2xl border border-border shadow-card flex items-start gap-4">
-            <div className="p-3 bg-primary text-primary-foreground rounded-xl">
-              <Presentation size={20} />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-1 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary" /> Conducted
-              </p>
-              <p className="text-2xl font-bold text-foreground">{totals.conducted}</p>
-            </div>
-          </div>
-          <div className="bg-card p-5 rounded-2xl border border-border shadow-card flex items-start gap-4">
-            <div className="p-3 bg-secondary text-foreground rounded-xl">
-              <Users size={20} />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Active</p>
-              <p className="text-2xl font-bold text-foreground">{totals.activeCount}</p>
-            </div>
-          </div>
-          <div className="bg-foreground p-5 rounded-2xl border border-foreground shadow-card flex items-start gap-4 relative overflow-hidden text-background">
-            <div className="absolute -right-4 -bottom-4 text-background/10">
-              <Trophy size={80} />
-            </div>
-            <div className="p-3 bg-background/20 text-background rounded-xl relative z-10">
-              <Trophy size={20} />
-            </div>
-            <div className="relative z-10">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-background/70 mb-1">Top Performer</p>
-              <p className="text-lg font-bold text-background leading-tight">{topPerformer ? topPerformer.name : 'N/A'}</p>
-            </div>
-          </div>
-        </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
@@ -135,7 +146,9 @@ export function AnalyticsTab({ users, globalActivities }: AnalyticsTabProps) {
             </div>
           </div>
           <div className="flex-1 w-full min-h-0">
-            {chartData.length > 0 ? (
+            {isLoading ? (
+              <Skeleton className="w-full h-full rounded-xl" />
+            ) : chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 0, right: 20, left: 0, bottom: 0 }} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
@@ -172,61 +185,69 @@ export function AnalyticsTab({ users, globalActivities }: AnalyticsTabProps) {
             </div>
           </div>
           <div className="overflow-y-auto flex-1 custom-scrollbar">
-            <table className="w-full text-sm text-left">
-              <thead className="text-[11px] uppercase tracking-widest text-muted-foreground bg-secondary/50 sticky top-0 z-10 backdrop-blur-sm">
-                <tr>
-                  <th className="px-6 py-4 font-bold w-16 text-center">Rank</th>
-                  <th className="px-6 py-4 font-bold">Associate</th>
-                  <th className="px-6 py-4 font-bold text-center">Score</th>
-                  <th className="px-6 py-4 font-bold text-right">Performance</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {chartData.map((row, idx) => {
-                  const maxScore = topPerformer ? topPerformer.score : 1;
-                  const percent = Math.max(5, (row.score / maxScore) * 100);
-                  
-                  return (
-                    <tr key={row.name} className="hover:bg-secondary/30 transition-colors group">
-                      <td className="px-6 py-4 text-center">
-                        {idx === 0 ? (
-                          <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold shadow-sm mx-auto">
-                            <Trophy size={12} />
-                          </div>
-                        ) : (
-                          <div className="w-7 h-7 rounded-full bg-secondary text-muted-foreground border border-border flex items-center justify-center font-bold text-xs mx-auto">
-                            #{idx + 1}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 font-semibold text-foreground flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center text-foreground text-[10px] font-bold border border-border group-hover:border-primary/50 transition-colors shrink-0">
-                          {row.name.substring(0, 2).toUpperCase()}
-                        </div>
-                        <span className="truncate">{row.name}</span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="font-bold text-foreground">
-                          {row.score}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-3">
-                          <div className="h-1.5 w-full max-w-[80px] bg-secondary rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full ${idx === 0 ? 'bg-primary' : 'bg-muted-foreground'}`} style={{ width: `${percent}%` }} />
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {chartData.length === 0 && (
+            {isLoading ? (
+              <div className="p-6 flex flex-col gap-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-10 w-full" />
+                ))}
+              </div>
+            ) : (
+              <table className="w-full text-sm text-left">
+                <thead className="text-[11px] uppercase tracking-widest text-muted-foreground bg-secondary/50 sticky top-0 z-10 backdrop-blur-sm">
                   <tr>
-                    <td colSpan={4} className="py-12 text-center text-muted-foreground font-medium">No seminars recorded in this period.</td>
+                    <th className="px-6 py-4 font-bold w-16 text-center">Rank</th>
+                    <th className="px-6 py-4 font-bold">Associate</th>
+                    <th className="px-6 py-4 font-bold text-center">Score</th>
+                    <th className="px-6 py-4 font-bold text-right">Performance</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {chartData.map((row, idx) => {
+                    const maxScore = topPerformer ? topPerformer.score : 1;
+                    const percent = Math.max(5, (row.score / maxScore) * 100);
+                    
+                    return (
+                      <tr key={row.name} className="hover:bg-secondary/30 transition-colors group">
+                        <td className="px-6 py-4 text-center">
+                          {idx === 0 ? (
+                            <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold shadow-sm mx-auto">
+                              <Trophy size={12} />
+                            </div>
+                          ) : (
+                            <div className="w-7 h-7 rounded-full bg-secondary text-muted-foreground border border-border flex items-center justify-center font-bold text-xs mx-auto">
+                              #{idx + 1}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 font-semibold text-foreground flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center text-foreground text-[10px] font-bold border border-border group-hover:border-primary/50 transition-colors shrink-0">
+                            {row.name.substring(0, 2).toUpperCase()}
+                          </div>
+                          <span className="truncate">{row.name}</span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="font-bold text-foreground">
+                            {row.score}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-end gap-3">
+                            <div className="h-1.5 w-full max-w-[80px] bg-secondary rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full ${idx === 0 ? 'bg-primary' : 'bg-muted-foreground'}`} style={{ width: `${percent}%` }} />
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {chartData.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="py-12 text-center text-muted-foreground font-medium">No seminars recorded in this period.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 

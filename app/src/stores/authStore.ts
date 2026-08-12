@@ -146,8 +146,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true });
     try {
       // Stop tracking and clear session BEFORE signing out
-      await locationTracker.stopTracking();
-      await firestoreSync.endSession();
+      await locationTracker.stopTracking().catch(e => console.warn('Stop tracking failed during logout', String(e)));
+      await firestoreSync.endSession().catch(e => console.warn('End session failed during logout', String(e)));
       
       const { useTasksStore } = require('./tasksStore');
       const { useCrmActivitiesStore } = require('./crmActivitiesStore');

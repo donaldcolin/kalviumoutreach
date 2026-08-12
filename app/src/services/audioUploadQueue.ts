@@ -13,7 +13,15 @@ export type AudioQueueItem =
 export const enqueueMeetingAudio = async (uri: string, durationMillis: number, userId: string) => {
   try {
     const queueStr = await AsyncStorage.getItem(QUEUE_KEY);
-    const queue: AudioQueueItem[] = queueStr ? JSON.parse(queueStr) : [];
+    let queue: AudioQueueItem[] = [];
+    if (queueStr) {
+      try {
+        queue = JSON.parse(queueStr);
+      } catch (e) {
+        logger.error('Failed to parse audio queue in enqueue, resetting', String(e));
+        await AsyncStorage.removeItem(QUEUE_KEY);
+      }
+    }
     
     queue.push({
       id: Date.now().toString(),
@@ -33,7 +41,15 @@ export const enqueueMeetingAudio = async (uri: string, durationMillis: number, u
 export const enqueueWalkInAudio = async (uri: string, activityId: string, userId: string) => {
   try {
     const queueStr = await AsyncStorage.getItem(QUEUE_KEY);
-    const queue: AudioQueueItem[] = queueStr ? JSON.parse(queueStr) : [];
+    let queue: AudioQueueItem[] = [];
+    if (queueStr) {
+      try {
+        queue = JSON.parse(queueStr);
+      } catch (e) {
+        logger.error('Failed to parse audio queue in enqueueWalkInAudio, resetting', String(e));
+        await AsyncStorage.removeItem(QUEUE_KEY);
+      }
+    }
     
     queue.push({
       id: Date.now().toString(),
@@ -64,7 +80,15 @@ export const processAudioQueue = async () => {
     const queueStr = await AsyncStorage.getItem(QUEUE_KEY);
     if (!queueStr) return;
     
-    let queue: AudioQueueItem[] = JSON.parse(queueStr);
+    let queue: AudioQueueItem[] = [];
+    try {
+      queue = JSON.parse(queueStr);
+    } catch (e) {
+      logger.error('Failed to parse audio queue in processAudioQueue, resetting', String(e));
+      await AsyncStorage.removeItem(QUEUE_KEY);
+      return;
+    }
+    
     if (queue.length === 0) return;
 
     isProcessing = true;

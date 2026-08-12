@@ -8,9 +8,9 @@ import Animated, {
   withTiming,
   runOnJS,
 } from 'react-native-reanimated';
-import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react-native';
+import { CheckCircle2, AlertCircle, Info, X, AlertTriangle } from 'lucide-react-native';
 
-export type ToastType = 'success' | 'error' | 'info';
+export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
 export interface ToastOptions {
   title: string;
@@ -103,6 +103,11 @@ export const ToastManager = () => {
     bgColor = '#fef2f2'; // red-50
     borderColor = '#fecaca'; // red-200
     iconColor = '#ef4444'; // red-500
+  } else if (toast.type === 'warning') {
+    Icon = AlertTriangle;
+    bgColor = '#fffbeb'; // amber-50
+    borderColor = '#fde68a'; // amber-200
+    iconColor = '#f59e0b'; // amber-500
   }
 
   return (

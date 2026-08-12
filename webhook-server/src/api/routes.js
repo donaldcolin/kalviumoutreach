@@ -106,9 +106,8 @@ app.post('/api/create-user', requireAuth, async (req, res) => {
       displayName: name,
     });
 
-    // 2. Set Custom Claims based on role
-    // This allows Firestore rules to enforce RBAC without reading the users collection
-    await auth.setCustomUserClaims(userRecord.uid, { role });
+    // 2. Custom Claims are handled automatically by claims.js onDocumentWritten trigger
+    // to prevent race conditions.
 
     // 3. Save profile to Firestore
     const userDoc = {
@@ -338,11 +337,13 @@ app.post('/api/leads', requireAuth, async (req, res) => {
     }
 
     // Pre-check: if phone exists, throw error
+    const cleanPhone = phone.replace(/\D/g, '');
+    const phoneSearch = cleanPhone.length >= 10 ? cleanPhone.slice(-10) : cleanPhone;
     const searchBody = {
       "Parameter": {
         "LookupName": "Phone",
-        "LookupValue": phone,
-        "SqlOperator": "="
+        "LookupValue": `%${phoneSearch}%`,
+        "SqlOperator": "like"
       }
     };
     const existingLeads = await lsqFetch('/v2/LeadManagement.svc/Leads.Get', 'POST', searchBody);
@@ -389,7 +390,7 @@ app.post('/api/leads', requireAuth, async (req, res) => {
         "ActivityNote": "Created via Kalvium Outreach Mobile App",
         "Fields": [
           { "SchemaName": "mx_Custom_1", "Value": email },
-          { "SchemaName": "mx_Custom_2", "Value": new Date().toISOString().replace('T', ' ').substring(0, 19) },
+          { "SchemaName": "mx_Custom_2", "Value": new Date(Date.now() + 5.5 * 3600000).toISOString().replace('T', ' ').substring(0, 19) },
           { "SchemaName": "mx_Custom_3", "Value": latitude || "0.0" },
           { "SchemaName": "mx_Custom_4", "Value": longitude || "0.0" }
         ]
@@ -447,6 +448,49 @@ app.post('/api/leads', requireAuth, async (req, res) => {
       } catch (e) { /* ignore */ }
     }
 
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Create Appointment (Secure Endpoint) ──────────────────────────────────
+
+app.post('/api/appointments', requireAuth, async (req, res) => {
+  try {
+    const { title, date, time, leadId, schoolName, executiveId, type } = req.body;
+    
+    // Only managers and admins can assign seminars/appointments
+    const isManager = ['admin', 'regionalManager', 'seniorManager', 'teamLead'].includes(req.user.role);
+    if (!isManager) {
+      return res.status(403).json({ error: 'Forbidden: Insufficient privileges to assign appointments.' });
+    }
+
+    if (!title || !date || !leadId || !executiveId) {
+      return res.status(400).json({ error: 'Missing required fields for appointment.' });
+    }
+
+    const appointmentDoc = {
+      title,
+      date,
+      time: time || '10:00 AM',
+      leadId,
+      schoolName: schoolName || 'Unknown School',
+      executiveId,
+      type: type || 'seminar',
+      status: 'upcoming',
+      createdAt: FieldValue.serverTimestamp(),
+      assignedBy: req.user.uid,
+    };
+
+    const docRef = await db.collection('appointments').add(appointmentDoc);
+
+    res.json({
+      success: true,
+      appointmentId: docRef.id,
+      message: 'Appointment created successfully.'
+    });
+
+  } catch (err) {
+    console.error('Create appointment failed:', err);
     res.status(500).json({ error: err.message });
   }
 });

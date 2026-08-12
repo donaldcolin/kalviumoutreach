@@ -5,8 +5,7 @@ import { type SchoolPipelineEntry } from './types';
 import { useAuthStore } from '../../stores/authStore';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 import { Button } from '../ui/button';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../firebase';
+import { auth } from '../../firebase';
 import { useToast } from '../../hooks/use-toast';
 
 interface PipelineSeminarsProps {
@@ -19,6 +18,23 @@ interface PipelineSeminarsProps {
   setAssociateFilter: (val: string) => void;
   setTaskTypeFilter: (val: string) => void;
 }
+
+const TASK_CONFIG = {
+  seminar: {
+    label: 'Seminar',
+    pluralLabel: 'Seminars',
+    bgActive: 'bg-purple-500 text-white',
+    dotActive: 'bg-white',
+    dotInactive: 'bg-purple-500',
+  },
+  follow_up: {
+    label: 'Follow-up',
+    pluralLabel: 'Follow-ups',
+    bgActive: 'bg-blue-500 text-white',
+    dotActive: 'bg-white',
+    dotInactive: 'bg-blue-500',
+  }
+} as const;
 
 export function PipelineSeminars({
   pipelineData,
@@ -87,22 +103,36 @@ export function PipelineSeminars({
     if (!assigningTask || !selectedExecutiveId) return;
     setIsAssigning(true);
     try {
-      await addDoc(collection(db, 'appointments'), {
-        type: assigningTask.type,
-        schoolName: assigningTask.school.schoolName,
-        lsqLeadId: assigningTask.school.lsqLeadId,
-        date: assigningTask.type === 'seminar' ? assigningTask.school.seminarDate : assigningTask.school.followUpDate,
-        executiveId: selectedExecutiveId,
-        assignedBy: useAuthStore.getState().user?.id,
-        status: 'pending',
-        createdAt: serverTimestamp()
+      const token = await auth.currentUser?.getIdToken();
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      
+      const response = await fetch(`${apiUrl}/api/appointments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          type: assigningTask.type,
+          schoolName: assigningTask.school.schoolName,
+          leadId: assigningTask.school.lsqLeadId,
+          date: assigningTask.type === 'seminar' ? assigningTask.school.seminarDate : assigningTask.school.followUpDate,
+          title: `${TASK_CONFIG[assigningTask.type as keyof typeof TASK_CONFIG]?.label || 'Task'} at ${assigningTask.school.schoolName}`,
+          executiveId: selectedExecutiveId
+        })
       });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to assign task');
+      }
+
       toast({ title: 'Task Assigned', description: `Successfully assigned to associate.` });
       setAssigningTask(null);
       setSelectedExecutiveId('');
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast({ title: 'Assignment Failed', description: 'Could not assign task.', variant: 'destructive' });
+      toast({ title: 'Assignment Failed', description: error.message || 'Could not assign task.', variant: 'destructive' });
     } finally {
       setIsAssigning(false);
     }
@@ -126,20 +156,16 @@ export function PipelineSeminars({
                 >
                   All Tasks
                 </button>
-                <button
-                  onClick={() => setTaskTypeFilter('seminar')}
-                  className={`flex items-center gap-2 transition-colors rounded-full px-4 py-1.5 font-medium text-sm ${taskTypeFilter === 'seminar' ? 'bg-purple-500 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
-                >
-                  <div className={`w-1.5 h-1.5 rounded-full ${taskTypeFilter === 'seminar' ? 'bg-white' : 'bg-purple-500'}`} />
-                  Seminars
-                </button>
-                <button
-                  onClick={() => setTaskTypeFilter('follow_up')}
-                  className={`flex items-center gap-2 transition-colors rounded-full px-4 py-1.5 font-medium text-sm ${taskTypeFilter === 'follow_up' ? 'bg-blue-500 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
-                >
-                  <div className={`w-1.5 h-1.5 rounded-full ${taskTypeFilter === 'follow_up' ? 'bg-white' : 'bg-blue-500'}`} />
-                  Follow-ups
-                </button>
+                {Object.entries(TASK_CONFIG).map(([type, config]) => (
+                  <button
+                    key={type}
+                    onClick={() => setTaskTypeFilter(type)}
+                    className={`flex items-center gap-2 transition-colors rounded-full px-4 py-1.5 font-medium text-sm ${taskTypeFilter === type ? config.bgActive : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+                  >
+                    <div className={`w-1.5 h-1.5 rounded-full ${taskTypeFilter === type ? config.dotActive : config.dotInactive}`} />
+                    {config.pluralLabel}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -191,9 +217,9 @@ export function PipelineSeminars({
 
                     {/* Dot Badge */}
                     <div className="flex items-center gap-1.5 mt-1 shrink-0">
-                      <div className={`w-1.5 h-1.5 rounded-full ${task.taskType === 'seminar' ? 'bg-purple-500' : 'bg-blue-500'}`} />
+                      <div className={`w-1.5 h-1.5 rounded-full ${TASK_CONFIG[task.taskType as keyof typeof TASK_CONFIG]?.dotInactive || 'bg-gray-500'}`} />
                       <span className="text-xs font-medium text-gray-500">
-                        {task.taskType === 'seminar' ? 'Seminar' : 'Follow-up'}
+                        {TASK_CONFIG[task.taskType as keyof typeof TASK_CONFIG]?.label || task.taskType}
                       </span>
                     </div>
                   </div>
@@ -235,7 +261,7 @@ export function PipelineSeminars({
           </DialogHeader>
           <div className="py-6">
             <p className="text-gray-500 mb-6 font-medium">
-              Assigning {assigningTask?.type === 'seminar' ? 'Seminar' : 'Follow-up'} at <span className="text-gray-900 font-semibold">{assigningTask?.school.schoolName}</span>
+              Assigning {assigningTask ? TASK_CONFIG[assigningTask.type as keyof typeof TASK_CONFIG]?.label : ''} at <span className="text-gray-900 font-semibold">{assigningTask?.school.schoolName}</span>
             </p>
             <select
               value={selectedExecutiveId}

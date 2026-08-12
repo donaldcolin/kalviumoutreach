@@ -111,10 +111,21 @@ export function useOutreachTracking(userId: string | undefined) {
   useEffect(() => {
     if (!isTracking) return;
 
+    let lastCheckedDate = new Date().toDateString();
+
     // Check time immediately and then every minute
     const checkTime = () => {
-      const hour = new Date().getHours();
-      // Only auto-stop once per app session.
+      const now = new Date();
+      
+      // Reset the auto-stop flag if it's a new day
+      if (now.toDateString() !== lastCheckedDate) {
+        lastCheckedDate = now.toDateString();
+        hasAutoStoppedRef.current = false;
+        console.log('[useOutreachTracking] New day detected, resetting auto-stop flag.');
+      }
+      
+      const hour = now.getHours();
+      // Only auto-stop once per app session (or day).
       if (hour >= 18 && !hasAutoStoppedRef.current) {
         console.log('[useOutreachTracking] 6 PM reached, pausing location tracking but keeping app active.');
         hasAutoStoppedRef.current = true;

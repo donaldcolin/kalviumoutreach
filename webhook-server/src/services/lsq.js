@@ -89,10 +89,11 @@ export function buildFirestoreDoc(raw, fields, emailToFirestoreId) {
   if (locationStr) {
     try {
       if (locationStr.includes(',')) {
-        const parts = locationStr.split(',').map(s => parseFloat(s.trim()));
-        if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-          lat = parts[0];
-          lng = parts[1];
+        const parts = locationStr.split(',').map(s => s.trim());
+        const isStrictNumber = (str) => /^-?\d+(\.\d+)?$/.test(str);
+        if (parts.length >= 2 && isStrictNumber(parts[0]) && isStrictNumber(parts[1])) {
+          lat = parseFloat(parts[0]);
+          lng = parseFloat(parts[1]);
         }
       }
 

@@ -15,12 +15,13 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 
 import { SYNC_INTERVAL_MINUTES } from './src/config/config.js';
-import { syncActivities } from './src/services/sync.js';
-import app from './src/api/routes.js';
-import { handlePushQueue } from './src/services/pushQueue.js';
+import { syncUserClaims } from './src/services/claims.js';
 
 // ─── Export: HTTP API (Express) ─────────────────────────────────────────────
-export const api = onRequest({ secrets: ["LSQ_ACCESS_KEY", "LSQ_SECRET_KEY"] }, app);
+export const api = onRequest({ secrets: ["LSQ_ACCESS_KEY", "LSQ_SECRET_KEY"] }, async (req, res) => {
+  const { default: app } = await import('./src/api/routes.js');
+  return app(req, res);
+});
 
 // ─── Export: Scheduled Cron Sync ────────────────────────────────────────────
 export const syncCron = onSchedule({ schedule: `every ${SYNC_INTERVAL_MINUTES} minutes`, secrets: ["LSQ_ACCESS_KEY", "LSQ_SECRET_KEY"] }, async (event) => {
@@ -35,6 +36,7 @@ export const syncCron = onSchedule({ schedule: `every ${SYNC_INTERVAL_MINUTES} m
   const endMinutes = 18 * 60 + 15;  // 18:15
 
   if (totalMinutes >= startMinutes && totalMinutes <= endMinutes) {
+    const { syncActivities } = await import('./src/services/sync.js');
     await syncActivities();
   } else {
     // Only log once an hour to avoid spamming the console overnight
@@ -45,12 +47,16 @@ export const syncCron = onSchedule({ schedule: `every ${SYNC_INTERVAL_MINUTES} m
 });
 
 // ─── Export: Push Queue Trigger ──────────────────────────────────────────────
-export const processPushQueue = onDocumentCreated({ document: "pushQueue/{docId}", secrets: ["LSQ_ACCESS_KEY", "LSQ_SECRET_KEY"] }, handlePushQueue);
+export const processPushQueue = onDocumentCreated({ document: "pushQueue/{docId}", secrets: ["LSQ_ACCESS_KEY", "LSQ_SECRET_KEY"] }, async (event) => {
+  const { handlePushQueue } = await import('./src/services/pushQueue.js');
+  return handlePushQueue(event);
+});
 
 // ─── Export: Location Requests Trigger ───────────────────────────────────────
-import { handleLocationRequest } from './src/services/locationRequests.js';
-export const processLocationRequest = onDocumentCreated({ document: "locationRequests/{docId}" }, handleLocationRequest);
+export const processLocationRequest = onDocumentCreated({ document: "locationRequests/{docId}" }, async (event) => {
+  const { handleLocationRequest } = await import('./src/services/locationRequests.js');
+  return handleLocationRequest(event);
+});
 
 // ─── Export: User Claims Sync Trigger ────────────────────────────────────────
-import { syncUserClaims } from './src/services/claims.js';
 export const processUserClaims = syncUserClaims;

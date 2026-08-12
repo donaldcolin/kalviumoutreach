@@ -200,8 +200,10 @@ export function useDashboardData(
     const unsubReqsToday = onSnapshot(qReqsToday, (snapshot) => {
       const reqs = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as LocationRequest));
       const filteredReqs = reqs.filter(r => {
-        const ts = r.requestedAt?.toMillis ? r.requestedAt.toMillis() : (r.requestedAt as number || 0);
-        return ts >= todayStart && ts <= todayEnd;
+        const ts = r.requestedAt?.toMillis ? r.requestedAt.toMillis() : (typeof r.requestedAt === 'number' ? r.requestedAt : Date.now());
+        const selectedStart = new Date(selectedDate).setHours(0,0,0,0);
+        const selectedEnd = new Date(selectedDate).setHours(23,59,59,999);
+        return ts >= selectedStart && ts <= selectedEnd;
       });
       setSelectedDateLocReqs(filteredReqs);
     }, (error) => console.error("Error fetching locationRequests:", error));
@@ -229,7 +231,9 @@ export function useDashboardData(
           const dt = a.walkInDateTime || a.lsqCreatedOn;
           if (!dt) return false;
           const ts = new Date(dt).getTime();
-          return ts >= todayStart && ts <= todayEnd;
+          const selectedStart = new Date(selectedDate).setHours(0,0,0,0);
+          const selectedEnd = new Date(selectedDate).setHours(23,59,59,999);
+          return ts >= selectedStart && ts <= selectedEnd;
         });
         setSelectedDateCrmActivities(filtered);
       });
