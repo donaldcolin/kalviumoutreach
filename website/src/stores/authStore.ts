@@ -99,7 +99,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   
   addAssociate: async (newUser, pass) => {
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const baseUrl = import.meta.env.VITE_API_URL || 'https://us-central1-kalvium-outreach-53f54.cloudfunctions.net/api';
       const currentUser = auth.currentUser;
       if (!currentUser) throw new Error('Not authenticated');
       

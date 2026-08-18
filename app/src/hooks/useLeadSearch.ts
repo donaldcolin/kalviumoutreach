@@ -112,9 +112,6 @@ export function useLeadSearch(userEmail?: string) {
   }, [searchQuery]);
 
   const filteredLeads = leads.filter((l) => {
-    // Only show School Prospect leads
-    if (l.ProspectStage && l.ProspectStage !== 'School Prospect') return false;
-    
     const name = `${l.FirstName || ''} ${l.LastName || ''}`.toLowerCase();
     const city = (l.mx_City || '').toLowerCase();
     const q = debouncedSearchQuery.toLowerCase();

@@ -106,8 +106,9 @@ app.post('/api/create-user', requireAuth, async (req, res) => {
       displayName: name,
     });
 
-    // 2. Custom Claims are handled automatically by claims.js onDocumentWritten trigger
-    // to prevent race conditions.
+    // 2. Set Custom Claims synchronously so the user can login immediately.
+    // The claims.js onDocumentWritten trigger acts as a backup for role updates.
+    await auth.setCustomUserClaims(userRecord.uid, { role });
 
     // 3. Save profile to Firestore
     const userDoc = {
@@ -162,15 +163,20 @@ app.get('/api/leads', requireAuth, async (req, res) => {
       },
       "Paging": {
         "PageIndex": 1,
-        "PageSize": 500
+        "PageSize": 1000
       }
     };
 
     const lsqResp = await lsqFetch('/v2/LeadManagement.svc/Leads.Get', 'POST', searchBody);
 
+    // Filter server-side: only return School Prospect leads to the app
+    const leads = Array.isArray(lsqResp)
+      ? lsqResp.filter(l => !l.ProspectStage || l.ProspectStage === 'School Prospect')
+      : [];
+
     res.json({
       success: true,
-      leads: Array.isArray(lsqResp) ? lsqResp : []
+      leads
     });
 
   } catch (err) {
